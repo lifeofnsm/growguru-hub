@@ -42,7 +42,7 @@
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef } = React;
 
-// âââ FIREBASE INIT ââââââââââââââââââââââââââââââââââââââââââââ
+// --- FIREBASE INIT --------------------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyA9Oq5jOw4TCxmWQn3hcSf-Zd8QvWQ4Mj8",
   authDomain: "growguru-hub.firebaseapp.com",
@@ -55,10 +55,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// âââ CONSTANTS ââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- CONSTANTS ------------------------------------------------
 const GOLD = '#F5C518';
 const PILLARS = ['Content', 'Business Ops', 'Training', 'Daily Publishing'];
-const CHANNELS = ['GrowGuru Kannada â YouTube', 'GrowGuru English â YouTube', 'GrowGuru Reels â Instagram', 'Hashnode'];
+const CHANNELS = ['GrowGuru Kannada - YouTube', 'GrowGuru English - YouTube', 'GrowGuru Reels - Instagram', 'Hashnode'];
 const P_STAGES = ['Idea', 'Script', 'Record', 'Edit', 'Review', 'Published'];
 const D_STAGES = ['Lead', 'Negotiation', 'Confirmed', 'Script Approval', 'Live', 'Invoiced', 'Paid'];
 const P_COLORS = { P1: '#ff6b6b', P2: '#F5C518', P3: '#4ade80' };
@@ -68,7 +68,7 @@ const todayStr = () => new Date().toISOString().split('T')[0];
 const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
 const fmtDateFull = () => new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-// âââ DISCORD ââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- DISCORD --------------------------------------------------
 async function notify(channel, msg) {
   try {
     const doc = await db.collection('settings').doc('webhooks').get();
@@ -79,7 +79,7 @@ async function notify(channel, msg) {
   } catch (_) {}
 }
 
-// âââ ROOT APP âââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- ROOT APP -------------------------------------------------
 function App() {
   const [user, setUser] = useState(undefined);
   const [profile, setProfile] = useState(null);
@@ -121,7 +121,7 @@ function Splash() {
   );
 }
 
-// âââ LOGIN ââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- LOGIN ----------------------------------------------------
 function Login() {
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
@@ -152,7 +152,7 @@ function Login() {
           </div>
           {err && <div style={{ color: '#ff6b6b', fontSize: 12, marginBottom: 12 }}>{err}</div>}
           <button className="btn-gold" type="submit" disabled={loading} style={{ width: '100%', padding: '11px' }}>
-            {loading ? 'Signing inâ¦' : 'Sign In'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
       </div>
@@ -160,16 +160,16 @@ function Login() {
   );
 }
 
-// âââ DASHBOARD ââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- DASHBOARD ------------------------------------------------
 function Dashboard({ user, profile }) {
   const [tab, setTab] = useState('today');
   const isAdmin = profile?.role === 'admin';
   const tabs = [
-    { id: 'today', icon: 'ð¯', label: 'Today' },
-    { id: 'pipeline', icon: 'ð¬', label: 'Pipeline' },
-    { id: 'deals', icon: 'ð¼', label: 'Deals' },
-    { id: 'ideas', icon: 'ð¡', label: 'Ideas' },
-    ...(isAdmin ? [{ id: 'settings', icon: 'âï¸', label: 'Settings' }] : []),
+    { id: 'today', icon: '', label: 'Today' },
+    { id: 'pipeline', icon: '', label: 'Pipeline' },
+    { id: 'deals', icon: '', label: 'Deals' },
+    { id: 'ideas', icon: '', label: 'Ideas' },
+    ...(isAdmin ? [{ id: 'settings', icon: '', label: 'Settings' }] : []),
   ];
 
   return (
@@ -212,7 +212,7 @@ function Dashboard({ user, profile }) {
   );
 }
 
-// âââ TODAY ââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- TODAY ----------------------------------------------------
 function TodayTab() {
   const [tasks, setTasks] = useState([]);
   const [form, setForm] = useState({ title: '', pillar: 'Content', priority: 'P1', notes: '' });
@@ -231,7 +231,7 @@ function TodayTab() {
     if (!form.title.trim()) return;
     setSaving(true);
     await db.collection('tasks').add({ ...form, date: todayStr(), done: false, createdAt: new Date().toISOString() });
-    notify('content', `ð New task: **${form.title}** Â�- ${form.priority} Â�- ${form.pillar}`);
+    notify('content', `New task: **${form.title}** - ${form.priority} - ${form.pillar}`);
     setForm({ title: '', pillar: 'Content', priority: 'P1', notes: '' });
     setAdding(false);
     setSaving(false);
@@ -259,14 +259,14 @@ function TodayTab() {
 
       {/* Priority legend */}
       <div style={{ display: 'flex', gap: 20, padding: '8px 14px', background: '#111', borderRadius: 8, marginBottom: 20, fontSize: 12, color: '#666' }}>
-        <span><span className="dot" style={{ background: '#ff6b6b' }} />P1 â Must Do</span>
-        <span><span className="dot" style={{ background: GOLD }} />P2 â Should Do</span>
-        <span><span className="dot" style={{ background: '#4ade80' }} />P3 â If Time</span>
+        <span><span className="dot" style={{ background: '#ff6b6b' }} />P1 - Must Do</span>
+        <span><span className="dot" style={{ background: GOLD }} />P2 - Should Do</span>
+        <span><span className="dot" style={{ background: '#4ade80' }} />P3 - If Time</span>
       </div>
 
       {adding && (
         <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: '#F5C51844' }}>
-          <input className="input" placeholder="Task titleâ¦" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
+          <input className="input" placeholder="Task title..." value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
             style={{ marginBottom: 10 }} autoFocus onKeyDown={e => e.key === 'Enter' && add()} />
           <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
             <select className="select" value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={{ flex: 1 }}>
@@ -278,18 +278,18 @@ function TodayTab() {
           </div>
           <input className="input" placeholder="Notes (optional)" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ marginBottom: 12 }} />
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Savingâ¦' : 'Add Task'}</button>
+            <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Saving...' : 'Add Task'}</button>
             <button className="btn-ghost" onClick={() => setAdding(false)} style={{ fontSize: 13 }}>Cancel</button>
           </div>
         </div>
       )}
 
-      {tasks.length === 0 && !adding && <Empty icon="ð¯" text="No tasks yet. Add something to focus on." />}
+      {tasks.length === 0 && !adding && <Empty icon="" text="No tasks yet. Add something to focus on." />}
 
       {['P1', 'P2', 'P3'].map(p => groups[p].length > 0 && (
         <div key={p} style={{ marginBottom: 22 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: P_COLORS[p], marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1.2, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="dot" style={{ background: P_COLORS[p] }} />{p} Â�- {groups[p].filter(t => t.done).length}/{groups[p].length}
+            <span className="dot" style={{ background: P_COLORS[p] }} />{p} - {groups[p].filter(t => t.done).length}/{groups[p].length}
           </div>
           {groups[p].map(t => (
             <div key={t.id} className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 14px', marginBottom: 7, opacity: t.done ? 0.45 : 1, transition: 'opacity 0.2s' }}>
@@ -307,7 +307,7 @@ function TodayTab() {
                   {t.notes && <span style={{ fontSize: 12, color: '#555' }}>{t.notes}</span>}
                 </div>
               </div>
-              <button onClick={() => del(t.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>Ã</button>
+              <button onClick={() => del(t.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>x</button>
             </div>
           ))}
         </div>
@@ -316,7 +316,7 @@ function TodayTab() {
   );
 }
 
-// âââ PIPELINE âââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- PIPELINE -------------------------------------------------
 function PipelineTab() {
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({ title: '', stage: 'Idea', channel: CHANNELS[0], brandDeal: false, brandName: '', publishDate: '', notes: '' });
@@ -331,7 +331,7 @@ function PipelineTab() {
     if (!form.title.trim()) return;
     setSaving(true);
     await db.collection('pipeline').add({ ...form, createdAt: new Date().toISOString() });
-    notify('content', `ð¬ Pipeline: **${form.title}** added Â�- Stage: ${form.stage}`);
+    notify('content', `Pipeline: **${form.title}** added - Stage: ${form.stage}`);
     setForm({ title: '', stage: 'Idea', channel: CHANNELS[0], brandDeal: false, brandName: '', publishDate: '', notes: '' });
     setAdding(false);
     setSaving(false);
@@ -363,7 +363,7 @@ function PipelineTab() {
 
       {adding && (
         <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: '#F5C51844' }}>
-          <input className="input" placeholder="Video titleâ¦" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ marginBottom: 10 }} autoFocus />
+          <input className="input" placeholder="Video title..." value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ marginBottom: 10 }} autoFocus />
           <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
             <select className="select" value={form.stage} onChange={e => setForm({ ...form, stage: e.target.value })} style={{ flex: 1 }}>
               {P_STAGES.map(s => <option key={s}>{s}</option>)}
@@ -382,28 +382,28 @@ function PipelineTab() {
           </div>
           <input className="input" placeholder="Notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ marginBottom: 12 }} />
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Savingâ¦' : 'Add'}</button>
+            <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Saving...' : 'Add'}</button>
             <button className="btn-ghost" onClick={() => setAdding(false)} style={{ fontSize: 13 }}>Cancel</button>
           </div>
         </div>
       )}
 
-      {items.length === 0 && !adding && <Empty icon="ð¬" text="Pipeline is empty. Add your first video." />}
+      {items.length === 0 && !adding && <Empty icon="" text="Pipeline is empty. Add your first video." />}
 
       {P_STAGES.map(stage => {
         const grp = items.filter(i => i.stage === stage);
         if (!grp.length) return null;
         return (
           <div key={stage} style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#666', marginBottom: 9, textTransform: 'uppercase', letterSpacing: 1.2 }}>{stage} Â�- {grp.length}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#666', marginBottom: 9, textTransform: 'uppercase', letterSpacing: 1.2 }}>{stage} - {grp.length}</div>
             {grp.map(item => (
               <div key={item.id} className="card" style={{ padding: '13px 15px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 500, color: '#ddd', marginBottom: 6 }}>{item.title}</div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span className="tag" style={{ background: '#1e1e1e', color: '#666' }}>{item.channel}</span>
-                    {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>ð¼ {item.brandName || 'Brand Deal'}</span>}
-                    {item.publishDate && <span style={{ fontSize: 11, color: '#666' }}>ð {fmtDate(item.publishDate)}</span>}
+                    {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>{item.brandName || 'Brand Deal'}</span>}
+                    {item.publishDate && <span style={{ fontSize: 11, color: '#666' }}>{fmtDate(item.publishDate)}</span>}
                     {item.notes && <span style={{ fontSize: 12, color: '#555' }}>{item.notes}</span>}
                   </div>
                 </div>
@@ -411,7 +411,7 @@ function PipelineTab() {
                   <select className="select" value={item.stage} onChange={e => updateStage(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
                     {P_STAGES.map(s => <option key={s}>{s}</option>)}
                   </select>
-                  <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>Ã</button>
+                  <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>x</button>
                 </div>
               </div>
             ))}
@@ -422,7 +422,7 @@ function PipelineTab() {
   );
 }
 
-// âââ DEALS ââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- DEALS ----------------------------------------------------
 function DealsTab() {
   const [deals, setDeals] = useState([]);
   const [form, setForm] = useState({ brand: '', stage: 'Lead', contact: '', platform: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', notes: '' });
@@ -437,7 +437,7 @@ function DealsTab() {
     if (!form.brand.trim()) return;
     setSaving(true);
     await db.collection('deals').add({ ...form, createdAt: new Date().toISOString() });
-    notify('brand', `ð¼ New deal: **${form.brand}** Â�- Stage: ${form.stage}`);
+    notify('brand', `New deal: **${form.brand}** - Stage: ${form.stage}`);
     setForm({ brand: '', stage: 'Lead', contact: '', platform: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', notes: '' });
     setAdding(false);
     setSaving(false);
@@ -446,7 +446,7 @@ function DealsTab() {
   const updateStage = async (id, stage) => {
     await db.collection('deals').doc(id).update({ stage });
     const d = deals.find(x => x.id === id);
-    notify('brand', `ð¼ **${d?.brand}** â ${stage}`);
+    notify('brand', `**${d?.brand}** -> ${stage}`);
   };
 
   const del = id => db.collection('deals').doc(id).delete();
@@ -472,7 +472,7 @@ function DealsTab() {
               {D_STAGES.map(s => <option key={s}>{s}</option>)}
             </select>
             <input className="input" placeholder="Agency / Platform" value={form.platform} onChange={e => setForm({ ...form, platform: e.target.value })} style={{ flex: 1 }} />
-            <input className="input" placeholder="Rate (â¹)" value={form.agreedRate} onChange={e => setForm({ ...form, agreedRate: e.target.value })} style={{ flex: 1 }} />
+            <input className="input" placeholder="Rate (Rs.)" value={form.agreedRate} onChange={e => setForm({ ...form, agreedRate: e.target.value })} style={{ flex: 1 }} />
           </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
             <input className="input" placeholder="Deliverables" value={form.deliverables} onChange={e => setForm({ ...form, deliverables: e.target.value })} style={{ flex: 2 }} />
@@ -480,13 +480,13 @@ function DealsTab() {
           </div>
           <input className="input" placeholder="Notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ marginBottom: 12 }} />
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Savingâ¦' : 'Add Deal'}</button>
+            <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Saving...' : 'Add Deal'}</button>
             <button className="btn-ghost" onClick={() => setAdding(false)} style={{ fontSize: 13 }}>Cancel</button>
           </div>
         </div>
       )}
 
-      {deals.length === 0 && !adding && <Empty icon="ð¼" text="No brand deals yet. Add your first one." />}
+      {deals.length === 0 && !adding && <Empty icon="" text="No brand deals yet. Add your first one." />}
 
       <div style={{ display: 'grid', gap: 10 }}>
         {deals.map(deal => {
@@ -498,14 +498,14 @@ function DealsTab() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{deal.brand}</span>
                     <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11, fontWeight: 600 }}>{deal.stage}</span>
-                    {deal.agreedRate && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 600 }}>â¹{deal.agreedRate}</span>}
-                    {deal.paymentStatus === 'Paid' && <span className="tag" style={{ background: '#4ade8018', color: '#4ade80', fontSize: 10 }}>PAID â</span>}
+                    {deal.agreedRate && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 600 }}>Rs.{deal.agreedRate}</span>}
+                    {deal.paymentStatus === 'Paid' && <span className="tag" style={{ background: '#4ade8018', color: '#4ade80', fontSize: 10 }}>PAID OK</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#666' }}>
-                    {deal.contact && <span>ð¤ {deal.contact}</span>}
-                    {deal.platform && <span>ð {deal.platform}</span>}
-                    {deal.deliverables && <span>ð¦ {deal.deliverables}</span>}
-                    {deal.deadline && <span>â° {fmtDate(deal.deadline)}</span>}
+                    {deal.contact && <span>{deal.contact}</span>}
+                    {deal.platform && <span>{deal.platform}</span>}
+                    {deal.deliverables && <span>{deal.deliverables}</span>}
+                    {deal.deadline && <span>{fmtDate(deal.deadline)}</span>}
                   </div>
                   {deal.notes && <div style={{ fontSize: 12, color: '#555', marginTop: 5 }}>{deal.notes}</div>}
                 </div>
@@ -513,7 +513,7 @@ function DealsTab() {
                   <select className="select" value={deal.stage} onChange={e => updateStage(deal.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
                     {D_STAGES.map(s => <option key={s}>{s}</option>)}
                   </select>
-                  <button onClick={() => del(deal.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>Ã</button>
+                  <button onClick={() => del(deal.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>x</button>
                 </div>
               </div>
             </div>
@@ -524,7 +524,7 @@ function DealsTab() {
   );
 }
 
-// âââ IDEAS ââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- IDEAS ----------------------------------------------------
 function IdeasTab() {
   const [ideas, setIdeas] = useState([]);
   const [text, setText] = useState('');
@@ -553,15 +553,15 @@ function IdeasTab() {
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
-        <input className="input" placeholder="Capture an ideaâ¦ (Enter to save)" value={text} onChange={e => setText(e.target.value)}
+        <input className="input" placeholder="Capture an idea... (Enter to save)" value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && add()} style={{ flex: 1 }} />
         <select className="select" value={cat} onChange={e => setCat(e.target.value)}>
           {PILLARS.map(p => <option key={p}>{p}</option>)}
         </select>
-        <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'â¦' : 'Save'}</button>
+        <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? '...' : 'Save'}</button>
       </div>
 
-      {ideas.length === 0 && <Empty icon="ð¡" text="No ideas yet. Start capturing them here." />}
+      {ideas.length === 0 && <Empty icon="" text="No ideas yet. Start capturing them here." />}
 
       <div style={{ display: 'grid', gap: 8 }}>
         {ideas.map(idea => (
@@ -573,7 +573,7 @@ function IdeasTab() {
                 {new Date(idea.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
               </div>
             </div>
-            <button onClick={() => del(idea.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1, marginTop: 2 }}>Ã</button>
+            <button onClick={() => del(idea.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1, marginTop: 2 }}>x</button>
           </div>
         ))}
       </div>
@@ -581,7 +581,7 @@ function IdeasTab() {
   );
 }
 
-// âââ SETTINGS âââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- SETTINGS -------------------------------------------------
 function SettingsTab() {
   const [users, setUsers] = useState([]);
   const [webhooks, setWebhooks] = useState({ content: '', brand: '', training: '' });
@@ -603,9 +603,9 @@ function SettingsTab() {
   };
 
   const testWebhook = async (channel) => {
-    setTestMsg('Sendingâ¦');
-    await notify(channel, `â Test from GrowGuru Hub â ${channel} channel webhook is working!`);
-    setTestMsg('Sent â');
+    setTestMsg('Sending...');
+    await notify(channel, `Test from GrowGuru Hub - ${channel} channel webhook is working!`);
+    setTestMsg('Sent');
     setTimeout(() => setTestMsg(''), 3000);
   };
 
@@ -637,18 +637,18 @@ function SettingsTab() {
       <div className="card" style={{ padding: 20 }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>Discord Webhooks</h2>
         <p style={{ fontSize: 12, color: '#555', marginBottom: 18 }}>Paste webhook URLs for each pillar channel. Notifications will route automatically.</p>
-        {[['content', 'ð¬ Content Channel'], ['brand', 'ð¼ Brand Channel'], ['training', 'ð Training Channel']].map(([key, label]) => (
+        {[['content', 'Content Channel'], ['brand', 'Brand Channel'], ['training', 'Training Channel']].map(([key, label]) => (
           <div key={key} style={{ marginBottom: 14 }}>
             <label style={{ display: 'block', fontSize: 12, color: '#888', marginBottom: 5 }}>{label}</label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <input className="input" type="url" placeholder="https://discord.com/api/webhooks/â¦" value={webhooks[key] || ''}
+              <input className="input" type="url" placeholder="https://discord.com/api/webhooks/..." value={webhooks[key] || ''}
                 onChange={e => setWebhooks({ ...webhooks, [key]: e.target.value })} style={{ flex: 1 }} />
               <button className="btn-ghost" onClick={() => testWebhook(key)} style={{ fontSize: 12, whiteSpace: 'nowrap' }}>Test</button>
             </div>
           </div>
         ))}
         {testMsg && <div style={{ fontSize: 12, color: '#4ade80', marginBottom: 10 }}>{testMsg}</div>}
-        <button className="btn-gold" onClick={saveWebhooks} style={{ fontSize: 13 }}>{whSaved ? 'â Saved' : 'Save Webhooks'}</button>
+        <button className="btn-gold" onClick={saveWebhooks} style={{ fontSize: 13 }}>{whSaved ? 'Saved' : 'Save Webhooks'}</button>
       </div>
 
       {/* Users */}
@@ -671,13 +671,13 @@ function SettingsTab() {
           <input className="input" placeholder="Password (min 6 chars)" type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
         </div>
         {userErr && <div style={{ fontSize: 12, color: '#ff6b6b', marginBottom: 10 }}>{userErr}</div>}
-        <button className="btn-gold" onClick={createUser} disabled={creating} style={{ fontSize: 13 }}>{creating ? 'Creatingâ¦' : 'Create Member'}</button>
+        <button className="btn-gold" onClick={createUser} disabled={creating} style={{ fontSize: 13 }}>{creating ? 'Creating...' : 'Create Member'}</button>
       </div>
     </div>
   );
 }
 
-// âââ SHARED COMPONENTS ââââââââââââââââââââââââââââââââââââââââ
+// --- SHARED COMPONENTS ----------------------------------------
 function Empty({ icon, text }) {
   return (
     <div style={{ textAlign: 'center', padding: '64px 20px', color: '#444' }}>
@@ -687,7 +687,7 @@ function Empty({ icon, text }) {
   );
 }
 
-// âââ RENDER âââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- RENDER ---------------------------------------------------
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
