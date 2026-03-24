@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GrowGuru Hub</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { background: #0d0d0d; color: #e8e8e8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 4px; }
+    input, select, textarea, button { font-family: inherit; font-size: inherit; }
+    input::placeholder { color: #444; }
+    select option { background: #1a1a1a; }
+    .fade { animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .card { background: #161616; border: 1px solid #222; border-radius: 10px; }
+    .card:hover { border-color: #2e2e2e; }
+    .input { width: 100%; padding: 9px 13px; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 8px; color: #e8e8e8; outline: none; transition: border-color 0.15s; }
+    .input:focus { border-color: #F5C518; }
+    .select { padding: 9px 13px; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 8px; color: #e8e8e8; outline: none; cursor: pointer; }
+    .select:focus { border-color: #F5C518; }
+    .btn-gold { background: #F5C518; color: #000; border: none; padding: 9px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .btn-gold:hover { opacity: 0.88; }
+    .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost { background: transparent; border: 1px solid #2a2a2a; color: #888; padding: 9px 16px; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+    .btn-ghost:hover { border-color: #444; color: #ccc; }
+    .tag { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ─── FIREBASE INIT ────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyA9Oq5jOw4TCxmWQn3hcSf-Zd8QvWQ4Mj8",
+  authDomain: "growguru-hub.firebaseapp.com",
+  projectId: "growguru-hub",
+  storageBucket: "growguru-hub.firebasestorage.app",
+  messagingSenderId: "928801251635",
+  appId: "1:928801251635:web:5b22c70985ba11c653de46"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ─── CONSTANTS ────────────────────────────────────────────────
+const GOLD = '#F5C518';
+const PILLARS = ['Content', 'Business Ops', 'Training', 'Daily Publishing'];
+const CHANNELS = ['GrowGuru Kannada — YouTube', 'GrowGuru English — YouTube', 'GrowGuru Reels — Instagram', 'Hashnode'];
+const P_STAGES = ['Idea', 'Script', 'Record', 'Edit', 'Review', 'Published'];
+const D_STAGES = ['Lead', 'Negotiation', 'Confirmed', 'Script Approval', 'Live', 'Invoiced', 'Paid'];
+const P_COLORS = { P1: '#ff6b6b', P2: '#F5C518', P3: '#4ade80' };
+const D_COLORS = { Lead: '#8888ff', Negotiation: '#f97316', Confirmed: '#38bdf8', 'Script Approval': '#a78bfa', Live: '#4ade80', Invoiced: '#F5C518', Paid: '#4ade80' };
+
+const todayStr = () => new Date().toISOString().split('T')[0];
+const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+const fmtDateFull = () => new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+// ─── DISCORD ──────────────────────────────────────────────────
+async function notify(channel, msg) {
+  try {
+    const doc = await db.collection('settings').doc('webhooks').get();
+    if (!doc.exists) return;
+    const url = doc.data()[channel];
+    if (!url) return;
+    await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: msg }) });
+  } catch (_) {}
+}
+
+// ─── ROOT APP ─────────────────────────────────────────────────
+function App() {
+  const [user, setUser] = useState(undefined);
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    return auth.onAuthStateChanged(async u => {
+      if (u) {
+        const snap = await db.collection('users').doc(u.uid).get();
+        if (snap.exists) {
+          setProfile(snap.data());
+        } else {
+          const all = await db.collection('users').get();
+          const isAdmin = all.empty;
+          const p = { name: u.email.split('@')[0], email: u.email, role: isAdmin ? 'admin' : 'member', createdAt: todayStr() };
+          await db.collection('users').doc(u.uid).set(p);
+          setProfile(p);
+        }
+        setUser(u);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+    });
+  }, []);
+
+  if (user === undefined) return <Splash />;
+  if (!user) return <Login />;
+  return <Dashboard user={user} profile={profile} />;
+}
+
+function Splash() {
+  return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+      <div style={{ fontSize: 26, fontWeight: 800, color: GOLD, letterSpacing: '-0.5px' }}>GrowGuru Hub</div>
+      <div style={{ width: 32, height: 2, background: '#222', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ height: '100%', background: GOLD, animation: 'slideIn 1s ease infinite', width: '60%' }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── LOGIN ────────────────────────────────────────────────────
+function Login() {
+  const [email, setEmail] = useState('');
+  const [pwd, setPwd] = useState('');
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async e => {
+    e.preventDefault();
+    setLoading(true); setErr('');
+    try { await auth.signInWithEmailAndPassword(email, pwd); }
+    catch (_) { setErr('Incorrect email or password.'); setLoading(false); }
+  };
+
+  return (
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div className="fade" style={{ width: '100%', maxWidth: 360, padding: '40px 32px', background: '#141414', border: '1px solid #222', borderRadius: 16 }}>
+        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: GOLD, letterSpacing: '-0.5px' }}>GrowGuru Hub</div>
+          <div style={{ color: '#555', fontSize: 12, marginTop: 6, letterSpacing: 0.5 }}>ACTIVITY MANAGEMENT SYSTEM</div>
+        </div>
+        <form onSubmit={submit}>
+          <div style={{ marginBottom: 12 }}>
+            <input className="input" type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} required />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <input className="input" type="password" placeholder="Password" value={pwd} onChange={e => setPwd(e.target.value)} required />
+          </div>
+          {err && <div style={{ color: '#ff6b6b', fontSize: 12, marginBottom: 12 }}>{err}</div>}
+          <button className="btn-gold" type="submit" disabled={loading} style={{ width: '100%', padding: '11px' }}>
+            {loading ? 'Signing in…' : 'Sign In'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────
+function Dashboard({ user, profile }) {
+  const [tab, setTab] = useState('today');
+  const isAdmin = profile?.role === 'admin';
+  const tabs = [
+    { id: 'today', icon: '🎯', label: 'Today' },
+    { id: 'pipeline', icon: '🎬', label: 'Pipeline' },
+    { id: 'deals', icon: '💼', label: 'Deals' },
+    { id: 'ideas', icon: '💡', label: 'Ideas' },
+    ...(isAdmin ? [{ id: 'settings', icon: '⚙️', label: 'Settings' }] : []),
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {/* Header */}
+      <header style={{ height: 52, background: '#0f0f0f', borderBottom: '1px solid #1e1e1e', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', flexShrink: 0 }}>
+        <span style={{ fontWeight: 800, fontSize: 17, color: GOLD, letterSpacing: '-0.3px' }}>GrowGuru Hub</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: '#555', fontSize: 12 }}>{profile?.name || user.email}</span>
+          {isAdmin && <span className="tag" style={{ background: `${GOLD}22`, color: GOLD, fontSize: 10, letterSpacing: 0.5 }}>ADMIN</span>}
+          <button className="btn-ghost" onClick={() => auth.signOut()} style={{ padding: '4px 12px', fontSize: 12 }}>Sign out</button>
+        </div>
+      </header>
+
+      {/* Tab Nav */}
+      <nav style={{ background: '#0f0f0f', borderBottom: '1px solid #1a1a1a', display: 'flex', padding: '0 16px', flexShrink: 0 }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            padding: '10px 14px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13,
+            color: tab === t.id ? GOLD : '#555', fontWeight: tab === t.id ? 600 : 400,
+            borderBottom: tab === t.id ? `2px solid ${GOLD}` : '2px solid transparent',
+            transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <span>{t.icon}</span><span>{t.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {/* Content */}
+      <main style={{ flex: 1, padding: '24px 20px', maxWidth: 960, width: '100%', margin: '0 auto' }}>
+        <div className="fade" key={tab}>
+          {tab === 'today'    && <TodayTab />}
+          {tab === 'pipeline' && <PipelineTab />}
+          {tab === 'deals'    && <DealsTab />}
+          {tab === 'ideas'    && <IdeasTab />}
+          {tab === 'settings' && isAdmin && <SettingsTab />}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ─── TODAY ────────────────────────────────────────────────────
+function TodayTab() {
+  const [tasks, setTasks] = useState([]);
+  const [form, setForm] = useState({ title: '', pillar: 'Content', priority: 'P1', notes: '' });
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    return db.collection('tasks').where('date', '==', todayStr()).onSnapshot(snap => {
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      data.sort((a, b) => a.priority.localeCompare(b.priority));
+      setTasks(data);
+    });
+  }, []);
+
+  const add = async () => {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    await db.collection('tasks').add({ ...form, date: todayStr(), done: false, createdAt: new Date().toISOString() });
+    notify('content', `📋 New task: **${form.title}** · ${form.priority} · ${form.pillar}`);
+    setForm({ title: '', pillar: 'Content', priority: 'P1', notes: '' });
+    setAdding(false);
+    setSaving(false);
+  };
+
+  const toggle = id => db.collection('tasks').doc(id).update({ done: !tasks.find(t => t.id === id)?.done });
+  const del = id => db.collection('tasks').doc(id).delete();
+
+  const groups = { P1: [], P2: [], P3: [] };
+  tasks.forEach(t => groups[t.priority]?.push(t));
+  const done = tasks.filter(t => t.done).length;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Today's Focus</h1>
+          <div style={{ color: '#555', fontSize: 13 }}>
+            {fmtDateFull()}
+            {tasks.length > 0 && <span style={{ marginLeft: 10, color: done === tasks.length && tasks.length > 0 ? '#4ade80' : GOLD }}>{done}/{tasks.length} done</span>}
+          </div>
+        </div>
+        <button className="btn-gold" onClick={() => setAdding(v => !v)} style={{ fontSize: 13 }}>+ Add Task</button>
+      </div>
+
+      {/* Priority legend */}
+      <div style={{ display: 'flex', gap: 20, padding: '8px 14px', background: '#111', borderRadius: 8, marginBottom: 20, fontSize: 12, color: '#666' }}>
+        <span><span className="dot" style={{ background: '#ff6b6b' }} />P1 — Must Do</span>
+        <span><span className="dot" style={{ background: GOLD }} />P2 — Should Do</span>
+        <span><span className="dot" style={{ background: '#4ade80' }} />P3 — If Time</span>
+      </div>
+
+      {adding && (
+        <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: '#F5C51844' }}>
+          <input className="input" placeholder="Task title…" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
+            style={{ marginBottom: 10 }} autoFocus onKeyDown={e => e.key === 'Enter' && add()} />
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <select className="select" value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={{ flex: 1 }}>
+              <option>P1</option><option>P2</option><option>P3</option>
+            </select>
+            <select className="select" value={form.pillar} onChange={e => setForm({ ...form, pillar: e.target.value })} style={{ flex: 2 }}>
+              {PILLARS.map(p => <option key={p}>{p}</option>)}
+            </select>
+          </div>
+          <input className="input" placeholder="Notes (optional)" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ marginBottom: 12 }} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Saving…' : 'Add Task'}</button>
+            <button className="btn-ghost" onClick={() => setAdding(false)} style={{ fontSize: 13 }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {tasks.length === 0 && !adding && <Empty icon="🎯" text="No tasks yet. Add something to focus on." />}
+
+      {['P1', 'P2', 'P3'].map(p => groups[p].length > 0 && (
+        <div key={p} style={{ marginBottom: 22 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: P_COLORS[p], marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1.2, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="dot" style={{ background: P_COLORS[p] }} />{p} · {groups[p].filter(t => t.done).length}/{groups[p].length}
+          </div>
+          {groups[p].map(t => (
+            <div key={t.id} className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 14px', marginBottom: 7, opacity: t.done ? 0.45 : 1, transition: 'opacity 0.2s' }}>
+              <button onClick={() => toggle(t.id)} style={{
+                width: 18, height: 18, borderRadius: '50%', border: `2px solid ${t.done ? '#4ade80' : P_COLORS[t.priority]}`,
+                background: t.done ? '#4ade80' : 'transparent', cursor: 'pointer', flexShrink: 0, marginTop: 2,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s'
+              }}>
+                {t.done && <svg width="9" height="7" viewBox="0 0 9 7"><polyline points="1,3.5 3.5,6 8,1" fill="none" stroke="#000" strokeWidth="1.8" strokeLinecap="round" /></svg>}
+              </button>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, color: t.done ? '#444' : '#ddd', textDecoration: t.done ? 'line-through' : 'none', marginBottom: t.notes ? 4 : 0 }}>{t.title}</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span className="tag" style={{ background: '#1e1e1e', color: '#666' }}>{t.pillar}</span>
+                  {t.notes && <span style={{ fontSize: 12, color: '#555' }}>{t.notes}</span>}
+                </div>
+              </div>
+              <button onClick={() => del(t.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── PIPELINE ─────────────────────────────────────────────────
+function PipelineTab() {
+  const [items, setItems] = useState([]);
+  const [form, setForm] = useState({ title: '', stage: 'Idea', channel: CHANNELS[0], brandDeal: false, brandName: '', publishDate: '', notes: '' });
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    return db.collection('pipeline').orderBy('createdAt', 'desc').onSnapshot(snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  const add = async () => {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    await db.collection('pipeline').add({ ...form, createdAt: new Date().toISOString() });
+    notify('content', `🎬 Pipeline: **${form.title}** added · Stage: ${form.stage}`);
+    setForm({ title: '', stage: 'Idea', channel: CHANNELS[0], brandDeal: false, brandName: '', publishDate: '', notes: '' });
+    setAdding(false);
+    setSaving(false);
+  };
+
+  const updateStage = (id, stage) => db.collection('pipeline').doc(id).update({ stage });
+  const del = id => db.collection('pipeline').doc(id).delete();
+
+  const stageCount = s => items.filter(i => i.stage === s).length;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Content Pipeline</h1>
+          <div style={{ color: '#555', fontSize: 13 }}>{items.length} videos tracked</div>
+        </div>
+        <button className="btn-gold" onClick={() => setAdding(v => !v)} style={{ fontSize: 13 }}>+ Add Video</button>
+      </div>
+
+      {/* Stage counts */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        {P_STAGES.map(s => (
+          <div key={s} className="tag" style={{ background: '#141414', border: '1px solid #222', color: stageCount(s) > 0 ? '#ccc' : '#444', padding: '4px 12px', borderRadius: 20, fontSize: 12 }}>
+            {s} {stageCount(s) > 0 && <span style={{ color: GOLD, marginLeft: 4, fontWeight: 700 }}>{stageCount(s)}</span>}
+          </div>
+        ))}
+      </div>
+
+      {adding && (
+        <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: '#F5C51844' }}>
+          <input className="input" placeholder="Video title…" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={{ marginBottom: 10 }} autoFocus />
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <select className="select" value={form.stage} onChange={e => setForm({ ...form, stage: e.target.value })} style={{ flex: 1 }}>
+              {P_STAGES.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <select className="select" value={form.channel} onChange={e => setForm({ ...form, channel: e.target.value })} style={{ flex: 2 }}>
+              {CHANNELS.map(c => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#888', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={form.brandDeal} onChange={e => setForm({ ...form, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
+              Brand Deal
+            </label>
+            {form.brandDeal && <input className="input" placeholder="Brand name" value={form.brandName} onChange={e => setForm({ ...form, brandName: e.target.value })} style={{ flex: 1 }} />}
+            <input className="input" type="date" value={form.publishDate} onChange={e => setForm({ ...form, publishDate: e.target.value })} style={{ flex: 1 }} />
+          </div>
+          <input className="input" placeholder="Notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ marginBottom: 12 }} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Saving…' : 'Add'}</button>
+            <button className="btn-ghost" onClick={() => setAdding(false)} style={{ fontSize: 13 }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {items.length === 0 && !adding && <Empty icon="🎬" text="Pipeline is empty. Add your first video." />}
+
+      {P_STAGES.map(stage => {
+        const grp = items.filter(i => i.stage === stage);
+        if (!grp.length) return null;
+        return (
+          <div key={stage} style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#666', marginBottom: 9, textTransform: 'uppercase', letterSpacing: 1.2 }}>{stage} · {grp.length}</div>
+            {grp.map(item => (
+              <div key={item.id} className="card" style={{ padding: '13px 15px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: '#ddd', marginBottom: 6 }}>{item.title}</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span className="tag" style={{ background: '#1e1e1e', color: '#666' }}>{item.channel}</span>
+                    {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>💼 {item.brandName || 'Brand Deal'}</span>}
+                    {item.publishDate && <span style={{ fontSize: 11, color: '#666' }}>📅 {fmtDate(item.publishDate)}</span>}
+                    {item.notes && <span style={{ fontSize: 12, color: '#555' }}>{item.notes}</span>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                  <select className="select" value={item.stage} onChange={e => updateStage(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
+                    {P_STAGES.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                  <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── DEALS ────────────────────────────────────────────────────
+function DealsTab() {
+  const [deals, setDeals] = useState([]);
+  const [form, setForm] = useState({ brand: '', stage: 'Lead', contact: '', platform: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', notes: '' });
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    return db.collection('deals').orderBy('createdAt', 'desc').onSnapshot(snap => setDeals(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  const add = async () => {
+    if (!form.brand.trim()) return;
+    setSaving(true);
+    await db.collection('deals').add({ ...form, createdAt: new Date().toISOString() });
+    notify('brand', `💼 New deal: **${form.brand}** · Stage: ${form.stage}`);
+    setForm({ brand: '', stage: 'Lead', contact: '', platform: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', notes: '' });
+    setAdding(false);
+    setSaving(false);
+  };
+
+  const updateStage = async (id, stage) => {
+    await db.collection('deals').doc(id).update({ stage });
+    const d = deals.find(x => x.id === id);
+    notify('brand', `💼 **${d?.brand}** → ${stage}`);
+  };
+
+  const del = id => db.collection('deals').doc(id).delete();
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Brand Deals</h1>
+          <div style={{ color: '#555', fontSize: 13 }}>{deals.length} deals tracked</div>
+        </div>
+        <button className="btn-gold" onClick={() => setAdding(v => !v)} style={{ fontSize: 13 }}>+ Add Deal</button>
+      </div>
+
+      {adding && (
+        <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: '#F5C51844' }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <input className="input" placeholder="Brand name *" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} autoFocus />
+            <input className="input" placeholder="Contact" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} />
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <select className="select" value={form.stage} onChange={e => setForm({ ...form, stage: e.target.value })} style={{ flex: 1 }}>
+              {D_STAGES.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <input className="input" placeholder="Agency / Platform" value={form.platform} onChange={e => setForm({ ...form, platform: e.target.value })} style={{ flex: 1 }} />
+            <input className="input" placeholder="Rate (₹)" value={form.agreedRate} onChange={e => setForm({ ...form, agreedRate: e.target.value })} style={{ flex: 1 }} />
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <input className="input" placeholder="Deliverables" value={form.deliverables} onChange={e => setForm({ ...form, deliverables: e.target.value })} style={{ flex: 2 }} />
+            <input className="input" type="date" value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} style={{ flex: 1 }} />
+          </div>
+          <input className="input" placeholder="Notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ marginBottom: 12 }} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Saving…' : 'Add Deal'}</button>
+            <button className="btn-ghost" onClick={() => setAdding(false)} style={{ fontSize: 13 }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {deals.length === 0 && !adding && <Empty icon="💼" text="No brand deals yet. Add your first one." />}
+
+      <div style={{ display: 'grid', gap: 10 }}>
+        {deals.map(deal => {
+          const sc = D_COLORS[deal.stage] || '#888';
+          return (
+            <div key={deal.id} className="card" style={{ padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{deal.brand}</span>
+                    <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11, fontWeight: 600 }}>{deal.stage}</span>
+                    {deal.agreedRate && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 600 }}>₹{deal.agreedRate}</span>}
+                    {deal.paymentStatus === 'Paid' && <span className="tag" style={{ background: '#4ade8018', color: '#4ade80', fontSize: 10 }}>PAID ✓</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#666' }}>
+                    {deal.contact && <span>👤 {deal.contact}</span>}
+                    {deal.platform && <span>🔗 {deal.platform}</span>}
+                    {deal.deliverables && <span>📦 {deal.deliverables}</span>}
+                    {deal.deadline && <span>⏰ {fmtDate(deal.deadline)}</span>}
+                  </div>
+                  {deal.notes && <div style={{ fontSize: 12, color: '#555', marginTop: 5 }}>{deal.notes}</div>}
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                  <select className="select" value={deal.stage} onChange={e => updateStage(deal.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
+                    {D_STAGES.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                  <button onClick={() => del(deal.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── IDEAS ────────────────────────────────────────────────────
+function IdeasTab() {
+  const [ideas, setIdeas] = useState([]);
+  const [text, setText] = useState('');
+  const [cat, setCat] = useState('Content');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    return db.collection('ideas').orderBy('createdAt', 'desc').onSnapshot(snap => setIdeas(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  const add = async () => {
+    if (!text.trim()) return;
+    setSaving(true);
+    await db.collection('ideas').add({ text, category: cat, createdAt: new Date().toISOString() });
+    setText('');
+    setSaving(false);
+  };
+
+  const del = id => db.collection('ideas').doc(id).delete();
+
+  return (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Idea Swipe File</h1>
+        <div style={{ color: '#555', fontSize: 13 }}>{ideas.length} ideas captured</div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+        <input className="input" placeholder="Capture an idea… (Enter to save)" value={text} onChange={e => setText(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && add()} style={{ flex: 1 }} />
+        <select className="select" value={cat} onChange={e => setCat(e.target.value)}>
+          {PILLARS.map(p => <option key={p}>{p}</option>)}
+        </select>
+        <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? '…' : 'Save'}</button>
+      </div>
+
+      {ideas.length === 0 && <Empty icon="💡" text="No ideas yet. Start capturing them here." />}
+
+      <div style={{ display: 'grid', gap: 8 }}>
+        {ideas.map(idea => (
+          <div key={idea.id} className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 14px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, color: '#ddd', marginBottom: 4 }}>{idea.text}</div>
+              <div style={{ fontSize: 11, color: '#555' }}>
+                <span className="tag" style={{ background: '#1e1e1e', color: '#666', marginRight: 8 }}>{idea.category}</span>
+                {new Date(idea.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+              </div>
+            </div>
+            <button onClick={() => del(idea.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1, marginTop: 2 }}>×</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── SETTINGS ─────────────────────────────────────────────────
+function SettingsTab() {
+  const [users, setUsers] = useState([]);
+  const [webhooks, setWebhooks] = useState({ content: '', brand: '', training: '' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '' });
+  const [creating, setCreating] = useState(false);
+  const [userErr, setUserErr] = useState('');
+  const [whSaved, setWhSaved] = useState(false);
+  const [testMsg, setTestMsg] = useState('');
+
+  useEffect(() => {
+    db.collection('users').get().then(s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    db.collection('settings').doc('webhooks').get().then(d => { if (d.exists) setWebhooks(d.data()); });
+  }, []);
+
+  const saveWebhooks = async () => {
+    await db.collection('settings').doc('webhooks').set(webhooks);
+    setWhSaved(true);
+    setTimeout(() => setWhSaved(false), 2500);
+  };
+
+  const testWebhook = async (channel) => {
+    setTestMsg('Sending…');
+    await notify(channel, `✅ Test from GrowGuru Hub — ${channel} channel webhook is working!`);
+    setTestMsg('Sent ✓');
+    setTimeout(() => setTestMsg(''), 3000);
+  };
+
+  const createUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.password) { setUserErr('All fields required.'); return; }
+    if (newUser.password.length < 6) { setUserErr('Password must be at least 6 characters.'); return; }
+    setCreating(true);
+    setUserErr('');
+    try {
+      const appName = 'temp_' + Date.now();
+      const sec = firebase.initializeApp(firebase.app().options, appName);
+      const cred = await sec.auth().createUserWithEmailAndPassword(newUser.email, newUser.password);
+      await db.collection('users').doc(cred.user.uid).set({ name: newUser.name, email: newUser.email, role: 'member', createdAt: todayStr() });
+      await sec.auth().signOut();
+      sec.delete();
+      setUsers(prev => [...prev, { id: cred.user.uid, name: newUser.name, email: newUser.email, role: 'member' }]);
+      setNewUser({ name: '', email: '', password: '' });
+    } catch (e) {
+      setUserErr(e.message);
+    }
+    setCreating(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <h1 style={{ fontSize: 20, fontWeight: 700 }}>Settings</h1>
+
+      {/* Discord */}
+      <div className="card" style={{ padding: 20 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>Discord Webhooks</h2>
+        <p style={{ fontSize: 12, color: '#555', marginBottom: 18 }}>Paste webhook URLs for each pillar channel. Notifications will route automatically.</p>
+        {[['content', '🎬 Content Channel'], ['brand', '💼 Brand Channel'], ['training', '🎓 Training Channel']].map(([key, label]) => (
+          <div key={key} style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 12, color: '#888', marginBottom: 5 }}>{label}</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input className="input" type="url" placeholder="https://discord.com/api/webhooks/…" value={webhooks[key] || ''}
+                onChange={e => setWebhooks({ ...webhooks, [key]: e.target.value })} style={{ flex: 1 }} />
+              <button className="btn-ghost" onClick={() => testWebhook(key)} style={{ fontSize: 12, whiteSpace: 'nowrap' }}>Test</button>
+            </div>
+          </div>
+        ))}
+        {testMsg && <div style={{ fontSize: 12, color: '#4ade80', marginBottom: 10 }}>{testMsg}</div>}
+        <button className="btn-gold" onClick={saveWebhooks} style={{ fontSize: 13 }}>{whSaved ? '✓ Saved' : 'Save Webhooks'}</button>
+      </div>
+
+      {/* Users */}
+      <div className="card" style={{ padding: 20 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: '#ddd' }}>Team Members</h2>
+        {users.map(u => (
+          <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #1c1c1c' }}>
+            <div>
+              <div style={{ fontSize: 14, color: '#ddd' }}>{u.name}</div>
+              <div style={{ fontSize: 12, color: '#555' }}>{u.email}</div>
+            </div>
+            <span className="tag" style={{ background: u.role === 'admin' ? `${GOLD}18` : '#1e1e1e', color: u.role === 'admin' ? GOLD : '#666', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' }}>{u.role}</span>
+          </div>
+        ))}
+
+        <h3 style={{ fontSize: 13, fontWeight: 600, color: '#666', margin: '20px 0 12px' }}>Add New Member</h3>
+        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr 1fr', marginBottom: 10 }}>
+          <input className="input" placeholder="Name" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
+          <input className="input" placeholder="Email" type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
+          <input className="input" placeholder="Password (min 6 chars)" type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+        </div>
+        {userErr && <div style={{ fontSize: 12, color: '#ff6b6b', marginBottom: 10 }}>{userErr}</div>}
+        <button className="btn-gold" onClick={createUser} disabled={creating} style={{ fontSize: 13 }}>{creating ? 'Creating…' : 'Create Member'}</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── SHARED COMPONENTS ────────────────────────────────────────
+function Empty({ icon, text }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '64px 20px', color: '#444' }}>
+      <div style={{ fontSize: 36, marginBottom: 12 }}>{icon}</div>
+      <div style={{ fontSize: 14 }}>{text}</div>
+    </div>
+  );
+}
+
+// ─── RENDER ───────────────────────────────────────────────────
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
