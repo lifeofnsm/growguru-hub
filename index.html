@@ -231,7 +231,7 @@ function TodayTab() {
     if (!form.title.trim()) return;
     setSaving(true);
     await db.collection('tasks').add({ ...form, date: todayStr(), done: false, createdAt: new Date().toISOString() });
-    notify('content', `ð New task: **${form.title}** Â· ${form.priority} Â· ${form.pillar}`);
+    notify('content', `ð New task: **${form.title}** Â�- ${form.priority} Â�- ${form.pillar}`);
     setForm({ title: '', pillar: 'Content', priority: 'P1', notes: '' });
     setAdding(false);
     setSaving(false);
@@ -289,7 +289,7 @@ function TodayTab() {
       {['P1', 'P2', 'P3'].map(p => groups[p].length > 0 && (
         <div key={p} style={{ marginBottom: 22 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: P_COLORS[p], marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1.2, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="dot" style={{ background: P_COLORS[p] }} />{p} Â· {groups[p].filter(t => t.done).length}/{groups[p].length}
+            <span className="dot" style={{ background: P_COLORS[p] }} />{p} Â�- {groups[p].filter(t => t.done).length}/{groups[p].length}
           </div>
           {groups[p].map(t => (
             <div key={t.id} className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 14px', marginBottom: 7, opacity: t.done ? 0.45 : 1, transition: 'opacity 0.2s' }}>
@@ -331,7 +331,7 @@ function PipelineTab() {
     if (!form.title.trim()) return;
     setSaving(true);
     await db.collection('pipeline').add({ ...form, createdAt: new Date().toISOString() });
-    notify('content', `ð¬ Pipeline: **${form.title}** added Â· Stage: ${form.stage}`);
+    notify('content', `ð¬ Pipeline: **${form.title}** added Â�- Stage: ${form.stage}`);
     setForm({ title: '', stage: 'Idea', channel: CHANNELS[0], brandDeal: false, brandName: '', publishDate: '', notes: '' });
     setAdding(false);
     setSaving(false);
@@ -395,7 +395,7 @@ function PipelineTab() {
         if (!grp.length) return null;
         return (
           <div key={stage} style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#666', marginBottom: 9, textTransform: 'uppercase', letterSpacing: 1.2 }}>{stage} Â· {grp.length}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#666', marginBottom: 9, textTransform: 'uppercase', letterSpacing: 1.2 }}>{stage} Â�- {grp.length}</div>
             {grp.map(item => (
               <div key={item.id} className="card" style={{ padding: '13px 15px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -437,7 +437,7 @@ function DealsTab() {
     if (!form.brand.trim()) return;
     setSaving(true);
     await db.collection('deals').add({ ...form, createdAt: new Date().toISOString() });
-    notify('brand', `ð¼ New deal: **${form.brand}** Â· Stage: ${form.stage}`);
+    notify('brand', `ð¼ New deal: **${form.brand}** Â�- Stage: ${form.stage}`);
     setForm({ brand: '', stage: 'Lead', contact: '', platform: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', notes: '' });
     setAdding(false);
     setSaving(false);
