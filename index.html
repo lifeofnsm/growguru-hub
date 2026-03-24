@@ -164,12 +164,14 @@ function Login() {
 function Dashboard({ user, profile }) {
   const [tab, setTab] = useState('today');
   const isAdmin = profile?.role === 'admin';
+  const isPartner = profile?.role === 'partner';
+  const canSeeSettings = isAdmin || isPartner;
   const tabs = [
     { id: 'today', icon: '', label: 'Today' },
     { id: 'pipeline', icon: '', label: 'Pipeline' },
     { id: 'deals', icon: '', label: 'Deals' },
     { id: 'ideas', icon: '', label: 'Ideas' },
-    ...(isAdmin ? [{ id: 'settings', icon: '', label: 'Settings' }] : []),
+    ...(canSeeSettings ? [{ id: 'settings', icon: '', label: 'Settings' }] : []),
   ];
 
   return (
@@ -180,6 +182,7 @@ function Dashboard({ user, profile }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ color: '#555', fontSize: 12 }}>{profile?.name || user.email}</span>
           {isAdmin && <span className="tag" style={{ background: `${GOLD}22`, color: GOLD, fontSize: 10, letterSpacing: 0.5 }}>ADMIN</span>}
+          {isPartner && <span className="tag" style={{ background: '#38bdf822', color: '#38bdf8', fontSize: 10, letterSpacing: 0.5 }}>PARTNER</span>}
           <button className="btn-ghost" onClick={() => auth.signOut()} style={{ padding: '4px 12px', fontSize: 12 }}>Sign out</button>
         </div>
       </header>
@@ -205,7 +208,7 @@ function Dashboard({ user, profile }) {
           {tab === 'pipeline' && <PipelineTab />}
           {tab === 'deals'    && <DealsTab />}
           {tab === 'ideas'    && <IdeasTab />}
-          {tab === 'settings' && isAdmin && <SettingsTab />}
+          {tab === 'settings' && canSeeSettings && <SettingsTab isAdmin={isAdmin} />}
         </div>
       </main>
     </div>
@@ -582,14 +585,15 @@ function IdeasTab() {
 }
 
 // --- SETTINGS -------------------------------------------------
-function SettingsTab() {
+function SettingsTab({ isAdmin }) {
   const [users, setUsers] = useState([]);
   const [webhooks, setWebhooks] = useState({ content: '', brand: '', training: '' });
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'member' });
   const [creating, setCreating] = useState(false);
   const [userErr, setUserErr] = useState('');
   const [whSaved, setWhSaved] = useState(false);
   const [testMsg, setTestMsg] = useState('');
+  const [changingRole, setChangingRole] = useState({});
 
   useEffect(() => {
     db.collection('users').get().then(s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -609,6 +613,13 @@ function SettingsTab() {
     setTimeout(() => setTestMsg(''), 3000);
   };
 
+  const changeRole = async (uid, newRole) => {
+    setChangingRole(prev => ({ ...prev, [uid]: true }));
+    await db.collection('users').doc(uid).update({ role: newRole });
+    setUsers(prev => prev.map(u => u.id === uid ? { ...u, role: newRole } : u));
+    setChangingRole(prev => ({ ...prev, [uid]: false }));
+  };
+
   const createUser = async () => {
     if (!newUser.name || !newUser.email || !newUser.password) { setUserErr('All fields required.'); return; }
     if (newUser.password.length < 6) { setUserErr('Password must be at least 6 characters.'); return; }
@@ -618,11 +629,11 @@ function SettingsTab() {
       const appName = 'temp_' + Date.now();
       const sec = firebase.initializeApp(firebase.app().options, appName);
       const cred = await sec.auth().createUserWithEmailAndPassword(newUser.email, newUser.password);
-      await db.collection('users').doc(cred.user.uid).set({ name: newUser.name, email: newUser.email, role: 'member', createdAt: todayStr() });
+      await db.collection('users').doc(cred.user.uid).set({ name: newUser.name, email: newUser.email, role: newUser.role, createdAt: todayStr() });
       await sec.auth().signOut();
       sec.delete();
-      setUsers(prev => [...prev, { id: cred.user.uid, name: newUser.name, email: newUser.email, role: 'member' }]);
-      setNewUser({ name: '', email: '', password: '' });
+      setUsers(prev => [...prev, { id: cred.user.uid, name: newUser.name, email: newUser.email, role: newUser.role }]);
+      setNewUser({ name: '', email: '', password: '', role: 'member' });
     } catch (e) {
       setUserErr(e.message);
     }
@@ -654,21 +665,39 @@ function SettingsTab() {
       {/* Users */}
       <div className="card" style={{ padding: 20 }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: '#ddd' }}>Team Members</h2>
-        {users.map(u => (
-          <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #1c1c1c' }}>
-            <div>
-              <div style={{ fontSize: 14, color: '#ddd' }}>{u.name}</div>
-              <div style={{ fontSize: 12, color: '#555' }}>{u.email}</div>
+        {users.map(u => {
+          const roleColor = u.role === 'admin' ? GOLD : u.role === 'partner' ? '#38bdf8' : '#666';
+          const roleBg = u.role === 'admin' ? `${GOLD}18` : u.role === 'partner' ? '#38bdf818' : '#1e1e1e';
+          return (
+            <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #1c1c1c' }}>
+              <div>
+                <div style={{ fontSize: 14, color: '#ddd' }}>{u.name}</div>
+                <div style={{ fontSize: 12, color: '#555' }}>{u.email}</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="tag" style={{ background: roleBg, color: roleColor, fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' }}>{u.role}</span>
+                {isAdmin && u.role !== 'admin' && (
+                  <select className="select" value={u.role} disabled={changingRole[u.id]}
+                    onChange={e => changeRole(u.id, e.target.value)}
+                    style={{ fontSize: 11, padding: '3px 8px', color: '#888' }}>
+                    <option value="member">Member</option>
+                    <option value="partner">Partner</option>
+                  </select>
+                )}
+              </div>
             </div>
-            <span className="tag" style={{ background: u.role === 'admin' ? `${GOLD}18` : '#1e1e1e', color: u.role === 'admin' ? GOLD : '#666', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' }}>{u.role}</span>
-          </div>
-        ))}
+          );
+        })}
 
         <h3 style={{ fontSize: 13, fontWeight: 600, color: '#666', margin: '20px 0 12px' }}>Add New Member</h3>
-        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr 1fr', marginBottom: 10 }}>
+        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr 1fr 1fr', marginBottom: 10 }}>
           <input className="input" placeholder="Name" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
           <input className="input" placeholder="Email" type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
           <input className="input" placeholder="Password (min 6 chars)" type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+          <select className="select" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })} style={{ fontSize: 13 }}>
+            <option value="member">Member — Basic Access</option>
+            <option value="partner">Partner — Limited Admin</option>
+          </select>
         </div>
         {userErr && <div style={{ fontSize: 12, color: '#ff6b6b', marginBottom: 10 }}>{userErr}</div>}
         <button className="btn-gold" onClick={createUser} disabled={creating} style={{ fontSize: 13 }}>{creating ? 'Creating...' : 'Create Member'}</button>
