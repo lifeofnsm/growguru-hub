@@ -23,20 +23,20 @@
       --t-bright: #dddddd; --t-strong: #cccccc; --t-label: #aaaaaa; --t-heading: #eeeeee;
       --ph: #444444; --sb-track: #111111; --sb-thumb: #2a2a2a; --row-hover: rgba(255,255,255,0.031);
       --sidebar-bg: #0a0a0a; --sidebar-border: #1a1a1a; --mob-bg: #0a0a0a; --mob-border: #1e1e1e;
-      --sel-opt: #1a1a1a;
+      --sel-opt: #1a1a1a; --bg-today: #1a1800;
       --accent: #F5C518; --accent-text: #000000;
       --a08: #F5C51808; --a12: #F5C51812; --a18: #F5C51818; --a20: #F5C51820;
       --a22: #F5C51822; --a28: #F5C51828; --a40: #F5C51840; --a44: #F5C51844; --a80: #F5C51880;
     }
     html.light {
-      --bg: #f0f4ff; --bg-card: #ffffff; --bg-sub: #f8fafc; --bg-deep: #edf2ff;
+      --bg: #f0f4ff; --bg-card: #ffffff; --bg-sub: #f5f7fa; --bg-deep: #edf2ff;
       --bg-input: #ffffff; --bg-login: #ffffff; --bg-shell: #f0f4ff;
-      --border: #e2e8f0; --border-soft: #edf2f7; --border-hover: #c4d0e4; --border-input: #cbd5e0;
-      --text: #1a202c; --t-muted: #64748b; --t-soft: #94a3b8; --t-faint: #94a3b8;
-      --t-bright: #334155; --t-strong: #475569; --t-label: #64748b; --t-heading: #1e293b;
+      --border: #d1d9e6; --border-soft: #e2e8f0; --border-hover: #b0bcd4; --border-input: #c4cfe0;
+      --text: #1a202c; --t-muted: #4a5568; --t-soft: #64748b; --t-faint: #94a3b8;
+      --t-bright: #1e293b; --t-strong: #334155; --t-label: #475569; --t-heading: #0f172a;
       --ph: #94a3b8; --sb-track: #e8edf5; --sb-thumb: #c0ccda; --row-hover: rgba(0,0,0,0.031);
-      --sidebar-bg: #ffffff; --sidebar-border: #e2e8f0; --mob-bg: #ffffff; --mob-border: #e2e8f0;
-      --sel-opt: #ffffff;
+      --sidebar-bg: #ffffff; --sidebar-border: #d1d9e6; --mob-bg: #ffffff; --mob-border: #e2e8f0;
+      --sel-opt: #ffffff; --bg-today: #fffbeb;
       --accent: #2563eb; --accent-text: #ffffff;
       --a08: #2563eb08; --a12: #2563eb12; --a18: #2563eb18; --a20: #2563eb20;
       --a22: #2563eb22; --a28: #2563eb28; --a40: #2563eb40; --a44: #2563eb44; --a80: #2563eb80;
@@ -55,6 +55,8 @@
     .card:hover { border-color: var(--border-hover); }
     .input { width: 100%; padding: 9px 13px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 8px; color: var(--text); outline: none; transition: border-color 0.15s; }
     .input:focus { border-color: var(--accent); }
+    input[type="date"], input[type="time"] { color-scheme: dark; }
+    html.light input[type="date"], html.light input[type="time"] { color-scheme: light; }
     .input[type="date"]::-webkit-calendar-picker-indicator,
     .input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; opacity: 0.7; }
     html.light .input[type="date"]::-webkit-calendar-picker-indicator,
@@ -221,7 +223,7 @@ function Splash() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
       <div style={{ fontSize: 26, fontWeight: 800, color: GOLD, letterSpacing: '-0.5px' }}>GrowGuru Hub</div>
-      <div style={{ width: 32, height: 2, background: '#222', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ width: 32, height: 2, background: 'var(--border-input)', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{ height: '100%', background: GOLD, animation: 'slideIn 1s ease infinite', width: '60%' }} />
       </div>
     </div>
@@ -391,13 +393,13 @@ function StatCard({ label, value, sub, color, onClick }) {
     <div className="card" onClick={onClick} style={{
       padding: '18px 20px', cursor: onClick ? 'pointer' : 'default', transition: 'border-color 0.15s',
     }}
-      onMouseEnter={e => { if (onClick) e.currentTarget.style.borderColor = '#383838'; }}
+      onMouseEnter={e => { if (onClick) e.currentTarget.style.borderColor = 'var(--border-hover)'; }}
       onMouseLeave={e => { if (onClick) e.currentTarget.style.borderColor = ''; }}
     >
       <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</div>
       <div style={{ fontSize: 30, fontWeight: 800, color, letterSpacing: '-1px', lineHeight: 1 }}>{value}</div>
       <div style={{ fontSize: 11, color: 'var(--t-muted)', marginTop: 6 }}>{sub}</div>
-      {onClick && <div style={{ fontSize: 10, color: '#444', marginTop: 8, letterSpacing: 0.5 }}>VIEW →</div>}
+      {onClick && <div style={{ fontSize: 10, color: 'var(--t-soft)', marginTop: 8, letterSpacing: 0.5 }}>VIEW →</div>}
     </div>
   );
 }
@@ -464,9 +466,9 @@ function OverviewTab({ onNavigate }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 16 }}>
         {/* Pipeline breakdown */}
         <div className="card" onClick={() => onNavigate('pipeline')} style={{ padding: 18, cursor: 'pointer' }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
+          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
           onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-label)', marginBottom: 16 }}>🎬 Pipeline by Stage <span style={{ fontSize: 10, color: '#444', marginLeft: 4 }}>VIEW →</span></div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-label)', marginBottom: 16 }}>🎬 Pipeline by Stage <span style={{ fontSize: 10, color: 'var(--t-soft)', marginLeft: 4 }}>VIEW →</span></div>
           {P_STAGES.map(s => {
             const cnt = data.pipeline.filter(p => p.stage === s).length;
             const pct = data.pipeline.length ? (cnt / data.pipeline.length) * 100 : 0;
@@ -474,7 +476,7 @@ function OverviewTab({ onNavigate }) {
               <div key={s} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
                   <span style={{ color: 'var(--t-muted)' }}>{s}</span>
-                  <span style={{ color: cnt > 0 ? '#ddd' : '#444', fontWeight: 600 }}>{cnt}</span>
+                  <span style={{ color: cnt > 0 ? 'var(--t-strong)' : 'var(--t-soft)', fontWeight: 600 }}>{cnt}</span>
                 </div>
                 <div style={{ height: 4, background: 'var(--bg-sub)', borderRadius: 4 }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: s === 'Published' ? '#4ade80' : GOLD, borderRadius: 4, transition: 'width 0.5s ease' }} />
@@ -486,9 +488,9 @@ function OverviewTab({ onNavigate }) {
 
         {/* Deals breakdown */}
         <div className="card" onClick={() => onNavigate('deals')} style={{ padding: 18, cursor: 'pointer' }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
+          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
           onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-label)', marginBottom: 16 }}>💼 Deals by Stage <span style={{ fontSize: 10, color: '#444', marginLeft: 4 }}>VIEW →</span></div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-label)', marginBottom: 16 }}>💼 Deals by Stage <span style={{ fontSize: 10, color: 'var(--t-soft)', marginLeft: 4 }}>VIEW →</span></div>
           {activeDeals.length === 0 && <div style={{ color: 'var(--t-soft)', fontSize: 12 }}>No active deals</div>}
           {D_STAGES.map(s => {
             const grp = data.deals.filter(d => d.stage === s);
@@ -506,7 +508,7 @@ function OverviewTab({ onNavigate }) {
         </div>
         {/* Trainings breakdown */}
         <div className="card" onClick={() => onNavigate('trainings')} style={{ padding: 18, cursor: 'pointer' }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
+          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
           onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-label)', marginBottom: 16 }}>📚 Trainings <span style={{ fontSize: 10, color: 'var(--t-soft)', marginLeft: 4 }}>VIEW →</span></div>
           {data.trainings.length === 0 && <div style={{ color: 'var(--t-soft)', fontSize: 12 }}>No trainings yet</div>}
@@ -734,8 +736,8 @@ function WeeklyTab() {
           return (
             <div key={day} className="card" style={{
               padding: 0,
-              borderColor: isToday ? GOLD + '99' : isPast && !hasContent ? '#1c1c1c' : 'var(--border)',
-              background: isToday ? '#1a1800' : isPast ? 'var(--bg-login)' : 'var(--bg-card)',
+              borderColor: isToday ? GOLD + '99' : isPast && !hasContent ? 'var(--border-soft)' : 'var(--border)',
+              background: isToday ? 'var(--bg-today)' : isPast ? 'var(--bg-login)' : 'var(--bg-card)',
               overflow: 'hidden',
             }}>
               {/* ── Day header row ── */}
@@ -747,7 +749,7 @@ function WeeklyTab() {
               }}>
                 {/* Day name + date */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 110 }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: isToday ? GOLD : isPast ? '#555' : '#bbb', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: isToday ? GOLD : isPast ? '#555' : 'var(--t-faint)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     {DAY_NAMES[idx]}
                   </span>
                   <span style={{ fontSize: 12, color: isToday ? GOLD + 'cc' : 'var(--t-faint)' }}>{dateLabel}</span>
@@ -780,13 +782,13 @@ function WeeklyTab() {
                 {/* Add task button (top-right) */}
                 {addingDay !== day && (
                   <button onClick={() => setAddingDay(day)} style={{
-                    background: 'none', border: `1px dashed ${isToday ? GOLD + '66' : '#333'}`,
+                    background: 'none', border: `1px dashed ${isToday ? GOLD + '66' : 'var(--border-input)'}`,
                     borderRadius: 5, color: isToday ? GOLD + 'aa' : 'var(--t-soft)',
                     cursor: 'pointer', fontSize: 12, padding: '3px 12px', flexShrink: 0,
                     transition: 'all 0.15s',
                   }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD + '99'; e.currentTarget.style.color = GOLD; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = isToday ? GOLD + '66' : '#333'; e.currentTarget.style.color = isToday ? GOLD + 'aa' : 'var(--t-soft)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = isToday ? GOLD + '66' : 'var(--border-input)'; e.currentTarget.style.color = isToday ? GOLD + 'aa' : 'var(--t-soft)'; }}
                   >+ Task</button>
                 )}
               </div>
@@ -846,7 +848,7 @@ function WeeklyTab() {
                         <span style={{ fontSize: 10, color: P_COLORS[t.priority], background: P_COLORS[t.priority] + '18', borderRadius: 3, padding: '1px 5px', flexShrink: 0 }}>{t.priority}</span>
                       )}
                       <button onClick={() => delTask(t.id)} style={{
-                        background: 'none', border: 'none', color: '#444', cursor: 'pointer',
+                        background: 'none', border: 'none', color: 'var(--t-soft)', cursor: 'pointer',
                         fontSize: 15, lineHeight: 1, padding: '0 2px', flexShrink: 0,
                       }}
                         onMouseEnter={e => e.target.style.color = '#ff6b6b'}
@@ -1034,7 +1036,7 @@ function TodayTab() {
       </div>
 
       {/* Priority legend */}
-      <div style={{ display: 'flex', gap: 20, padding: '8px 14px', background: '#111', borderRadius: 8, marginBottom: 20, fontSize: 12, color: 'var(--t-soft)' }}>
+      <div style={{ display: 'flex', gap: 20, padding: '8px 14px', background: 'var(--bg-sub)', borderRadius: 8, marginBottom: 20, fontSize: 12, color: 'var(--t-soft)' }}>
         <span><span className="dot" style={{ background: '#ff6b6b' }} />P1 - Must Do</span>
         <span><span className="dot" style={{ background: GOLD }} />P2 - Should Do</span>
         <span><span className="dot" style={{ background: '#4ade80' }} />P3 - If Time</span>
@@ -1063,14 +1065,14 @@ function TodayTab() {
                   padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: form.recurring === v ? 700 : 400,
                   background: form.recurring === v ? GOLD : 'transparent',
                   color: form.recurring === v ? '#000' : 'var(--t-muted)',
-                  border: `1px solid ${form.recurring === v ? GOLD : '#2a2a2a'}`,
+                  border: `1px solid ${form.recurring === v ? GOLD : 'var(--border-input)'}`,
                 }}>{v ? '🔁 Recurring' : '1️⃣ One-time'}</button>
               ))}
             </div>
           </div>
 
           {form.recurring && (
-            <div style={{ marginBottom: 12, padding: '12px 14px', background: '#111', borderRadius: 8 }}>
+            <div style={{ marginBottom: 12, padding: '12px 14px', background: 'var(--bg-sub)', borderRadius: 8 }}>
               <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 8 }}>Repeat frequency</div>
               <div style={{ display: 'flex', gap: 6, marginBottom: form.frequency === 'Weekly' || form.frequency === 'Monthly' ? 10 : 0, flexWrap: 'wrap' }}>
                 {TASK_FREQS.map(f => (
@@ -1078,7 +1080,7 @@ function TodayTab() {
                     padding: '4px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: form.frequency === f ? 700 : 400,
                     background: form.frequency === f ? '#38bdf822' : 'transparent',
                     color: form.frequency === f ? '#38bdf8' : 'var(--t-soft)',
-                    border: `1px solid ${form.frequency === f ? '#38bdf8' : '#222'}`,
+                    border: `1px solid ${form.frequency === f ? '#38bdf8' : 'var(--border-input)'}`,
                   }}>{f}</button>
                 ))}
               </div>
@@ -1091,7 +1093,7 @@ function TodayTab() {
                         padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
                         background: form.weekDay === i ? GOLD : 'transparent',
                         color: form.weekDay === i ? '#000' : 'var(--t-soft)',
-                        border: `1px solid ${form.weekDay === i ? GOLD : '#222'}`,
+                        border: `1px solid ${form.weekDay === i ? GOLD : 'var(--border-input)'}`,
                       }}>{d}</button>
                     ))}
                   </div>
@@ -1156,16 +1158,16 @@ function TodayTab() {
           }}>
             <span style={{ fontSize: 14 }}>🔁</span>
             <span>{templates.length} Recurring Task{templates.length > 1 ? 's' : ''}</span>
-            <span style={{ fontSize: 11, color: '#444' }}>{showRec ? '▲' : '▼'}</span>
+            <span style={{ fontSize: 11, color: 'var(--t-soft)' }}>{showRec ? '▲' : '▼'}</span>
           </button>
           {showRec && templates.map(tmpl => (
-            <div key={tmpl.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#111', borderRadius: 7, marginBottom: 5 }}>
+            <div key={tmpl.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg-sub)', borderRadius: 7, marginBottom: 5 }}>
               <span className="dot" style={{ background: P_COLORS[tmpl.priority], flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 13, color: 'var(--t-strong)' }}>{tmpl.title}</span>
               <span className="tag" style={{ background: '#38bdf810', color: '#38bdf8', fontSize: 10 }}>{freqLabel(tmpl)}</span>
               <span className="tag" style={{ background: 'var(--bg-sub)', color: 'var(--t-soft)', fontSize: 10 }}>{tmpl.pillar}</span>
               <button onClick={() => delTmpl(tmpl.id)} title="Stop recurring" style={{
-                background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: 13,
+                background: 'none', border: 'none', color: 'var(--t-soft)', cursor: 'pointer', fontSize: 13,
               }} onMouseEnter={e => e.target.style.color = '#ff6b6b'} onMouseLeave={e => e.target.style.color = '#444'}>×</button>
             </div>
           ))}
@@ -1339,17 +1341,17 @@ function PipelineTab() {
               padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: active ? 700 : 400,
               background: active ? `${col}20` : 'transparent',
               color: active ? col : 'var(--t-soft)',
-              border: `1px solid ${active ? col : '#222'}`,
+              border: `1px solid ${active ? col : 'var(--border-input)'}`,
               transition: 'all 0.15s',
             }}>{ch}</button>
           );
         })}
-        <div style={{ width: 1, background: '#222', height: 20, alignSelf: 'center', margin: '0 4px' }} />
+        <div style={{ width: 1, background: 'var(--border-input)', height: 20, alignSelf: 'center', margin: '0 4px' }} />
         <button onClick={() => setFilterBrand(v => !v)} style={{
           padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: filterBrand ? 700 : 400,
           background: filterBrand ? 'var(--a20)' : 'transparent',
           color: filterBrand ? GOLD : 'var(--t-soft)',
-          border: `1px solid ${filterBrand ? GOLD : '#222'}`,
+          border: `1px solid ${filterBrand ? GOLD : 'var(--border-input)'}`,
           transition: 'all 0.15s',
         }}>💼 Brand Deals</button>
       </div>
@@ -1398,7 +1400,7 @@ function PipelineTab() {
             <span style={{ fontSize: 12, color: 'var(--t-soft)', marginRight: 4 }}>Type:</span>
             {['One-time', 'Recurring'].map(opt => (
               <button key={opt} type="button" onClick={() => setForm({ ...form, recurring: opt === 'Recurring' })}
-                style={{ padding: '5px 14px', borderRadius: 6, border: `1px solid ${form.recurring === (opt === 'Recurring') ? GOLD : '#2a2a2a'}`, background: form.recurring === (opt === 'Recurring') ? 'var(--a18)' : 'transparent', color: form.recurring === (opt === 'Recurring') ? GOLD : 'var(--t-soft)', fontSize: 12, cursor: 'pointer', fontWeight: form.recurring === (opt === 'Recurring') ? 600 : 400 }}>
+                style={{ padding: '5px 14px', borderRadius: 6, border: `1px solid ${form.recurring === (opt === 'Recurring') ? GOLD : 'var(--border-input)'}`, background: form.recurring === (opt === 'Recurring') ? 'var(--a18)' : 'transparent', color: form.recurring === (opt === 'Recurring') ? GOLD : 'var(--t-soft)', fontSize: 12, cursor: 'pointer', fontWeight: form.recurring === (opt === 'Recurring') ? 600 : 400 }}>
                 {opt === 'Recurring' ? '🔁 Recurring' : '1️⃣ One-time'}
               </button>
             ))}
@@ -1406,7 +1408,7 @@ function PipelineTab() {
               <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
                 {['Daily', 'Weekly', 'Monthly'].map(f => (
                   <button key={f} type="button" onClick={() => setForm({ ...form, frequency: f })}
-                    style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${form.frequency === f ? '#38bdf8' : '#2a2a2a'}`, background: form.frequency === f ? '#38bdf818' : 'transparent', color: form.frequency === f ? '#38bdf8' : 'var(--t-faint)', fontSize: 12, cursor: 'pointer', fontWeight: form.frequency === f ? 600 : 400 }}>
+                    style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${form.frequency === f ? '#38bdf8' : 'var(--border-input)'}`, background: form.frequency === f ? '#38bdf818' : 'transparent', color: form.frequency === f ? '#38bdf8' : 'var(--t-faint)', fontSize: 12, cursor: 'pointer', fontWeight: form.frequency === f ? 600 : 400 }}>
                     {f}
                   </button>
                 ))}
@@ -1515,7 +1517,7 @@ function PipelineTab() {
             <span style={{ fontSize: 12, color: 'var(--t-soft)', marginRight: 4 }}>Type:</span>
             {['One-time', 'Recurring'].map(opt => (
               <button key={opt} type="button" onClick={() => setEditForm({ ...editForm, recurring: opt === 'Recurring' })}
-                style={{ padding: '5px 14px', borderRadius: 6, border: `1px solid ${editForm.recurring === (opt === 'Recurring') ? GOLD : '#2a2a2a'}`, background: editForm.recurring === (opt === 'Recurring') ? 'var(--a18)' : 'transparent', color: editForm.recurring === (opt === 'Recurring') ? GOLD : 'var(--t-soft)', fontSize: 12, cursor: 'pointer', fontWeight: editForm.recurring === (opt === 'Recurring') ? 600 : 400 }}>
+                style={{ padding: '5px 14px', borderRadius: 6, border: `1px solid ${editForm.recurring === (opt === 'Recurring') ? GOLD : 'var(--border-input)'}`, background: editForm.recurring === (opt === 'Recurring') ? 'var(--a18)' : 'transparent', color: editForm.recurring === (opt === 'Recurring') ? GOLD : 'var(--t-soft)', fontSize: 12, cursor: 'pointer', fontWeight: editForm.recurring === (opt === 'Recurring') ? 600 : 400 }}>
                 {opt === 'Recurring' ? '🔁 Recurring' : '1️⃣ One-time'}
               </button>
             ))}
@@ -1523,7 +1525,7 @@ function PipelineTab() {
               <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
                 {['Daily', 'Weekly', 'Monthly'].map(f => (
                   <button key={f} type="button" onClick={() => setEditForm({ ...editForm, frequency: f })}
-                    style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${editForm.frequency === f ? '#38bdf8' : '#2a2a2a'}`, background: editForm.frequency === f ? '#38bdf818' : 'transparent', color: editForm.frequency === f ? '#38bdf8' : 'var(--t-faint)', fontSize: 12, cursor: 'pointer', fontWeight: editForm.frequency === f ? 600 : 400 }}>
+                    style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${editForm.frequency === f ? '#38bdf8' : 'var(--border-input)'}`, background: editForm.frequency === f ? '#38bdf818' : 'transparent', color: editForm.frequency === f ? '#38bdf8' : 'var(--t-faint)', fontSize: 12, cursor: 'pointer', fontWeight: editForm.frequency === f ? 600 : 400 }}>
                     {f}
                   </button>
                 ))}
@@ -1633,7 +1635,7 @@ function PipelineTab() {
               const urgentColor = isOverdue ? '#ff6b6b' : GOLD;
 
               // Per-date colour helper
-              const dateCol = d => d === null ? '#666' : d < 0 ? '#ff6b6b' : d <= 3 ? GOLD : 'var(--t-soft)';
+              const dateCol = d => d === null ? 'var(--t-muted)' : d < 0 ? '#ff6b6b' : d <= 3 ? GOLD : 'var(--t-soft)';
               const dateLabel = d => d === null ? '' : d < 0 ? ` (${Math.abs(d)}d overdue)` : d === 0 ? ' (today!)' : d <= 3 ? ` (${d}d)` : '';
 
               return (
@@ -1725,7 +1727,7 @@ function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColo
               style={{ padding: '6px 16px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: f.contactedVia === opt ? 700 : 400,
                 background: f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf820' : 'var(--a20)') : 'transparent',
                 color: f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf8' : GOLD) : 'var(--t-faint)',
-                border: `1px solid ${f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf8' : GOLD) : '#222'}`, transition: 'all 0.15s' }}>
+                border: `1px solid ${f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf8' : GOLD) : 'var(--border-input)'}`, transition: 'all 0.15s' }}>
               {opt === 'Direct' ? '🤝 Direct' : '🏢 Via Agency'}
             </button>
           ))}
@@ -1964,7 +1966,7 @@ function DealsTab() {
             <button key={s} onClick={() => setFilterStage(s)} style={{
               padding: '3px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
               background: active ? `${sc}20` : 'transparent', color: active ? sc : 'var(--t-soft)',
-              border: `1px solid ${active ? sc : '#222'}`, fontWeight: active ? 700 : 400, transition: 'all 0.15s',
+              border: `1px solid ${active ? sc : 'var(--border-input)'}`, fontWeight: active ? 700 : 400, transition: 'all 0.15s',
             }}>{s === 'All' ? `All (${deals.length})` : `${s} (${deals.filter(d => d.stage === s).length})`}</button>
           );
         })}
@@ -1999,9 +2001,9 @@ function DealsTab() {
           );
           const today = todayStr();
           const daysLeft = deal.deadline ? Math.ceil((new Date(deal.deadline + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
-          const deadlineCol = daysLeft === null ? '#666' : daysLeft < 0 ? '#ff6b6b' : daysLeft <= 3 ? GOLD : 'var(--t-soft)';
+          const deadlineCol = daysLeft === null ? 'var(--t-muted)' : daysLeft < 0 ? '#ff6b6b' : daysLeft <= 3 ? GOLD : 'var(--t-soft)';
           const payDaysLeft = deal.paymentDue && deal.paymentStatus !== 'Paid' ? Math.ceil((new Date(deal.paymentDue + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
-          const payDueCol = payDaysLeft === null ? '#666' : payDaysLeft < 0 ? '#ff6b6b' : payDaysLeft <= 7 ? '#f97316' : 'var(--t-soft)';
+          const payDueCol = payDaysLeft === null ? 'var(--t-muted)' : payDaysLeft < 0 ? '#ff6b6b' : payDaysLeft <= 7 ? '#f97316' : 'var(--t-soft)';
           const borderOverride = payDaysLeft !== null && payDaysLeft <= 7 ? `3px solid ${payDueCol}` : (daysLeft !== null && daysLeft <= 3 && deal.stage !== 'Paid' ? `3px solid ${deadlineCol}` : undefined);
           return (
             <div key={deal.id} className="card" style={{ padding: '14px 16px', borderLeft: borderOverride }}>
@@ -2055,7 +2057,7 @@ const IDEA_CATS         = ['Content', 'Training', 'Other'];
 const IDEA_CAT_COLORS   = { Content: '#38bdf8', Training: '#a78bfa', Other: 'var(--t-muted)' };
 const IDEA_CAT_ICONS    = { Content: '🎬', Training: '📚', Other: '💡' };
 const IDEA_STATUSES     = ['Captured', 'Shortlisted', 'In Pipeline', 'In Trainings', 'Archived'];
-const IDEA_STATUS_COLORS = { Captured: 'var(--t-muted)', Shortlisted: '#F5C518', 'In Pipeline': '#38bdf8', 'In Trainings': '#a78bfa', Archived: '#333' };
+const IDEA_STATUS_COLORS = { Captured: 'var(--t-muted)', Shortlisted: '#F5C518', 'In Pipeline': '#38bdf8', 'In Trainings': '#a78bfa', Archived: 'var(--t-soft)' };
 const IDEA_ARCHIVE_DAYS = 30;
 
 function IdeasTab() {
@@ -2148,7 +2150,7 @@ function IdeasTab() {
       </div>
 
       {/* Quick capture */}
-      <div className="capture-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16, padding: '14px', background: '#111', borderRadius: 10, border: '1px solid var(--border)' }}>
+      <div className="capture-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16, padding: '14px', background: 'var(--bg-sub)', borderRadius: 10, border: '1px solid var(--border)' }}>
         <input className="input" placeholder="Type your idea here..." value={text}
           onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
           style={{ fontSize: 15, padding: '12px 14px' }} autoFocus />
@@ -2159,7 +2161,7 @@ function IdeasTab() {
                 flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: cat === c ? 700 : 400,
                 background: cat === c ? `${IDEA_CAT_COLORS[c]}22` : 'transparent',
                 color: cat === c ? IDEA_CAT_COLORS[c] : 'var(--t-faint)',
-                border: `1px solid ${cat === c ? IDEA_CAT_COLORS[c] : '#222'}`,
+                border: `1px solid ${cat === c ? IDEA_CAT_COLORS[c] : 'var(--border-input)'}`,
                 textAlign: 'center',
               }}>{IDEA_CAT_ICONS[c]}<br/><span style={{ fontSize: 10 }}>{c}</span></button>
             ))}
@@ -2182,7 +2184,7 @@ function IdeasTab() {
               padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: active_c ? 700 : 400,
               background: active_c ? `${col}20` : 'transparent',
               color: active_c ? col : 'var(--t-soft)',
-              border: `1px solid ${active_c ? col : '#222'}`,
+              border: `1px solid ${active_c ? col : 'var(--border-input)'}`,
             }}>{c === 'All' ? 'All' : IDEA_CAT_ICONS[c] + ' ' + c} ({count})</button>
           );
         })}
@@ -2237,7 +2239,7 @@ function IdeaCard({ idea, onStar, onStatus, onPushPipeline, onPushTraining, onDe
   return (
     <div className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', marginBottom: 8, opacity: idea.status === 'Archived' ? 0.5 : 1 }}>
       <button onClick={() => onStar(idea.id, idea.starred)}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: idea.starred ? '#F5C518' : '#333', padding: 0, marginTop: 2, flexShrink: 0 }}>★</button>
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: idea.starred ? '#F5C518' : 'var(--t-faint)', padding: 0, marginTop: 2, flexShrink: 0 }}>★</button>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, color: 'var(--t-bright)', marginBottom: 6, lineHeight: 1.4 }}>{idea.text}</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -2352,7 +2354,7 @@ function SearchTab({ onNavigate }) {
           {results.map(doc => (
             <div key={`${doc._source.key}-${doc.id}`} className="card" onClick={() => onNavigate(doc._source.tab)}
               style={{ padding: '12px 14px', marginBottom: 8, cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'flex-start' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
               onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, color: 'var(--t-bright)', marginBottom: 4, fontWeight: 500 }}>
@@ -2363,14 +2365,14 @@ function SearchTab({ onNavigate }) {
                   <span style={{ fontSize: 11, color: 'var(--t-soft)' }}>{getSub(doc)}</span>
                 </div>
               </div>
-              <span style={{ fontSize: 11, color: '#444', flexShrink: 0, marginTop: 2 }}>VIEW →</span>
+              <span style={{ fontSize: 11, color: 'var(--t-soft)', flexShrink: 0, marginTop: 2 }}>VIEW →</span>
             </div>
           ))}
         </div>
       )}
 
       {query.length < 2 && (
-        <div style={{ textAlign: 'center', padding: '50px 0', color: '#444' }}>
+        <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--t-soft)' }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
           <div style={{ fontSize: 13 }}>Search pipeline, deals, ideas and trainings in one place</div>
         </div>
@@ -2671,7 +2673,7 @@ function InvoicesTab() {
     const halfGst   = Math.round(gstAmt / 2);
     const totalAmt  = baseAmt + gstAmt;
     const isIGST    = collab.gstType === 'IGST';
-    const stColor   = { Paid: '#166534', Pending: '#854d0e', Overdue: '#991b1b' }[collab.status] || '#666';
+    const stColor   = { Paid: '#166534', Pending: '#854d0e', Overdue: '#991b1b' }[collab.status] || 'var(--t-muted)';
     const stBg      = { Paid: '#dcfce7', Pending: '#fef9c3', Overdue: '#fee2e2' }[collab.status] || '#eee';
     const w = window.open('', '_blank');
     w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -2807,7 +2809,7 @@ td:last-child{text-align:right;font-weight:600}
             padding: '4px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: filterYear === y && !hasDateRange ? 700 : 400,
             background: filterYear === y && !hasDateRange ? 'var(--a20)' : 'transparent',
             color: hasDateRange ? '#444' : filterYear === y ? GOLD : 'var(--t-soft)',
-            border: `1px solid ${filterYear === y && !hasDateRange ? GOLD : '#222'}`, transition: 'all 0.15s',
+            border: `1px solid ${filterYear === y && !hasDateRange ? GOLD : 'var(--border-input)'}`, transition: 'all 0.15s',
             opacity: hasDateRange ? 0.45 : 1,
           }}>{y}</button>
         ))}
@@ -2818,11 +2820,11 @@ td:last-child{text-align:right;font-weight:600}
         <span style={{ fontSize: 11, color: 'var(--t-soft)', textTransform: 'uppercase', letterSpacing: 0.8 }}>Date:</span>
         <input className="input" type="date" value={dateFrom}
           onChange={e => { setDateFrom(e.target.value); if (e.target.value) setFilterYear('All'); }}
-          style={{ fontSize: 12, padding: '4px 8px', width: 136, colorScheme: 'dark' }} />
+          style={{ fontSize: 12, padding: '4px 8px', width: 136 }} />
         <span style={{ fontSize: 11, color: 'var(--t-faint)' }}>→</span>
         <input className="input" type="date" value={dateTo}
           onChange={e => { setDateTo(e.target.value); if (e.target.value) setFilterYear('All'); }}
-          style={{ fontSize: 12, padding: '4px 8px', width: 136, colorScheme: 'dark' }} />
+          style={{ fontSize: 12, padding: '4px 8px', width: 136 }} />
         {hasDateRange && (
           <button onClick={() => { setDateFrom(''); setDateTo(''); }}
             style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#ff6b6b18', color: '#ff6b6b',
@@ -2864,7 +2866,7 @@ td:last-child{text-align:right;font-weight:600}
                   title={`${m.label}: Invoiced ₹${m.invoiced.toLocaleString('en-IN')} / Received ₹${m.received.toLocaleString('en-IN')}`}>
                   {invH > 0
                     ? <div style={{ flex: 1, height: invH, background: '#F5C518cc', borderRadius: '2px 2px 0 0' }} />
-                    : <div style={{ flex: 1, height: 2, background: '#2a2a2a', borderRadius: 1 }} />}
+                    : <div style={{ flex: 1, height: 2, background: 'var(--border-soft)', borderRadius: 1 }} />}
                   {recH > 0 && <div style={{ flex: 1, height: recH, background: '#4ade80aa', borderRadius: '2px 2px 0 0' }} />}
                 </div>
               );
@@ -2873,7 +2875,7 @@ td:last-child{text-align:right;font-weight:600}
           {/* Month labels row */}
           <div style={{ display: 'flex', gap: 2, marginTop: 5 }}>
             {monthlyData.map(m => (
-              <div key={m.ym} style={{ flex: 1, textAlign: 'center', fontSize: 8, color: '#555', overflow: 'hidden', whiteSpace: 'nowrap' }}>{m.label}</div>
+              <div key={m.ym} style={{ flex: 1, textAlign: 'center', fontSize: 8, color: 'var(--t-muted)', overflow: 'hidden', whiteSpace: 'nowrap' }}>{m.label}</div>
             ))}
           </div>
           {/* Legend */}
@@ -2890,7 +2892,7 @@ td:last-child{text-align:right;font-weight:600}
         {/* Brand breakdown */}
         <div className="card" style={{ padding: 18 }}>
           <div style={{ fontSize: 11, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 }}>Revenue by Brand</div>
-          {brandTotals.length === 0 && <div style={{ color: '#444', fontSize: 12 }}>No data yet</div>}
+          {brandTotals.length === 0 && <div style={{ color: 'var(--t-soft)', fontSize: 12 }}>No data yet</div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, maxHeight: 180, overflowY: 'auto' }}>
             {brandTotals.map(b => (
               <div key={b.brand}>
@@ -2940,7 +2942,7 @@ td:last-child{text-align:right;font-weight:600}
           );
           const today = todayStr();
           const dueDays = c.dueDate && c.status !== 'Paid' ? Math.ceil((new Date(c.dueDate + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
-          const dueCol = dueDays === null ? '#666' : dueDays < 0 ? '#ff6b6b' : dueDays <= 7 ? '#f97316' : 'var(--t-soft)';
+          const dueCol = dueDays === null ? 'var(--t-muted)' : dueDays < 0 ? '#ff6b6b' : dueDays <= 7 ? '#f97316' : 'var(--t-soft)';
           return (
             <div key={c.id} className="card" style={{ padding: '14px 16px', borderLeft: dueDays !== null && dueDays <= 7 && c.status !== 'Paid' ? `3px solid ${dueCol}` : undefined }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -3177,7 +3179,7 @@ function FormBlock({ f, onChange, onSave, onCancel, btnLabel, loading }) {
               padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: f.category === cat ? 700 : 400,
               background: f.category === cat ? `${T_CAT_COLORS[cat]}22` : 'transparent',
               color: f.category === cat ? T_CAT_COLORS[cat] : 'var(--t-soft)',
-              border: `1px solid ${f.category === cat ? T_CAT_COLORS[cat] : '#222'}`,
+              border: `1px solid ${f.category === cat ? T_CAT_COLORS[cat] : 'var(--border-input)'}`,
             }}>{T_CAT_ICONS[cat]} {cat}</button>
           ))}
         </div>
@@ -3692,7 +3694,7 @@ function SettingsTab({ isAdmin, currentUid }) {
       <div className="card" style={{ padding: 20, borderColor: '#F5C51830' }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: 'var(--t-bright)' }}>📊 Daily Summary</h2>
         <p style={{ fontSize: 12, color: 'var(--t-muted)', marginBottom: 16 }}>Posts a full digest to your Discord Alerts channel — tasks done/pending, pipeline status, active deals, overdue items, and ideas captured today.</p>
-        <div style={{ background: '#111', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 12, color: 'var(--t-soft)', lineHeight: 1.8 }}>
+        <div style={{ background: 'var(--bg-sub)', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 12, color: 'var(--t-soft)', lineHeight: 1.8 }}>
           <div>✅ Today's tasks — done vs pending, by priority</div>
           <div>🎬 Pipeline — active videos per stage, what's due today</div>
           <div>💼 Brand deals — active deals per stage with amounts</div>
@@ -3722,7 +3724,7 @@ function SettingsTab({ isAdmin, currentUid }) {
             <div key={plat} style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: col, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>{plat}</div>
               {grp.map(ch => (
-                <div key={ch.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: '#111', borderRadius: 7, marginBottom: 5 }}>
+                <div key={ch.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'var(--bg-sub)', borderRadius: 7, marginBottom: 5 }}>
                   <span style={{ fontSize: 13, color: 'var(--t-bright)' }}>{ch.name}</span>
                   <button onClick={() => deleteChannel(ch.id)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' }} title="Remove channel">✕</button>
                 </div>
