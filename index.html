@@ -418,7 +418,8 @@ function WeeklyTab() {
     setSaving(false);
   };
 
-  const toggle = (id, done) => db.collection('tasks').doc(id).update({ done: !done });
+  const toggle  = (id, done) => db.collection('tasks').doc(id).update({ done: !done });
+  const delTask = (id) => db.collection('tasks').doc(id).delete();
   const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const today = todayStr();
   const weekLabel = () => {
@@ -450,46 +451,84 @@ function WeeklyTab() {
           const isToday  = day === today;
           const done     = dayTasks.filter(t => t.done).length;
           return (
-            <div key={day} className="card" style={{ padding: '12px 10px', borderColor: isToday ? GOLD + '66' : '#222', minHeight: 150 }}>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? GOLD : '#555', textTransform: 'uppercase', letterSpacing: 0.8 }}>{DAY_NAMES[idx]}</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: isToday ? GOLD : '#666', lineHeight: 1.1 }}>{new Date(day + 'T00:00:00').getDate()}</div>
-                {dayTasks.length > 0 && <div style={{ fontSize: 10, color: done === dayTasks.length ? '#4ade80' : '#555', marginTop: 2 }}>{done}/{dayTasks.length} done</div>}
+            <div key={day} className="card" style={{
+              padding: '12px 10px',
+              borderColor: isToday ? GOLD + '88' : '#252525',
+              minHeight: 160,
+              background: isToday ? '#1a1800' : '#161616',
+            }}>
+              {/* Day header */}
+              <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: `1px solid ${isToday ? GOLD + '33' : '#1e1e1e'}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? GOLD : '#999', textTransform: 'uppercase', letterSpacing: 1 }}>{DAY_NAMES[idx]}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: isToday ? GOLD : '#ccc', lineHeight: 1.15 }}>{new Date(day + 'T00:00:00').getDate()}</div>
+                {dayTasks.length > 0 && (
+                  <div style={{ fontSize: 10, color: done === dayTasks.length ? '#4ade80' : '#888', marginTop: 2 }}>
+                    {done}/{dayTasks.length} done
+                  </div>
+                )}
               </div>
+
+              {/* Pipeline items for this day */}
               {dayPipe.map(p => (
-                <div key={p.id} style={{ fontSize: 10, color: '#38bdf8', background: '#38bdf810', borderRadius: 4, padding: '3px 6px', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.title}>
+                <div key={p.id} style={{
+                  fontSize: 11, color: '#38bdf8', background: '#38bdf810',
+                  borderRadius: 4, padding: '3px 7px', marginBottom: 4,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }} title={p.title}>
                   🎬 {p.title}
                 </div>
               ))}
+
+              {/* Tasks */}
               {dayTasks.map(t => (
-                <div key={t.id} onClick={() => toggle(t.id, t.done)} style={{
-                  fontSize: 10, padding: '3px 6px', marginBottom: 3, borderRadius: 4, cursor: 'pointer',
-                  background: t.done ? '#4ade8012' : `${P_COLORS[t.priority]}12`,
-                  color: t.done ? '#4ade80' : P_COLORS[t.priority],
-                  textDecoration: t.done ? 'line-through' : 'none',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: t.done ? 0.55 : 1,
-                }} title={t.title}>
-                  {t.done ? '✓' : '·'} {t.title}
+                <div key={t.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 3,
+                  fontSize: 11, padding: '3px 5px', marginBottom: 3, borderRadius: 4,
+                  background: t.done ? '#4ade8010' : `${P_COLORS[t.priority]}10`,
+                }}>
+                  <span onClick={() => toggle(t.id, t.done)} style={{
+                    flex: 1, cursor: 'pointer', minWidth: 0,
+                    color: t.done ? '#4ade80' : P_COLORS[t.priority],
+                    textDecoration: t.done ? 'line-through' : 'none',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    opacity: t.done ? 0.6 : 1, lineHeight: 1.4,
+                  }} title={t.title}>
+                    {t.done ? '✓' : '·'} {t.title}
+                  </span>
+                  <button onClick={() => delTask(t.id)} title="Remove" style={{
+                    background: 'none', border: 'none', color: '#555', cursor: 'pointer',
+                    fontSize: 13, lineHeight: 1, padding: '0 1px', flexShrink: 0,
+                  }}
+                    onMouseEnter={e => e.target.style.color = '#ff6b6b'}
+                    onMouseLeave={e => e.target.style.color = '#555'}
+                  >×</button>
                 </div>
               ))}
+
+              {/* Add task inline form */}
               {addingDay === day ? (
                 <div style={{ marginTop: 6 }}>
-                  <input className="input" placeholder="Task..." autoFocus value={newTask.title}
+                  <input className="input" placeholder="Task name..." autoFocus value={newTask.title}
                     onChange={e => setNewTask(v => ({ ...v, title: e.target.value }))}
                     onKeyDown={e => { if (e.key === 'Enter') addTask(day); if (e.key === 'Escape') setAddingDay(null); }}
-                    style={{ fontSize: 11, padding: '4px 7px', marginBottom: 4 }} />
+                    style={{ fontSize: 11, padding: '5px 8px', marginBottom: 5 }} />
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <select className="select" value={newTask.priority} onChange={e => setNewTask(v => ({ ...v, priority: e.target.value }))} style={{ fontSize: 10, padding: '3px 5px', flex: 1 }}>
+                    <select className="select" value={newTask.priority} onChange={e => setNewTask(v => ({ ...v, priority: e.target.value }))} style={{ fontSize: 11, padding: '4px 6px', flex: 1 }}>
                       <option>P1</option><option>P2</option><option>P3</option>
                     </select>
-                    <button onClick={() => addTask(day)} disabled={saving} style={{ background: GOLD, border: 'none', borderRadius: 4, padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', color: '#000' }}>+</button>
-                    <button onClick={() => setAddingDay(null)} style={{ background: 'transparent', border: '1px solid #333', borderRadius: 4, padding: '3px 6px', fontSize: 10, color: '#888', cursor: 'pointer' }}>✕</button>
+                    <button onClick={() => addTask(day)} disabled={saving} style={{ background: GOLD, border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: '#000' }}>Add</button>
+                    <button onClick={() => setAddingDay(null)} style={{ background: 'transparent', border: '1px solid #333', borderRadius: 6, padding: '4px 8px', fontSize: 11, color: '#888', cursor: 'pointer' }}>✕</button>
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setAddingDay(day)} title="Add task to this day" style={{ marginTop: 5, background: 'none', border: '1px dashed #2a2a2a', borderRadius: 4, color: '#555', cursor: 'pointer', fontSize: 14, width: '100%', padding: '2px 0', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { e.target.style.borderColor = '#444'; e.target.style.color = '#666'; }}
-                  onMouseLeave={e => { e.target.style.borderColor = '#2a2a2a'; e.target.style.color = '#333'; }}>+</button>
+                <button onClick={() => setAddingDay(day)} title="Add task" style={{
+                  marginTop: 6, background: 'none', border: '1px dashed #333',
+                  borderRadius: 5, color: '#777', cursor: 'pointer',
+                  fontSize: 14, width: '100%', padding: '3px 0', transition: 'all 0.15s',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD + '66'; e.currentTarget.style.color = GOLD; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#777'; }}
+                >+</button>
               )}
             </div>
           );
