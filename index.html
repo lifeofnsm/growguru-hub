@@ -362,11 +362,12 @@ function OverviewTab({ onNavigate }) {
   const overduePipeline   = data.pipeline.filter(p => p.publishDate && p.publishDate < today && p.stage !== 'Published');
   const activeDeals       = data.deals.filter(d => !['Paid'].includes(d.stage));
   const overdueDeals      = data.deals.filter(d => d.deadline && d.deadline < today && !['Paid'].includes(d.stage));
+  const paymentDueDeals   = data.deals.filter(d => d.paymentDue && d.paymentDue <= today && d.paymentStatus !== 'Paid');
   const totalDealValue    = activeDeals.reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
   const paidDealsValue    = data.deals.filter(d => d.stage === 'Paid').reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
   const upcomingTrainings = data.trainings.filter(t => t.status === 'Upcoming' || t.status === 'Live');
   const trainingRevenue   = data.trainings.filter(t => t.status === 'Completed' && t.category === 'Paid Program').reduce((s, t) => s + (parseFloat(t.revenue) || 0), 0);
-  const totalOverdue      = overdueTasks.length + overduePipeline.length + overdueDeals.length;
+  const totalOverdue      = overdueTasks.length + overduePipeline.length + overdueDeals.length + paymentDueDeals.length;
 
   if (loading) return <div style={{ color: '#666', textAlign: 'center', padding: 60 }}>Loading...</div>;
 
@@ -478,6 +479,13 @@ function OverviewTab({ onNavigate }) {
               onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
               onMouseLeave={e => e.currentTarget.style.background = ''}>
               <span>💼</span><span style={{ color: '#ccc', flex: 1 }}>{d.brand}</span><span style={{ color: '#666' }}>deadline {fmtDate(d.deadline)}</span>
+            </div>
+          ))}
+          {paymentDueDeals.map(d => (
+            <div key={`pay-${d.id}`} onClick={() => onNavigate('deals')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}>
+              <span>💳</span><span style={{ color: '#f97316', flex: 1, fontWeight: 600 }}>{d.brand}</span><span style={{ color: '#f97316' }}>payment due {fmtDate(d.paymentDue)}</span>
             </div>
           ))}
         </div>
@@ -1001,6 +1009,7 @@ function PipelineTab() {
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [updating, setUpdating] = useState(false);
   const [filterCh, setFilterCh] = useState('All');
+  const [filterBrand, setFilterBrand] = useState(false);
 
   useEffect(() => {
     return db.collection('pipeline').orderBy('createdAt', 'desc').onSnapshot(snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -1115,7 +1124,8 @@ function PipelineTab() {
     setUpdating(false);
   };
 
-  const visibleItems = filterCh === 'All' ? items : items.filter(i => i.channel === filterCh);
+  const chFiltered = filterCh === 'All' ? items : items.filter(i => i.channel === filterCh);
+  const visibleItems = filterBrand ? chFiltered.filter(i => i.brandDeal) : chFiltered;
   const stageCount = s => visibleItems.filter(i => i.stage === s).length;
 
   return (
@@ -1145,6 +1155,14 @@ function PipelineTab() {
             }}>{ch}</button>
           );
         })}
+        <div style={{ width: 1, background: '#222', height: 20, alignSelf: 'center', margin: '0 4px' }} />
+        <button onClick={() => setFilterBrand(v => !v)} style={{
+          padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: filterBrand ? 700 : 400,
+          background: filterBrand ? `${GOLD}20` : 'transparent',
+          color: filterBrand ? GOLD : '#666',
+          border: `1px solid ${filterBrand ? GOLD : '#222'}`,
+          transition: 'all 0.15s',
+        }}>💼 Brand Deals</button>
       </div>
 
       {/* Stage counts */}
@@ -1327,7 +1345,7 @@ function PipelineTab() {
       )}
 
       {items.length === 0 && !adding && <Empty icon="" text="Pipeline is empty. Add your first content." />}
-      {items.length > 0 && visibleItems.length === 0 && <div style={{ color: '#666', fontSize: 13, marginBottom: 20 }}>No content for <strong style={{ color: '#aaa' }}>{filterCh}</strong> yet.</div>}
+      {items.length > 0 && visibleItems.length === 0 && <div style={{ color: '#666', fontSize: 13, marginBottom: 20 }}>No content for <strong style={{ color: '#aaa' }}>{filterBrand ? 'Brand Deals' : filterCh}</strong> yet.</div>}
 
       {P_STAGES.map(stage => {
         const grp = visibleItems.filter(i => i.stage === stage);
@@ -1405,11 +1423,16 @@ function PipelineTab() {
 }
 
 // --- DEALS ----------------------------------------------------
+const D_EMPTY = { brand: '', stage: 'Lead', contact: '', platform: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', paymentDue: '', notes: '' };
+
 function DealsTab() {
-  const [deals, setDeals] = useState([]);
-  const [form, setForm] = useState({ brand: '', stage: 'Lead', contact: '', platform: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', notes: '' });
-  const [adding, setAdding] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [deals, setDeals]       = useState([]);
+  const [form, setForm]         = useState({ ...D_EMPTY });
+  const [adding, setAdding]     = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [editId, setEditId]     = useState(null);
+  const [editForm, setEditForm] = useState({ ...D_EMPTY });
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     return db.collection('deals').orderBy('createdAt', 'desc').onSnapshot(snap => setDeals(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -1419,10 +1442,25 @@ function DealsTab() {
     if (!form.brand.trim()) return;
     setSaving(true);
     await db.collection('deals').add({ ...form, createdAt: new Date().toISOString() });
-    notify('brand', `💼  **New Deal Added**\n> Brand: **${form.brand}**\n> Stage: \`${form.stage}\`${form.agreedRate ? `  ·  ₹${form.agreedRate}` : ''}${form.contact ? `\n> POC: ${form.contact}` : ''}${form.deadline ? `\n> Deadline: ${form.deadline}` : ''}`);
-    setForm({ brand: '', stage: 'Lead', contact: '', platform: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', notes: '' });
+    notify('brand', `💼  **New Deal Added**\n> Brand: **${form.brand}**\n> Stage: \`${form.stage}\`${form.agreedRate ? `  ·  ₹${form.agreedRate}` : ''}${form.contact ? `\n> POC: ${form.contact}` : ''}${form.deadline ? `\n> Deadline: ${fmtDate(form.deadline)}` : ''}`);
+    setForm({ ...D_EMPTY });
     setAdding(false);
     setSaving(false);
+  };
+
+  const startEdit = (deal) => {
+    setEditId(deal.id);
+    setEditForm({ brand: deal.brand || '', stage: deal.stage || 'Lead', contact: deal.contact || '', platform: deal.platform || '', agreedRate: deal.agreedRate || '', deliverables: deal.deliverables || '', paymentStatus: deal.paymentStatus || 'Pending', deadline: deal.deadline || '', paymentDue: deal.paymentDue || '', notes: deal.notes || '' });
+    setAdding(false);
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.brand.trim()) return;
+    setUpdating(true);
+    await db.collection('deals').doc(editId).update({ ...editForm });
+    notify('brand', `✏️  **Deal Updated**\n> **${editForm.brand}**\n> Stage: \`${editForm.stage}\`${editForm.agreedRate ? `  ·  ₹${editForm.agreedRate}` : ''}${editForm.deadline ? `\n> Deadline: ${fmtDate(editForm.deadline)}` : ''}`);
+    setEditId(null);
+    setUpdating(false);
   };
 
   const updateStage = async (id, stage) => {
@@ -1433,6 +1471,42 @@ function DealsTab() {
 
   const del = id => db.collection('deals').doc(id).delete();
 
+  // Shared form fields — used by both add and edit
+  const DealForm = ({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor }) => (
+    <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${accentColor}44` }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+        <input className="input" placeholder="Brand name *" value={f.brand} onChange={e => onChange({ ...f, brand: e.target.value })} style={{ flex: 2, minWidth: 140 }} autoFocus />
+        <input className="input" placeholder="POC / Contact" value={f.contact} onChange={e => onChange({ ...f, contact: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+        <select className="select" value={f.stage} onChange={e => onChange({ ...f, stage: e.target.value })} style={{ flex: 1, minWidth: 120 }}>
+          {D_STAGES.map(s => <option key={s}>{s}</option>)}
+        </select>
+        <select className="select" value={f.paymentStatus} onChange={e => onChange({ ...f, paymentStatus: e.target.value })} style={{ flex: 1, minWidth: 100 }}>
+          {['Pending', 'Partial', 'Paid'].map(s => <option key={s}>{s}</option>)}
+        </select>
+        <input className="input" placeholder="Rate (₹)" value={f.agreedRate} onChange={e => onChange({ ...f, agreedRate: e.target.value })} style={{ flex: 1, minWidth: 100 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+        <input className="input" placeholder="Agency / Platform" value={f.platform} onChange={e => onChange({ ...f, platform: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
+        <div style={{ flex: 1, minWidth: 130 }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>📅 Deadline</div>
+          <input className="input" type="date" value={f.deadline} onChange={e => onChange({ ...f, deadline: e.target.value })} />
+        </div>
+        <div style={{ flex: 1, minWidth: 130 }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>💳 Payment Due</div>
+          <input className="input" type="date" value={f.paymentDue} onChange={e => onChange({ ...f, paymentDue: e.target.value })} />
+        </div>
+      </div>
+      <input className="input" placeholder="Deliverables" value={f.deliverables} onChange={e => onChange({ ...f, deliverables: e.target.value })} style={{ marginBottom: 10 }} />
+      <input className="input" placeholder="Notes" value={f.notes} onChange={e => onChange({ ...f, notes: e.target.value })} style={{ marginBottom: 12 }} />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn-gold" onClick={onSave} disabled={loading} style={{ fontSize: 13 }}>{loading ? 'Saving...' : btnLabel}</button>
+        <button className="btn-ghost" onClick={onCancel} style={{ fontSize: 13 }}>Cancel</button>
+      </div>
+    </div>
+  );
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
@@ -1440,62 +1514,52 @@ function DealsTab() {
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Brand Deals</h1>
           <div style={{ color: '#888', fontSize: 13 }}>{deals.length} deals tracked</div>
         </div>
-        <button className="btn-gold" onClick={() => setAdding(v => !v)} style={{ fontSize: 13 }}>+ Add Deal</button>
+        <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Add Deal</button>
       </div>
 
-      {adding && (
-        <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: '#F5C51844' }}>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-            <input className="input" placeholder="Brand name *" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} autoFocus />
-            <input className="input" placeholder="Contact" value={form.contact} onChange={e => setForm({ ...form, contact: e.target.value })} />
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-            <select className="select" value={form.stage} onChange={e => setForm({ ...form, stage: e.target.value })} style={{ flex: 1 }}>
-              {D_STAGES.map(s => <option key={s}>{s}</option>)}
-            </select>
-            <input className="input" placeholder="Agency / Platform" value={form.platform} onChange={e => setForm({ ...form, platform: e.target.value })} style={{ flex: 1 }} />
-            <input className="input" placeholder="Rate (Rs.)" value={form.agreedRate} onChange={e => setForm({ ...form, agreedRate: e.target.value })} style={{ flex: 1 }} />
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-            <input className="input" placeholder="Deliverables" value={form.deliverables} onChange={e => setForm({ ...form, deliverables: e.target.value })} style={{ flex: 2 }} />
-            <input className="input" type="date" value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} style={{ flex: 1 }} />
-          </div>
-          <input className="input" placeholder="Notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ marginBottom: 12 }} />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Saving...' : 'Add Deal'}</button>
-            <button className="btn-ghost" onClick={() => setAdding(false)} style={{ fontSize: 13 }}>Cancel</button>
-          </div>
-        </div>
-      )}
+      {adding && <DealForm f={form} onChange={setForm} onSave={add} onCancel={() => setAdding(false)} btnLabel="Add Deal" loading={saving} accentColor={GOLD} />}
 
       {deals.length === 0 && !adding && <Empty icon="" text="No brand deals yet. Add your first one." />}
 
       <div style={{ display: 'grid', gap: 10 }}>
         {deals.map(deal => {
           const sc = D_COLORS[deal.stage] || '#888';
+          const isEditing = editId === deal.id;
+          if (isEditing) return (
+            <DealForm key={deal.id} f={editForm} onChange={setEditForm} onSave={saveEdit} onCancel={() => setEditId(null)} btnLabel="Save Changes" loading={updating} accentColor="#38bdf8" />
+          );
+          const today = todayStr();
+          const daysLeft = deal.deadline ? Math.ceil((new Date(deal.deadline + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
+          const deadlineCol = daysLeft === null ? '#666' : daysLeft < 0 ? '#ff6b6b' : daysLeft <= 3 ? GOLD : '#666';
+          const payDaysLeft = deal.paymentDue && deal.paymentStatus !== 'Paid' ? Math.ceil((new Date(deal.paymentDue + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
+          const payDueCol = payDaysLeft === null ? '#666' : payDaysLeft < 0 ? '#ff6b6b' : payDaysLeft <= 7 ? '#f97316' : '#666';
+          const borderOverride = payDaysLeft !== null && payDaysLeft <= 7 ? `3px solid ${payDueCol}` : (daysLeft !== null && daysLeft <= 3 && deal.stage !== 'Paid' ? `3px solid ${deadlineCol}` : undefined);
           return (
-            <div key={deal.id} className="card" style={{ padding: '14px 16px' }}>
+            <div key={deal.id} className="card" style={{ padding: '14px 16px', borderLeft: borderOverride }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{deal.brand}</span>
                     <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11, fontWeight: 600 }}>{deal.stage}</span>
-                    {deal.agreedRate && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 600 }}>Rs.{deal.agreedRate}</span>}
-                    {deal.paymentStatus === 'Paid' && <span className="tag" style={{ background: '#4ade8018', color: '#4ade80', fontSize: 10 }}>PAID OK</span>}
+                    {deal.agreedRate && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 600 }}>₹{deal.agreedRate}</span>}
+                    {deal.paymentStatus === 'Paid'    && <span className="tag" style={{ background: '#4ade8018', color: '#4ade80', fontSize: 10, fontWeight: 700 }}>✓ PAID</span>}
+                    {deal.paymentStatus === 'Partial' && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD, fontSize: 10 }}>PARTIAL</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#666' }}>
-                    {deal.contact && <span>{deal.contact}</span>}
-                    {deal.platform && <span>{deal.platform}</span>}
-                    {deal.deliverables && <span>{deal.deliverables}</span>}
-                    {deal.deadline && <span>{fmtDate(deal.deadline)}</span>}
+                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#888' }}>
+                    {deal.contact     && <span>👤 {deal.contact}</span>}
+                    {deal.platform    && <span>🏢 {deal.platform}</span>}
+                    {deal.deliverables && <span>📋 {deal.deliverables}</span>}
+                    {deal.deadline    && <span style={{ color: deadlineCol, fontWeight: daysLeft !== null && daysLeft <= 3 ? 700 : 400 }}>📅 {fmtDate(deal.deadline)}{daysLeft !== null && daysLeft <= 3 && deal.stage !== 'Paid' ? ` (${daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'today!' : `${daysLeft}d`})` : ''}</span>}
+                    {deal.paymentDue && deal.paymentStatus !== 'Paid' && <span style={{ color: payDueCol, fontWeight: payDaysLeft !== null && payDaysLeft <= 7 ? 700 : 400 }}>💳 due {fmtDate(deal.paymentDue)}{payDaysLeft !== null && payDaysLeft <= 7 ? ` (${payDaysLeft < 0 ? `${Math.abs(payDaysLeft)}d overdue` : payDaysLeft === 0 ? 'today!' : `${payDaysLeft}d`})` : ''}</span>}
                   </div>
                   {deal.notes && <div style={{ fontSize: 12, color: '#888', marginTop: 5 }}>{deal.notes}</div>}
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                   <select className="select" value={deal.stage} onChange={e => updateStage(deal.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
                     {D_STAGES.map(s => <option key={s}>{s}</option>)}
                   </select>
-                  <button onClick={() => del(deal.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>x</button>
+                  <button onClick={() => startEdit(deal)} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
+                  <button onClick={() => del(deal.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
                 </div>
               </div>
             </div>
