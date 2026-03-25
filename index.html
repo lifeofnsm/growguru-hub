@@ -836,7 +836,7 @@ function PipelineTab() {
         </div>
       )}
 
-      {items.length === 0 && !adding && <Empty icon="" text="Pipeline is empty. Add your first content." />
+      {items.length === 0 && !adding && <Empty icon="" text="Pipeline is empty. Add your first content." />}
 
       {P_STAGES.map(stage => {
         const grp = items.filter(i => i.stage === stage);
