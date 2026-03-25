@@ -2578,7 +2578,7 @@ function InvoicesTab() {
     const now = new Date();
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const ym = d.toISOString().slice(0, 7);
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const label = d.toLocaleString('default', { month: 'short' });
       const invoiced = barBase.filter(c => c.invoiceDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
       const received = barBase.filter(c => c.paidDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
