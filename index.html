@@ -96,11 +96,38 @@
       .mob-btn {
         flex: 1; background: none; border: none; cursor: pointer;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
-        gap: 2px; color: var(--t-faint); font-size: 9px; letter-spacing: 0.2px;
-        transition: color 0.15s; padding: 4px 2px;
+        gap: 3px; color: var(--t-faint); font-size: 10px; letter-spacing: 0.2px;
+        transition: color 0.15s; padding: 6px 2px; position: relative;
       }
       .mob-btn.mob-active { color: var(--accent); }
-      .mob-btn .mob-icon  { font-size: 18px; line-height: 1; }
+      .mob-btn.mob-active::after {
+        content: ''; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+        width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+      }
+      .mob-btn .mob-icon  { font-size: 20px; line-height: 1; }
+      /* More sheet */
+      .mob-sheet-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 300;
+        animation: fadeIn 0.15s ease;
+      }
+      .mob-sheet {
+        position: fixed; bottom: 0; left: 0; right: 0; z-index: 301;
+        background: var(--bg-card); border-top: 1px solid var(--border);
+        border-radius: 20px 20px 0 0; padding: 16px 16px 40px;
+        animation: slideUp 0.2s ease;
+      }
+      @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+      .mob-sheet-grid {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px;
+      }
+      .mob-sheet-btn {
+        background: var(--bg-sub); border: 1px solid var(--border); border-radius: 12px;
+        padding: 14px 8px; display: flex; flex-direction: column; align-items: center;
+        gap: 6px; cursor: pointer; font-size: 11px; color: var(--t-muted);
+        transition: all 0.15s;
+      }
+      .mob-sheet-btn.active { background: var(--a12); border-color: var(--a44); color: var(--accent); font-weight: 600; }
+      .mob-sheet-btn .sh-icon { font-size: 22px; }
       .mob-stack { flex-direction: column !important; }
       .mob-full  { width: 100% !important; }
     }
@@ -287,6 +314,7 @@ function Dashboard({ user, profile }) {
 
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
   const [privacy, setPrivacy] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const tabs = [
     { id: 'overview',   label: '📊', full: 'Overview' },
     { id: 'today',      label: '✅', full: 'Today' },
@@ -394,14 +422,49 @@ function Dashboard({ user, profile }) {
       </main>
 
       {/* ── Bottom nav (mobile only) ── */}
-      <nav className="mobile-nav">
-        {tabs.map(t => (
-          <button key={t.id} className={`mob-btn${tab === t.id ? ' mob-active' : ''}`} onClick={() => setTab(t.id)}>
-            <span className="mob-icon">{t.label}</span>
-            <span>{t.full}</span>
-          </button>
-        ))}
-      </nav>
+      {(() => {
+        const PRIMARY = ['overview','today','pipeline','invoices'];
+        const primaryTabs = tabs.filter(t => PRIMARY.includes(t.id));
+        const moreTabs    = tabs.filter(t => !PRIMARY.includes(t.id));
+        const moreActive  = moreTabs.some(t => t.id === tab);
+        return (
+          <>
+            <nav className="mobile-nav">
+              {primaryTabs.map(t => (
+                <button key={t.id} className={`mob-btn${tab === t.id ? ' mob-active' : ''}`}
+                  onClick={() => { setTab(t.id); setMoreOpen(false); }}>
+                  <span className="mob-icon">{t.label}</span>
+                  <span>{t.id === 'pipeline' ? 'Pipeline' : t.id === 'overview' ? 'Home' : t.full}</span>
+                </button>
+              ))}
+              <button className={`mob-btn${moreActive ? ' mob-active' : ''}`}
+                onClick={() => setMoreOpen(o => !o)}>
+                <span className="mob-icon">☰</span>
+                <span>More</span>
+              </button>
+            </nav>
+
+            {moreOpen && (
+              <>
+                <div className="mob-sheet-overlay" onClick={() => setMoreOpen(false)} />
+                <div className="mob-sheet">
+                  <div style={{ width: 36, height: 4, background: 'var(--border)', borderRadius: 2, margin: '0 auto 4px' }} />
+                  <div style={{ fontSize: 11, color: 'var(--t-faint)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center' }}>More</div>
+                  <div className="mob-sheet-grid">
+                    {moreTabs.map(t => (
+                      <button key={t.id} className={`mob-sheet-btn${tab === t.id ? ' active' : ''}`}
+                        onClick={() => { setTab(t.id); setMoreOpen(false); }}>
+                        <span className="sh-icon">{t.label}</span>
+                        <span>{t.full}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        );
+      })()}
     </div>
     </PrivacyContext.Provider>
   );
