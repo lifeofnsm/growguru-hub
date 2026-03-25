@@ -1179,7 +1179,8 @@ function TodayTab() {
 function PipelineTab() {
   const [items, setItems] = useState([]);
   const [channels, setChannels] = useState([]);
-  const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', recurring: false, frequency: 'Weekly', brandDeal: false, brandName: '', pocName: '', pocContact: '', agreedRate: '', recordDate: '', editDate: '', publishDate: '', notes: '' };
+  const [vendors, setVendors] = useState([]);
+  const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', recurring: false, frequency: 'Weekly', brandDeal: false, brandId: '', brandName: '', pocName: '', pocContact: '', agreedRate: '', recordDate: '', editDate: '', publishDate: '', notes: '' };
   const [form, setForm] = useState(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1191,6 +1192,10 @@ function PipelineTab() {
 
   useEffect(() => {
     return db.collection('pipeline').orderBy('createdAt', 'desc').onSnapshot(snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  useEffect(() => {
+    db.collection('vendors').orderBy('name').get().then(snap => setVendors(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, []);
 
   useEffect(() => {
@@ -1265,7 +1270,7 @@ function PipelineTab() {
 
   const startEdit = (item) => {
     setEditItem(item.id);
-    setEditForm({ title: item.title || '', stage: item.stage || 'Idea', channel: item.channel || '', platform: item.platform || '', recurring: item.recurring || false, frequency: item.frequency || 'Weekly', brandDeal: item.brandDeal || false, brandName: item.brandName || '', pocName: item.pocName || '', pocContact: item.pocContact || '', agreedRate: item.agreedRate || '', recordDate: item.recordDate || '', editDate: item.editDate || '', publishDate: item.publishDate || '', notes: item.notes || '' });
+    setEditForm({ title: item.title || '', stage: item.stage || 'Idea', channel: item.channel || '', platform: item.platform || '', recurring: item.recurring || false, frequency: item.frequency || 'Weekly', brandDeal: item.brandDeal || false, brandId: item.brandId || '', brandName: item.brandName || '', pocName: item.pocName || '', pocContact: item.pocContact || '', agreedRate: item.agreedRate || '', recordDate: item.recordDate || '', editDate: item.editDate || '', publishDate: item.publishDate || '', notes: item.notes || '' });
   };
 
   const saveEdit = async () => {
@@ -1405,24 +1410,37 @@ function PipelineTab() {
               <input className="input" type="date" value={form.publishDate} onChange={e => setForm({ ...form, publishDate: e.target.value })} />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--t-muted)', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
-              <input type="checkbox" checked={form.brandDeal} onChange={e => setForm({ ...form, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
+              <input type="checkbox" checked={form.brandDeal} onChange={e => setForm({ ...form, brandDeal: e.target.checked, brandId: '', brandName: '', pocName: '', pocContact: '' })} style={{ accentColor: GOLD }} />
               Brand Deal
             </label>
-            {form.brandDeal && <input className="input" placeholder="Brand name *" value={form.brandName} onChange={e => setForm({ ...form, brandName: e.target.value })} style={{ flex: 1 }} />}
+            {form.brandDeal && (
+              <>
+                <select className="select" value={form.brandId || ''} onChange={e => {
+                  const v = vendors.find(x => x.id === e.target.value);
+                  if (v) setForm({ ...form, brandId: v.id, brandName: v.name, pocName: v.contactPerson || '', pocContact: v.phone || v.email || '' });
+                  else setForm({ ...form, brandId: '', brandName: '', pocName: '', pocContact: '' });
+                }} style={{ minWidth: 160 }}>
+                  <option value=''>Pick existing…</option>
+                  <optgroup label="Brands">{vendors.filter(v => v.type === 'Brand').map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>
+                  <optgroup label="Agencies">{vendors.filter(v => v.type === 'Agency').map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>
+                </select>
+                <input className="input" placeholder="or type new brand name…" value={form.brandName} onChange={e => setForm({ ...form, brandName: e.target.value, brandId: '' })} style={{ flex: 1, minWidth: 140 }} />
+              </>
+            )}
           </div>
           {form.brandDeal && (
-            <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: 'var(--a08)', border: '1px solid var(--a22)', borderRadius: 8 }}>
-              <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: 'var(--a08)', border: '1px solid var(--a22)', borderRadius: 8, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 110 }}>
                 <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>POC Name</div>
                 <input className="input" placeholder="e.g. Rahul Sharma" value={form.pocName} onChange={e => setForm({ ...form, pocName: e.target.value })} />
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 110 }}>
                 <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>POC Phone / Email</div>
                 <input className="input" placeholder="e.g. 9876543210" value={form.pocContact} onChange={e => setForm({ ...form, pocContact: e.target.value })} />
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 100 }}>
                 <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>Agreed Rate (₹)</div>
                 <input className="input" placeholder="e.g. 25000" value={form.agreedRate} onChange={e => setForm({ ...form, agreedRate: e.target.value })} />
               </div>
@@ -1491,20 +1509,33 @@ function PipelineTab() {
               <input className="input" type="date" value={editForm.publishDate} onChange={e => setEditForm({ ...editForm, publishDate: e.target.value })} />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--t-muted)', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
-              <input type="checkbox" checked={editForm.brandDeal} onChange={e => setEditForm({ ...editForm, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
+              <input type="checkbox" checked={editForm.brandDeal} onChange={e => setEditForm({ ...editForm, brandDeal: e.target.checked, brandId: '', brandName: '', pocName: '', pocContact: '' })} style={{ accentColor: GOLD }} />
               Brand Deal
             </label>
-            {editForm.brandDeal && <input className="input" placeholder="Brand name" value={editForm.brandName} onChange={e => setEditForm({ ...editForm, brandName: e.target.value })} style={{ flex: 1 }} />}
+            {editForm.brandDeal && (
+              <>
+                <select className="select" value={editForm.brandId || ''} onChange={e => {
+                  const v = vendors.find(x => x.id === e.target.value);
+                  if (v) setEditForm({ ...editForm, brandId: v.id, brandName: v.name, pocName: v.contactPerson || '', pocContact: v.phone || v.email || '' });
+                  else setEditForm({ ...editForm, brandId: '', brandName: '', pocName: '', pocContact: '' });
+                }} style={{ minWidth: 160 }}>
+                  <option value=''>Pick existing…</option>
+                  <optgroup label="Brands">{vendors.filter(v => v.type === 'Brand').map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>
+                  <optgroup label="Agencies">{vendors.filter(v => v.type === 'Agency').map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>
+                </select>
+                <input className="input" placeholder="or type new brand name…" value={editForm.brandName} onChange={e => setEditForm({ ...editForm, brandName: e.target.value, brandId: '' })} style={{ flex: 1, minWidth: 140 }} />
+              </>
+            )}
           </div>
           {editForm.brandDeal && (
-            <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: 'var(--a08)', border: '1px solid var(--a22)', borderRadius: 8 }}>
-              <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: 'var(--a08)', border: '1px solid var(--a22)', borderRadius: 8, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 110 }}>
                 <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>POC Name</div>
                 <input className="input" placeholder="e.g. Rahul Sharma" value={editForm.pocName} onChange={e => setEditForm({ ...editForm, pocName: e.target.value })} />
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 110 }}>
                 <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>POC Phone / Email</div>
                 <input className="input" placeholder="e.g. 9876543210" value={editForm.pocContact} onChange={e => setEditForm({ ...editForm, pocContact: e.target.value })} />
               </div>
