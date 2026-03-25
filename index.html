@@ -417,21 +417,21 @@ function OverviewTab({ onNavigate }) {
       {totalOverdue > 0 && (
         <div className="card" style={{ padding: 18, borderColor: '#ff6b6b33' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#ff6b6b', marginBottom: 12 }}>⚠️ Needs Attention ({totalOverdue})</div>
-          {overdueTasks.slice(0, 3).map(t => (
+          {overdueTasks.map(t => (
             <div key={t.id} onClick={() => onNavigate('today')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
               onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
               onMouseLeave={e => e.currentTarget.style.background = ''}>
               <span>⬜</span><span style={{ color: '#ccc', flex: 1 }}>{t.title}</span><span style={{ color: '#666' }}>{fmtDate(t.date)}</span>
             </div>
           ))}
-          {overduePipeline.slice(0, 2).map(p => (
+          {overduePipeline.map(p => (
             <div key={p.id} onClick={() => onNavigate('pipeline')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
               onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
               onMouseLeave={e => e.currentTarget.style.background = ''}>
               <span>🎬</span><span style={{ color: '#ccc', flex: 1 }}>{p.title}</span><span style={{ color: '#666' }}>due {fmtDate(p.publishDate)}</span>
             </div>
           ))}
-          {overdueDeals.slice(0, 2).map(d => (
+          {overdueDeals.map(d => (
             <div key={d.id} onClick={() => onNavigate('deals')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
               onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
               onMouseLeave={e => e.currentTarget.style.background = ''}>
@@ -491,11 +491,13 @@ function WeeklyTab() {
     return unsub;
   }, [startDate, endDate]);
 
-  // Spawn recurring tasks for all 7 days in this week
+  // Spawn recurring tasks — only for today and future days in this week
   useEffect(() => {
+    const today = todayStr();
     db.collection('taskTemplates').where('active', '==', true).get().then(async snap => {
       const tmpls = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       for (const day of weekDays) {
+        if (day < today) continue; // never create tasks for past days
         for (const tmpl of tmpls) {
           if (!appliesToday(tmpl, day)) continue;
           const existing = await db.collection('tasks')
@@ -693,6 +695,22 @@ function TodayTab() {
   useEffect(() => {
     db.collection('taskTemplates').where('active', '==', true).orderBy('createdAt', 'asc')
       .onSnapshot(snap => setTemplates(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  // One-time cleanup: delete past undone recurring task instances (spawned before today)
+  useEffect(() => {
+    const today = todayStr();
+    db.collection('tasks')
+      .where('recurring', '==', true)
+      .where('done', '==', false)
+      .get()
+      .then(snap => {
+        const pastOnes = snap.docs.filter(d => d.data().date < today);
+        if (!pastOnes.length) return;
+        const batch = db.batch();
+        pastOnes.forEach(d => batch.delete(d.ref));
+        return batch.commit();
+      });
   }, []);
 
   // Auto-spawn recurring tasks for today
