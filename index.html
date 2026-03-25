@@ -2876,14 +2876,21 @@ td:last-child{text-align:right;font-weight:600}
                 </div>
               </div>
 
-              {/* Tooltip */}
-              {hovBar !== null && monthlyData[hovBar] && (
-                <div style={{ marginBottom: 10, padding: '7px 12px', background: 'var(--bg-sub)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}>
-                  <span style={{ color: 'var(--t-label)', fontWeight: 700, marginRight: 12 }}>{monthlyData[hovBar].label}</span>
-                  <span style={{ color: '#F5C518', marginRight: 10 }}>Invoiced: {fmt(monthlyData[hovBar].invoiced)}</span>
-                  <span style={{ color: '#4ade80' }}>Received: {fmt(monthlyData[hovBar].received)}</span>
-                </div>
-              )}
+              {/* Fixed-height tooltip strip — always occupies space, content swaps in/out */}
+              <div style={{ height: 32, marginBottom: 8, display: 'flex', alignItems: 'center' }}>
+                {hovBar !== null && monthlyData[hovBar] ? (
+                  <div style={{ padding: '5px 12px', background: 'var(--bg-sub)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, display: 'flex', gap: 14, alignItems: 'center' }}>
+                    <span style={{ color: 'var(--t-bright)', fontWeight: 700 }}>{monthlyData[hovBar].label} 2026</span>
+                    <span style={{ color: '#F5C518' }}>📄 {fmt(monthlyData[hovBar].invoiced)}</span>
+                    <span style={{ color: '#4ade80' }}>✅ {fmt(monthlyData[hovBar].received)}</span>
+                    {monthlyData[hovBar].invoiced > 0 && monthlyData[hovBar].received < monthlyData[hovBar].invoiced && (
+                      <span style={{ color: '#f97316', fontSize: 11 }}>⏳ {fmt(monthlyData[hovBar].invoiced - monthlyData[hovBar].received)} pending</span>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 11, color: 'var(--t-faint)' }}>Hover a bar to see details</div>
+                )}
+              </div>
 
               {/* Chart body: Y-axis + bars */}
               <div style={{ display: 'flex', gap: 8 }}>
@@ -2895,7 +2902,7 @@ td:last-child{text-align:right;font-weight:600}
                 </div>
 
                 {/* Bar area with grid lines */}
-                <div style={{ flex: 1, position: 'relative' }}>
+                <div style={{ flex: 1, position: 'relative', height: CHART_H }}>
                   {/* Horizontal grid lines */}
                   {ticks.map((t, i) => (
                     <div key={t} style={{
@@ -2907,25 +2914,25 @@ td:last-child{text-align:right;font-weight:600}
                   ))}
 
                   {/* Bars */}
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: CHART_H, position: 'relative', zIndex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: '100%', position: 'relative', zIndex: 1 }}>
                     {monthlyData.map((m, i) => {
-                      const invH = m.invoiced > 0 ? Math.max(3, Math.round((m.invoiced / yMax) * CHART_H)) : 0;
-                      const recH = m.received > 0 ? Math.max(3, Math.round((m.received / yMax) * CHART_H)) : 0;
+                      const invH = m.invoiced > 0 ? Math.max(4, Math.round((m.invoiced / yMax) * CHART_H)) : 0;
+                      const recH = m.received > 0 ? Math.max(4, Math.round((m.received / yMax) * CHART_H)) : 0;
                       const isHov = hovBar === i;
                       return (
                         <div key={m.ym}
                           onMouseEnter={() => setHovBar(i)}
                           onMouseLeave={() => setHovBar(null)}
                           style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end', gap: 2, cursor: 'pointer',
-                            background: isHov ? 'var(--row-hover)' : 'transparent', borderRadius: 4, padding: '0 1px', transition: 'background 0.1s' }}>
+                            background: isHov ? 'var(--a08)' : 'transparent', borderRadius: 4, padding: '0 1px', transition: 'background 0.15s' }}>
                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%' }}>
                             {invH > 0
-                              ? <div style={{ height: invH, background: isHov ? '#F5C518' : '#F5C518cc', borderRadius: '3px 3px 0 0', transition: 'height 0.3s ease, background 0.1s' }} />
+                              ? <div style={{ height: invH, background: isHov ? '#F5C518' : '#F5C518cc', borderRadius: '3px 3px 0 0', transition: 'background 0.15s' }} />
                               : <div style={{ height: 2, background: 'var(--border-soft)', borderRadius: 1 }} />}
                           </div>
                           {recH > 0 && (
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%' }}>
-                              <div style={{ height: recH, background: isHov ? '#4ade80' : '#4ade80bb', borderRadius: '3px 3px 0 0', transition: 'height 0.3s ease, background 0.1s' }} />
+                              <div style={{ height: recH, background: isHov ? '#4ade80' : '#4ade80bb', borderRadius: '3px 3px 0 0', transition: 'background 0.15s' }} />
                             </div>
                           )}
                         </div>
