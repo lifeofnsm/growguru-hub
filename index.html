@@ -76,13 +76,42 @@ const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {
 const fmtDateFull = () => new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
 // --- DISCORD --------------------------------------------------
+const CHANNEL_COLORS = {
+  pipeline: 0xF5C518,  // gold
+  ideas:    0xa78bfa,  // purple
+  brand:    0x4ade80,  // green
+  training: 0x38bdf8,  // blue
+  alerts:   0xff9944,  // orange
+};
+
 async function notify(channel, msg) {
   try {
     const doc = await db.collection('settings').doc('webhooks').get();
     if (!doc.exists) return;
     const url = doc.data()[channel];
     if (!url) return;
-    await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: msg }) });
+
+    // First line → embed title (strip ** markers)
+    const lines = msg.split('\n');
+    const title = lines[0].replace(/\*\*/g, '').trim();
+    // Remaining lines → description (strip leading "> " quote prefix)
+    const body = lines.slice(1)
+      .map(l => l.replace(/^>\s?/, '').trim())
+      .filter(Boolean)
+      .join('\n');
+
+    const embed = {
+      title,
+      color: CHANNEL_COLORS[channel] || 0x888888,
+      timestamp: new Date().toISOString(),
+    };
+    if (body) embed.description = body;
+
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed] }),
+    });
   } catch (_) {}
 }
 
