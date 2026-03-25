@@ -241,6 +241,7 @@ function Dashboard({ user, profile }) {
     { id: 'deals',      label: '💼', full: 'Deals' },
     { id: 'trainings',  label: '📚', full: 'Trainings' },
     { id: 'ideas',      label: '💡', full: 'Ideas' },
+    { id: 'search',     label: '🔍', full: 'Search' },
     ...(canSeeSettings ? [{ id: 'settings', label: '⚙️', full: 'Settings' }] : []),
   ];
 
@@ -297,6 +298,7 @@ function Dashboard({ user, profile }) {
           {tab === 'deals'     && <DealsTab />}
           {tab === 'trainings' && <TrainingsTab />}
           {tab === 'ideas'     && <IdeasTab />}
+          {tab === 'search'    && <SearchTab onNavigate={setTab} />}
           {tab === 'settings'  && canSeeSettings && <SettingsTab isAdmin={isAdmin} currentUid={user.uid} />}
         </div>
       </main>
@@ -809,6 +811,14 @@ function TodayTab() {
   const del      = id => db.collection('tasks').doc(id).delete();
   const delTmpl  = id => db.collection('taskTemplates').doc(id).update({ active: false });
 
+  const markAllDone = async () => {
+    const undone = tasks.filter(t => !t.done);
+    if (!undone.length) return;
+    const batch = db.batch();
+    undone.forEach(t => batch.update(db.collection('tasks').doc(t.id), { done: true }));
+    await batch.commit();
+  };
+
   const groups = { P1: [], P2: [], P3: [] };
   tasks.forEach(t => groups[t.priority]?.push(t));
   const done = tasks.filter(t => t.done).length;
@@ -829,7 +839,12 @@ function TodayTab() {
             {tasks.length > 0 && <span style={{ marginLeft: 10, color: done === tasks.length && tasks.length > 0 ? '#4ade80' : GOLD }}>{done}/{tasks.length} done</span>}
           </div>
         </div>
-        <button className="btn-gold" onClick={() => setAdding(v => !v)} style={{ fontSize: 13 }}>+ Add Task</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {tasks.length > 0 && tasks.some(t => !t.done) && (
+            <button onClick={markAllDone} className="btn-ghost" style={{ fontSize: 13 }} title="Mark all tasks done for today">✓ All Done</button>
+          )}
+          <button className="btn-gold" onClick={() => setAdding(v => !v)} style={{ fontSize: 13 }}>+ Add Task</button>
+        </div>
       </div>
 
       {/* Priority legend */}
@@ -1292,32 +1307,47 @@ function PipelineTab() {
         return (
           <div key={stage} style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#666', marginBottom: 9, textTransform: 'uppercase', letterSpacing: 1.2 }}>{stage} - {grp.length}</div>
-            {grp.map(item => (
-              <div key={item.id} className="card" style={{ padding: '13px 15px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: '#ddd', marginBottom: 6 }}>{item.title}</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span className="tag" style={{ background: '#1e1e1e', color: '#ccc' }}>{item.channel}</span>
-                    {item.platform && <span className="tag" style={{ background: `${PLATFORM_COLORS[item.platform] || '#888'}18`, color: PLATFORM_COLORS[item.platform] || '#888', fontSize: 10 }}>{item.platform}</span>}
-                    {item.recurring
-                      ? <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8' }}>🔁 {item.frequency || 'Recurring'}</span>
-                      : <span className="tag" style={{ background: '#1e1e1e', color: '#888' }}>1️⃣ One-time</span>}
-                    {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>💼 {item.brandName || 'Brand Deal'}</span>}
-                    {item.brandDeal && item.agreedRate && <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 600 }}>₹{item.agreedRate}</span>}
-                    {item.brandDeal && item.pocName && <span style={{ fontSize: 11, color: '#666' }}>POC: {item.pocName}{item.pocContact ? ` · ${item.pocContact}` : ''}</span>}
-                    {item.publishDate && <span style={{ fontSize: 11, color: '#666' }}>{item.recurring ? 'Next: ' : ''}{fmtDate(item.publishDate)}</span>}
-                    {item.notes && <span style={{ fontSize: 12, color: '#888' }}>{item.notes}</span>}
+            {grp.map(item => {
+              const today = todayStr();
+              const daysUntil = item.publishDate ? Math.ceil((new Date(item.publishDate + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
+              const isDueSoon  = daysUntil !== null && daysUntil >= 0 && daysUntil <= 3 && item.stage !== 'Published';
+              const isOverdue  = daysUntil !== null && daysUntil < 0  && item.stage !== 'Published';
+              const urgentColor = isOverdue ? '#ff6b6b' : '#F5C518';
+              return (
+                <div key={item.id} className="card" style={{
+                  padding: '13px 15px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12,
+                  borderLeft: (isDueSoon || isOverdue) ? `3px solid ${urgentColor}` : undefined,
+                  background: (isDueSoon || isOverdue) ? `${urgentColor}06` : undefined,
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: '#ddd' }}>{item.title}</span>
+                      {isOverdue  && <span className="tag" style={{ background: '#ff6b6b18', color: '#ff6b6b', fontSize: 10, fontWeight: 700 }}>⚠ OVERDUE</span>}
+                      {isDueSoon  && !isOverdue && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD, fontSize: 10, fontWeight: 700 }}>⏰ {daysUntil === 0 ? 'DUE TODAY' : `${daysUntil}d left`}</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span className="tag" style={{ background: '#1e1e1e', color: '#ccc' }}>{item.channel}</span>
+                      {item.platform && <span className="tag" style={{ background: `${PLATFORM_COLORS[item.platform] || '#888'}18`, color: PLATFORM_COLORS[item.platform] || '#888', fontSize: 10 }}>{item.platform}</span>}
+                      {item.recurring
+                        ? <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8' }}>🔁 {item.frequency || 'Recurring'}</span>
+                        : <span className="tag" style={{ background: '#1e1e1e', color: '#888' }}>1️⃣ One-time</span>}
+                      {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>💼 {item.brandName || 'Brand Deal'}</span>}
+                      {item.brandDeal && item.agreedRate && <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 600 }}>₹{item.agreedRate}</span>}
+                      {item.brandDeal && item.pocName && <span style={{ fontSize: 11, color: '#666' }}>POC: {item.pocName}{item.pocContact ? ` · ${item.pocContact}` : ''}</span>}
+                      {item.publishDate && <span style={{ fontSize: 11, color: isOverdue ? '#ff6b6b' : isDueSoon ? GOLD : '#666' }}>{item.recurring ? 'Next: ' : '📅 '}{fmtDate(item.publishDate)}</span>}
+                      {item.notes && <span style={{ fontSize: 12, color: '#888' }}>{item.notes}</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                    <select className="select" value={item.stage} onChange={e => updateStage(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
+                      {P_STAGES.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                    <button onClick={() => { startEdit(item); setAdding(false); }} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
+                    <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-                  <select className="select" value={item.stage} onChange={e => updateStage(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
-                    {P_STAGES.map(s => <option key={s}>{s}</option>)}
-                  </select>
-                  <button onClick={() => { startEdit(item); setAdding(false); }} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
-                  <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         );
       })}
@@ -1639,6 +1669,112 @@ function IdeaCard({ idea, onStar, onStatus, onPushPipeline, onPushTraining, onDe
         {idea.status === 'In Trainings' && <span style={{ fontSize: 11, color: '#a78bfa' }}>✓ In Trainings</span>}
         <button onClick={() => onDel(idea.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
       </div>
+    </div>
+  );
+}
+
+// --- SEARCH ---------------------------------------------------
+function SearchTab({ onNavigate }) {
+  const [query, setQuery]     = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const SOURCES = [
+    { key: 'pipeline',  label: '🎬 Pipeline',  tab: 'pipeline',  fields: ['title', 'channel', 'brandName', 'notes'] },
+    { key: 'deals',     label: '💼 Deal',      tab: 'deals',     fields: ['brand', 'contact', 'deliverables', 'notes'] },
+    { key: 'ideas',     label: '💡 Idea',      tab: 'ideas',     fields: ['text', 'category'] },
+    { key: 'trainings', label: '📚 Training',  tab: 'trainings', fields: ['title', 'batch', 'notes'] },
+  ];
+
+  useEffect(() => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) { setResults([]); return; }
+    setLoading(true);
+    Promise.all(SOURCES.map(src =>
+      db.collection(src.key).get().then(snap =>
+        snap.docs
+          .map(d => ({ id: d.id, _source: src, ...d.data() }))
+          .filter(doc => src.fields.some(f => (doc[f] || '').toLowerCase().includes(q)))
+      )
+    )).then(groups => {
+      setResults(groups.flat());
+      setLoading(false);
+    });
+  }, [query]);
+
+  const highlight = (text, q) => {
+    if (!text || !q) return text;
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return text;
+    return <span>{text.slice(0, idx)}<mark style={{ background: `${GOLD}40`, color: '#fff', borderRadius: 2, padding: '0 1px' }}>{text.slice(idx, idx + q.length)}</mark>{text.slice(idx + q.length)}</span>;
+  };
+
+  const getTitle = (doc) => {
+    const k = doc._source.key;
+    if (k === 'pipeline' || k === 'trainings') return doc.title;
+    if (k === 'deals')  return doc.brand;
+    if (k === 'ideas')  return doc.text;
+    return '—';
+  };
+  const getSub = (doc) => {
+    const k = doc._source.key;
+    if (k === 'pipeline')  return [doc.stage, doc.channel].filter(Boolean).join(' · ');
+    if (k === 'deals')     return [doc.stage, doc.deliverables].filter(Boolean).join(' · ');
+    if (k === 'ideas')     return [doc.category, doc.status].filter(Boolean).join(' · ');
+    if (k === 'trainings') return [doc.category, doc.status, doc.date ? fmtDate(doc.date) : ''].filter(Boolean).join(' · ');
+    return '';
+  };
+
+  return (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Search</h1>
+        <div style={{ color: '#888', fontSize: 13 }}>Search across pipeline, deals, ideas and trainings</div>
+      </div>
+
+      <div style={{ position: 'relative', marginBottom: 20 }}>
+        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#555', pointerEvents: 'none' }}>🔍</span>
+        <input className="input" placeholder="Type at least 2 characters..." value={query}
+          onChange={e => setQuery(e.target.value)} autoFocus
+          style={{ paddingLeft: 40, fontSize: 15 }} />
+        {query && <button onClick={() => setQuery('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>}
+      </div>
+
+      {loading && <div style={{ color: '#666', fontSize: 13 }}>Searching...</div>}
+
+      {!loading && query.length >= 2 && results.length === 0 && (
+        <div style={{ color: '#666', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>No results for "<span style={{ color: '#aaa' }}>{query}</span>"</div>
+      )}
+
+      {results.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>{results.length} result{results.length > 1 ? 's' : ''}</div>
+          {results.map(doc => (
+            <div key={`${doc._source.key}-${doc.id}`} className="card" onClick={() => onNavigate(doc._source.tab)}
+              style={{ padding: '12px 14px', marginBottom: 8, cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'flex-start' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, color: '#ddd', marginBottom: 4, fontWeight: 500 }}>
+                  {highlight(getTitle(doc), query)}
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span className="tag" style={{ background: `${GOLD}18`, color: GOLD, fontSize: 10, fontWeight: 700 }}>{doc._source.label}</span>
+                  <span style={{ fontSize: 11, color: '#666' }}>{getSub(doc)}</span>
+                </div>
+              </div>
+              <span style={{ fontSize: 11, color: '#444', flexShrink: 0, marginTop: 2 }}>VIEW →</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {query.length < 2 && (
+        <div style={{ textAlign: 'center', padding: '50px 0', color: '#444' }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
+          <div style={{ fontSize: 13 }}>Search pipeline, deals, ideas and trainings in one place</div>
+        </div>
+      )}
     </div>
   );
 }
