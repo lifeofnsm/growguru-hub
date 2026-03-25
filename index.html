@@ -241,6 +241,7 @@ function Dashboard({ user, profile }) {
     { id: 'deals',      label: '💼', full: 'Deals' },
     { id: 'trainings',  label: '📚', full: 'Trainings' },
     { id: 'ideas',      label: '💡', full: 'Ideas' },
+    { id: 'invoices',   label: '🧾', full: 'Invoices' },
     { id: 'search',     label: '🔍', full: 'Search' },
     ...(canSeeSettings ? [{ id: 'settings', label: '⚙️', full: 'Settings' }] : []),
   ];
@@ -298,6 +299,7 @@ function Dashboard({ user, profile }) {
           {tab === 'deals'     && <DealsTab />}
           {tab === 'trainings' && <TrainingsTab />}
           {tab === 'ideas'     && <IdeasTab />}
+          {tab === 'invoices'  && <InvoicesTab />}
           {tab === 'search'    && <SearchTab onNavigate={setTab} />}
           {tab === 'settings'  && canSeeSettings && <SettingsTab isAdmin={isAdmin} currentUid={user.uid} />}
         </div>
@@ -1471,6 +1473,28 @@ function DealsTab() {
 
   const del = id => db.collection('deals').doc(id).delete();
 
+  const generateInvoice = async (deal) => {
+    const invNo = await autoInvoiceNo();
+    await db.collection('collabs').add({
+      brand: deal.brand || '',
+      invoiceNo: invNo,
+      description: deal.deliverables || '',
+      amount: deal.agreedRate || '',
+      channel: deal.platform || '',
+      poc: deal.contact || '',
+      deliverable: 'Integration',
+      invoiceDate: todayStr(),
+      dueDate: deal.paymentDue || '',
+      status: 'Pending',
+      paidDate: '',
+      notes: `Generated from Deal: ${deal.brand}`,
+      linkedDealId: deal.id,
+      createdAt: new Date().toISOString(),
+    });
+    await db.collection('deals').doc(deal.id).update({ stage: 'Invoiced', invoiceNo: invNo });
+    notify('brand', `🧾  **Invoice Generated**\n> **${deal.brand}**  ·  ${invNo}\n> ₹${deal.agreedRate || '—'}  ·  Deal → Invoiced`);
+  };
+
   // Shared form fields — used by both add and edit
   const DealForm = ({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor }) => (
     <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${accentColor}44` }}>
@@ -1544,6 +1568,7 @@ function DealsTab() {
                     {deal.agreedRate && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 600 }}>₹{deal.agreedRate}</span>}
                     {deal.paymentStatus === 'Paid'    && <span className="tag" style={{ background: '#4ade8018', color: '#4ade80', fontSize: 10, fontWeight: 700 }}>✓ PAID</span>}
                     {deal.paymentStatus === 'Partial' && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD, fontSize: 10 }}>PARTIAL</span>}
+                    {deal.invoiceNo && <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8', fontSize: 10 }}>🧾 {deal.invoiceNo}</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#888' }}>
                     {deal.contact     && <span>👤 {deal.contact}</span>}
@@ -1554,10 +1579,13 @@ function DealsTab() {
                   </div>
                   {deal.notes && <div style={{ fontSize: 12, color: '#888', marginTop: 5 }}>{deal.notes}</div>}
                 </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <select className="select" value={deal.stage} onChange={e => updateStage(deal.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
                     {D_STAGES.map(s => <option key={s}>{s}</option>)}
                   </select>
+                  {!deal.invoiceNo && deal.brand && (
+                    <button onClick={() => generateInvoice(deal)} title="Generate Invoice" style={{ background: `${GOLD}12`, border: `1px solid ${GOLD}44`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 11, padding: '4px 8px', fontWeight: 700, whiteSpace: 'nowrap' }}>🧾 Invoice</button>
+                  )}
                   <button onClick={() => startEdit(deal)} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
                   <button onClick={() => del(deal.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
                 </div>
@@ -1895,6 +1923,333 @@ function SearchTab({ onNavigate }) {
           <div style={{ fontSize: 13 }}>Search pipeline, deals, ideas and trainings in one place</div>
         </div>
       )}
+    </div>
+  );
+}
+
+// --- INVOICES -------------------------------------------------
+const INV_STATUSES   = ['Pending', 'Paid', 'Overdue'];
+const INV_ST_COLORS  = { Pending: '#f97316', Paid: '#4ade80', Overdue: '#ff6b6b' };
+const INV_DELIVERABLES = ['Integration', 'Dedicated Video', 'Live', 'Short', 'Reel', 'Webinar', 'Sponsorship', 'Other'];
+const INV_EMPTY      = { brand: '', invoiceNo: '', description: '', amount: '', channel: '', poc: '', deliverable: 'Integration', invoiceDate: '', dueDate: '', status: 'Pending', paidDate: '', notes: '', linkedDealId: '' };
+const BRAND_PALETTE  = ['#38bdf8','#a78bfa','#f97316','#4ade80','#f43f5e','#F5C518','#06b6d4','#84cc16','#e879f9','#fb923c'];
+
+const autoInvoiceNo = async () => {
+  const year = new Date().getFullYear();
+  const snap = await db.collection('collabs').where('invoiceNo', '>=', `NSM-${year}-`).where('invoiceNo', '<', `NSM-${year+1}-`).get();
+  const num  = snap.size + 1;
+  return `NSM-${year}-${String(num).padStart(3, '0')}`;
+};
+
+function InvoicesTab() {
+  const [collabs, setCollabs]   = useState([]);
+  const [form, setForm]         = useState({ ...INV_EMPTY });
+  const [adding, setAdding]     = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [editId, setEditId]     = useState(null);
+  const [editForm, setEditForm] = useState({ ...INV_EMPTY });
+  const [updating, setUpdating] = useState(false);
+  const [filterYear, setFilterYear]     = useState('All');
+  const [filterBrand, setFilterBrand]   = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+
+  useEffect(() => {
+    return db.collection('collabs').orderBy('invoiceDate', 'desc').onSnapshot(snap =>
+      setCollabs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+  }, []);
+
+  const years = [...new Set(collabs.map(c => c.invoiceDate?.slice(0, 4)).filter(Boolean))].sort((a, b) => b - a);
+  const brands = [...new Set(collabs.map(c => c.brand).filter(Boolean))].sort();
+
+  const filtered = collabs.filter(c => {
+    if (filterYear   !== 'All' && c.invoiceDate?.slice(0, 4) !== filterYear)     return false;
+    if (filterBrand  !== 'All' && c.brand !== filterBrand)                        return false;
+    if (filterStatus !== 'All' && c.status !== filterStatus)                      return false;
+    return true;
+  });
+
+  // ── Analytics computed values ──
+  const allForYear = filterYear === 'All' ? collabs : collabs.filter(c => c.invoiceDate?.slice(0, 4) === filterYear);
+  const totalInvoiced = allForYear.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const totalPaid     = allForYear.filter(c => c.status === 'Paid').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const totalPending  = allForYear.filter(c => c.status !== 'Paid').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const thisMonth     = (() => {
+    const ym = new Date().toISOString().slice(0, 7);
+    return collabs.filter(c => c.invoiceDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  })();
+
+  // Monthly bar chart — last 12 months
+  const monthlyData = (() => {
+    const months = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const ym = d.toISOString().slice(0, 7);
+      const label = d.toLocaleString('default', { month: 'short' });
+      const invoiced = collabs.filter(c => c.invoiceDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+      const received = collabs.filter(c => c.paidDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+      months.push({ ym, label, invoiced, received });
+    }
+    return months;
+  })();
+  const maxBar = Math.max(...monthlyData.map(m => Math.max(m.invoiced, m.received)), 1);
+
+  // Brand breakdown
+  const brandTotals = (() => {
+    const map = {};
+    allForYear.forEach(c => {
+      if (!c.brand) return;
+      map[c.brand] = (map[c.brand] || 0) + (parseFloat(c.amount) || 0);
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]).map(([brand, total], i) => ({ brand, total, color: BRAND_PALETTE[i % BRAND_PALETTE.length] }));
+  })();
+  const maxBrand = brandTotals[0]?.total || 1;
+
+  const fmt = n => n >= 100000 ? `₹${(n/100000).toFixed(1)}L` : n >= 1000 ? `₹${(n/1000).toFixed(1)}K` : `₹${n}`;
+
+  // ── CRUD ──
+  const add = async () => {
+    if (!form.brand.trim() || !form.amount) return;
+    setSaving(true);
+    const invNo = form.invoiceNo.trim() || await autoInvoiceNo();
+    await db.collection('collabs').add({ ...form, invoiceNo: invNo, createdAt: new Date().toISOString() });
+    notify('brand', `🧾  **Invoice Created**\n> **${form.brand}**  ·  Invoice ${invNo}\n> ₹${form.amount}  ·  Status: \`${form.status}\``);
+    setForm({ ...INV_EMPTY });
+    setAdding(false);
+    setSaving(false);
+  };
+
+  const startEdit = (c) => {
+    setEditId(c.id);
+    setEditForm({ brand: c.brand || '', invoiceNo: c.invoiceNo || '', description: c.description || '', amount: c.amount || '', channel: c.channel || '', poc: c.poc || '', deliverable: c.deliverable || 'Integration', invoiceDate: c.invoiceDate || '', dueDate: c.dueDate || '', status: c.status || 'Pending', paidDate: c.paidDate || '', notes: c.notes || '', linkedDealId: c.linkedDealId || '' });
+    setAdding(false);
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.brand.trim()) return;
+    setUpdating(true);
+    await db.collection('collabs').doc(editId).update({ ...editForm });
+    setEditId(null);
+    setUpdating(false);
+  };
+
+  const markPaid = async (c) => {
+    const today = todayStr();
+    await db.collection('collabs').doc(c.id).update({ status: 'Paid', paidDate: today });
+    // If linked to a deal, update paymentStatus too
+    if (c.linkedDealId) {
+      await db.collection('deals').doc(c.linkedDealId).update({ paymentStatus: 'Paid', stage: 'Paid' });
+    }
+    notify('brand', `✅  **Payment Received**\n> **${c.brand}**  ·  ${c.invoiceNo}\n> ₹${c.amount} marked as Paid`);
+  };
+
+  const markOverdue = async (id) => {
+    await db.collection('collabs').doc(id).update({ status: 'Overdue' });
+  };
+
+  const del = id => db.collection('collabs').doc(id).delete();
+
+  // Shared form
+  const CollabForm = ({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor }) => (
+    <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${accentColor}44` }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+        <input className="input" placeholder="Brand name *" value={f.brand} onChange={e => onChange({ ...f, brand: e.target.value })} style={{ flex: 2, minWidth: 140 }} autoFocus />
+        <input className="input" placeholder="POC / Contact" value={f.poc} onChange={e => onChange({ ...f, poc: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+        <input className="input" placeholder="Invoice No (auto if blank)" value={f.invoiceNo} onChange={e => onChange({ ...f, invoiceNo: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
+        <input className="input" placeholder="Amount (₹) *" type="number" value={f.amount} onChange={e => onChange({ ...f, amount: e.target.value })} style={{ flex: 1, minWidth: 100 }} />
+        <select className="select" value={f.status} onChange={e => onChange({ ...f, status: e.target.value })} style={{ flex: 1, minWidth: 100 }}>
+          {INV_STATUSES.map(s => <option key={s}>{s}</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+        <input className="input" placeholder="Channel (e.g. YouTube Kannada)" value={f.channel} onChange={e => onChange({ ...f, channel: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
+        <select className="select" value={f.deliverable} onChange={e => onChange({ ...f, deliverable: e.target.value })} style={{ flex: 1, minWidth: 120 }}>
+          {INV_DELIVERABLES.map(d => <option key={d}>{d}</option>)}
+        </select>
+      </div>
+      <input className="input" placeholder="Description / deliverable details" value={f.description} onChange={e => onChange({ ...f, description: e.target.value })} style={{ marginBottom: 10 }} />
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 130 }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>📄 Invoice Date</div>
+          <input className="input" type="date" value={f.invoiceDate} onChange={e => onChange({ ...f, invoiceDate: e.target.value })} />
+        </div>
+        <div style={{ flex: 1, minWidth: 130 }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>💳 Payment Due</div>
+          <input className="input" type="date" value={f.dueDate} onChange={e => onChange({ ...f, dueDate: e.target.value })} />
+        </div>
+        {f.status === 'Paid' && (
+          <div style={{ flex: 1, minWidth: 130 }}>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>✅ Paid On</div>
+            <input className="input" type="date" value={f.paidDate} onChange={e => onChange({ ...f, paidDate: e.target.value })} />
+          </div>
+        )}
+      </div>
+      <input className="input" placeholder="Notes" value={f.notes} onChange={e => onChange({ ...f, notes: e.target.value })} style={{ marginBottom: 12 }} />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn-gold" onClick={onSave} disabled={loading} style={{ fontSize: 13 }}>{loading ? 'Saving...' : btnLabel}</button>
+        <button className="btn-ghost" onClick={onCancel} style={{ fontSize: 13 }}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>🧾 Invoices & Collabs</h1>
+          <div style={{ color: '#888', fontSize: 13 }}>{collabs.length} total records · ₹{totalPaid.toLocaleString('en-IN')} received</div>
+        </div>
+        <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ New Invoice</button>
+      </div>
+
+      {adding && <CollabForm f={form} onChange={setForm} onSave={add} onCancel={() => setAdding(false)} btnLabel="Save Invoice" loading={saving} accentColor={GOLD} />}
+
+      {/* ── Year filter ── */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: '#666', marginRight: 4, textTransform: 'uppercase', letterSpacing: 0.8 }}>Year:</span>
+        {['All', ...years].map(y => (
+          <button key={y} onClick={() => setFilterYear(y)} style={{
+            padding: '4px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: filterYear === y ? 700 : 400,
+            background: filterYear === y ? `${GOLD}20` : 'transparent', color: filterYear === y ? GOLD : '#666',
+            border: `1px solid ${filterYear === y ? GOLD : '#222'}`, transition: 'all 0.15s',
+          }}>{y}</button>
+        ))}
+      </div>
+
+      {/* ── Stat strip ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 24 }}>
+        {[
+          { label: 'Total Invoiced', value: fmt(totalInvoiced), color: GOLD },
+          { label: 'Received', value: fmt(totalPaid), color: '#4ade80' },
+          { label: 'Pending / Overdue', value: fmt(totalPending), color: '#f97316' },
+          { label: 'This Month', value: fmt(thisMonth), color: '#38bdf8' },
+        ].map(s => (
+          <div key={s.label} className="card" style={{ padding: '14px 16px' }}>
+            <div style={{ fontSize: 10, color: '#666', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>{s.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Charts row ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
+
+        {/* Monthly bar chart */}
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 11, color: '#666', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 }}>Monthly Revenue (last 12 months)</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 100, paddingBottom: 20, position: 'relative' }}>
+            {monthlyData.map((m, i) => {
+              const invH = m.invoiced ? Math.max(4, (m.invoiced / maxBar) * 92) : 0;
+              const recH = m.received ? Math.max(4, (m.received / maxBar) * 92) : 0;
+              return (
+                <div key={m.ym} style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 1, position: 'relative' }}
+                  title={`${m.label}: Invoiced ₹${m.invoiced.toLocaleString('en-IN')} / Received ₹${m.received.toLocaleString('en-IN')}`}>
+                  {invH > 0 && <div style={{ flex: 1, height: invH, background: `${GOLD}80`, borderRadius: '2px 2px 0 0' }} />}
+                  {recH > 0 && <div style={{ flex: 1, height: recH, background: '#4ade8099', borderRadius: '2px 2px 0 0' }} />}
+                  {invH === 0 && recH === 0 && <div style={{ flex: 1, height: 2, background: '#222', borderRadius: 1 }} />}
+                  <div style={{ position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)', fontSize: 8, color: '#444', whiteSpace: 'nowrap' }}>{m.label}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: 14, marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#666' }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: `${GOLD}80` }} />Invoiced
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#666' }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#4ade8099' }} />Received
+            </div>
+          </div>
+        </div>
+
+        {/* Brand breakdown */}
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 11, color: '#666', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 }}>Revenue by Brand</div>
+          {brandTotals.length === 0 && <div style={{ color: '#444', fontSize: 12 }}>No data yet</div>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9, maxHeight: 180, overflowY: 'auto' }}>
+            {brandTotals.map(b => (
+              <div key={b.brand}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3, fontSize: 11 }}>
+                  <span style={{ color: b.color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{b.brand}</span>
+                  <span style={{ color: '#ccc', fontWeight: 600, marginLeft: 8, whiteSpace: 'nowrap' }}>{fmt(b.total)}</span>
+                </div>
+                <div style={{ height: 4, background: '#1a1a1a', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${(b.total / maxBrand) * 100}%`, background: b.color, borderRadius: 2, transition: 'width 0.4s ease' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Filters ── */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 0.8 }}>Filter:</span>
+        <select className="select" value={filterBrand} onChange={e => setFilterBrand(e.target.value)} style={{ fontSize: 12, padding: '5px 10px' }}>
+          <option value="All">All Brands</option>
+          {brands.map(b => <option key={b}>{b}</option>)}
+        </select>
+        <select className="select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ fontSize: 12, padding: '5px 10px' }}>
+          <option value="All">All Status</option>
+          {INV_STATUSES.map(s => <option key={s}>{s}</option>)}
+        </select>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: '#555' }}>{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>
+      </div>
+
+      {/* ── Collab records ── */}
+      {collabs.length === 0 && !adding && <Empty icon="🧾" text="No invoices yet. Generate one from a Deal or add manually." />}
+      {collabs.length > 0 && filtered.length === 0 && <div style={{ color: '#666', fontSize: 13, padding: '20px 0' }}>No records match the current filters.</div>}
+
+      <div style={{ display: 'grid', gap: 10 }}>
+        {filtered.map(c => {
+          const sc = INV_ST_COLORS[c.status] || '#888';
+          const isEditing = editId === c.id;
+          if (isEditing) return (
+            <CollabForm key={c.id} f={editForm} onChange={setEditForm} onSave={saveEdit} onCancel={() => setEditId(null)} btnLabel="Save Changes" loading={updating} accentColor="#38bdf8" />
+          );
+          const today = todayStr();
+          const dueDays = c.dueDate && c.status !== 'Paid' ? Math.ceil((new Date(c.dueDate + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
+          const dueCol = dueDays === null ? '#666' : dueDays < 0 ? '#ff6b6b' : dueDays <= 7 ? '#f97316' : '#666';
+          return (
+            <div key={c.id} className="card" style={{ padding: '14px 16px', borderLeft: dueDays !== null && dueDays <= 7 && c.status !== 'Paid' ? `3px solid ${dueCol}` : undefined }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{c.brand}</span>
+                    <span style={{ fontSize: 11, color: '#555', fontFamily: 'monospace' }}>{c.invoiceNo}</span>
+                    {c.amount && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 700 }}>₹{parseFloat(c.amount).toLocaleString('en-IN')}</span>}
+                    <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 10, fontWeight: 700 }}>{c.status}</span>
+                    {c.linkedDealId && <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8', fontSize: 10 }}>🔗 Deal</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#888' }}>
+                    {c.channel     && <span>📺 {c.channel}</span>}
+                    {c.deliverable && <span>📋 {c.deliverable}</span>}
+                    {c.poc         && <span>👤 {c.poc}</span>}
+                    {c.invoiceDate && <span>📄 {fmtDate(c.invoiceDate)}</span>}
+                    {c.dueDate && c.status !== 'Paid' && <span style={{ color: dueCol, fontWeight: dueDays !== null && dueDays <= 7 ? 700 : 400 }}>💳 due {fmtDate(c.dueDate)}{dueDays !== null && dueDays <= 7 ? ` (${dueDays < 0 ? `${Math.abs(dueDays)}d overdue` : dueDays === 0 ? 'today!' : `${dueDays}d`})` : ''}</span>}
+                    {c.paidDate    && <span style={{ color: '#4ade80' }}>✅ paid {fmtDate(c.paidDate)}</span>}
+                  </div>
+                  {c.description && <div style={{ fontSize: 12, color: '#666', marginTop: 5 }}>{c.description}</div>}
+                  {c.notes       && <div style={{ fontSize: 12, color: '#555', marginTop: 3 }}>{c.notes}</div>}
+                </div>
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {c.status !== 'Paid' && (
+                    <button onClick={() => markPaid(c)} style={{ background: '#4ade8012', border: '1px solid #4ade8044', borderRadius: 6, color: '#4ade80', cursor: 'pointer', fontSize: 11, padding: '4px 10px', fontWeight: 700 }}>✓ Mark Paid</button>
+                  )}
+                  {c.status === 'Pending' && c.dueDate && c.dueDate < today && (
+                    <button onClick={() => markOverdue(c.id)} style={{ background: '#ff6b6b12', border: '1px solid #ff6b6b44', borderRadius: 6, color: '#ff6b6b', cursor: 'pointer', fontSize: 11, padding: '4px 10px' }}>! Overdue</button>
+                  )}
+                  <button onClick={() => startEdit(c)} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px' }}>✎</button>
+                  <button onClick={() => del(c.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
