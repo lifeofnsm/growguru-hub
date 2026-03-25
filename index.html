@@ -1180,7 +1180,7 @@ function PipelineTab() {
   const [items, setItems] = useState([]);
   const [channels, setChannels] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', recurring: false, frequency: 'Weekly', brandDeal: false, brandId: '', brandName: '', pocName: '', pocContact: '', agreedRate: '', recordDate: '', editDate: '', publishDate: '', notes: '' };
+  const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', recurring: false, frequency: 'Weekly', brandDeal: false, brandId: '', brandName: '', pocName: '', pocContact: '', agreedRate: '', deliverableType: 'Integration', recordDate: '', editDate: '', publishDate: '', notes: '' };
   const [form, setForm] = useState(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1237,11 +1237,13 @@ function PipelineTab() {
       if (existingDeals.empty) {
         await db.collection('deals').add({
           brand: form.brandName.trim(),
+          brandId: form.brandId || '',
           stage: 'Confirmed',
           contact: form.pocName.trim() || '',
           pocContact: form.pocContact.trim() || '',
           platform: form.channel || '',
           agreedRate: form.agreedRate.trim() || '',
+          deliverableType: form.deliverableType || 'Integration',
           deliverables: form.title.trim(),
           paymentStatus: 'Pending',
           deadline: form.publishDate || '',
@@ -1271,7 +1273,7 @@ function PipelineTab() {
 
   const startEdit = (item) => {
     setEditItem(item.id);
-    setEditForm({ title: item.title || '', stage: item.stage || 'Idea', channel: item.channel || '', platform: item.platform || '', recurring: item.recurring || false, frequency: item.frequency || 'Weekly', brandDeal: item.brandDeal || false, brandId: item.brandId || '', brandName: item.brandName || '', pocName: item.pocName || '', pocContact: item.pocContact || '', agreedRate: item.agreedRate || '', recordDate: item.recordDate || '', editDate: item.editDate || '', publishDate: item.publishDate || '', notes: item.notes || '' });
+    setEditForm({ title: item.title || '', stage: item.stage || 'Idea', channel: item.channel || '', platform: item.platform || '', recurring: item.recurring || false, frequency: item.frequency || 'Weekly', brandDeal: item.brandDeal || false, brandId: item.brandId || '', brandName: item.brandName || '', pocName: item.pocName || '', pocContact: item.pocContact || '', agreedRate: item.agreedRate || '', deliverableType: item.deliverableType || 'Integration', recordDate: item.recordDate || '', editDate: item.editDate || '', publishDate: item.publishDate || '', notes: item.notes || '' });
   };
 
   const saveEdit = async () => {
@@ -1293,7 +1295,9 @@ function PipelineTab() {
           contact: editForm.pocName?.trim() || '',
           pocContact: editForm.pocContact?.trim() || '',
           platform: editForm.channel || '',
+          brandId: editForm.brandId || '',
           agreedRate: editForm.agreedRate?.trim() || '',
+          deliverableType: editForm.deliverableType || 'Integration',
           deliverables: editForm.title.trim(),
           paymentStatus: 'Pending',
           deadline: editForm.publishDate || '',
@@ -1465,6 +1469,17 @@ function PipelineTab() {
                 <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>Agreed Rate (₹)</div>
                 <input className="input" placeholder="e.g. 25000" value={form.agreedRate} onChange={e => setForm({ ...form, agreedRate: e.target.value })} />
               </div>
+              <div style={{ flex: 1, minWidth: 110 }}>
+                <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>Type</div>
+                <select className="select" value={form.deliverableType} onChange={e => setForm({ ...form, deliverableType: e.target.value })}>
+                  <option value="Integration">Integration</option>
+                  <option value="Dedicated">Dedicated</option>
+                  <option value="Dedicated Video">Dedicated Video</option>
+                  <option value="Live">Live</option>
+                  <option value="Short">Short</option>
+                  <option value="Reel">Reel</option>
+                </select>
+              </div>
             </div>
           )}
           <input className="input" placeholder="Notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ marginBottom: 12 }} />
@@ -1567,9 +1582,20 @@ function PipelineTab() {
                 <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>POC Phone / Email</div>
                 <input className="input" placeholder="e.g. 9876543210" value={editForm.pocContact} onChange={e => setEditForm({ ...editForm, pocContact: e.target.value })} />
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 100 }}>
                 <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>Agreed Rate (₹)</div>
                 <input className="input" placeholder="e.g. 25000" value={editForm.agreedRate} onChange={e => setEditForm({ ...editForm, agreedRate: e.target.value })} />
+              </div>
+              <div style={{ flex: 1, minWidth: 110 }}>
+                <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>Type</div>
+                <select className="select" value={editForm.deliverableType || 'Integration'} onChange={e => setEditForm({ ...editForm, deliverableType: e.target.value })}>
+                  <option value="Integration">Integration</option>
+                  <option value="Dedicated">Dedicated</option>
+                  <option value="Dedicated Video">Dedicated Video</option>
+                  <option value="Live">Live</option>
+                  <option value="Short">Short</option>
+                  <option value="Reel">Reel</option>
+                </select>
               </div>
             </div>
           )}
@@ -1898,7 +1924,7 @@ function DealsTab() {
         gstType: 'CGST+SGST',
         channel: deal.platform || '',
         poc: deal.contact || '',
-        deliverable: 'Integration',
+        deliverable: deal.deliverableType || 'Integration',
         invoiceDate: todayStr(),
         dueDate: deal.paymentDue || '',
         status: 'Pending',
@@ -2661,8 +2687,9 @@ td:last-child{text-align:right;font-weight:600}
 <div class="hdr">
   <div>
     <div class="co-name">${b.companyName || 'GrowGuru Media'}</div>
-    ${b.gstin ? `<div class="co-sub">GSTIN: ${b.gstin}</div>` : ''}
     ${b.address ? `<div class="co-sub">${b.address.replace(/\n/g, '<br>')}</div>` : ''}
+    ${b.pan ? `<div class="co-sub">PAN: ${b.pan}</div>` : ''}
+    ${b.gstin ? `<div class="co-sub">GSTIN: ${b.gstin}</div>` : ''}
   </div>
   <div class="inv-title">
     <div class="inv-word">Invoice</div>
@@ -2696,7 +2723,7 @@ td:last-child{text-align:right;font-weight:600}
   </tr></thead>
   <tbody><tr>
     <td><strong>${collab.description || collab.deliverable || 'Content Collaboration'}</strong></td>
-    <td>${collab.deliverable || '—'}</td>
+    <td>${collab.deliverable ? (collab.channel ? collab.deliverable + ' – ' + collab.channel : collab.deliverable) : '—'}</td>
     ${gstRate > 0 ? `<td>₹${baseAmt.toLocaleString('en-IN')}</td>${isIGST ? `<td>₹${gstAmt.toLocaleString('en-IN')}</td>` : `<td>₹${halfGst.toLocaleString('en-IN')}</td><td>₹${halfGst.toLocaleString('en-IN')}</td>`}` : ''}
     <td>₹${baseAmt.toLocaleString('en-IN')}</td>
   </tr></tbody>
@@ -2716,6 +2743,7 @@ td:last-child{text-align:right;font-weight:600}
     ${b.accountNo ? `<div class="ftr-row"><strong>A/C No:</strong> ${b.accountNo}</div>` : ''}
     ${b.accountType ? `<div class="ftr-row"><strong>A/C Type:</strong> ${b.accountType}</div>` : ''}
     ${b.ifsc ? `<div class="ftr-row"><strong>IFSC:</strong> ${b.ifsc}</div>` : ''}
+    ${b.pan ? `<div class="ftr-row"><strong>PAN:</strong> ${b.pan}</div>` : ''}
     ${b.upi ? `<div class="ftr-row"><strong>UPI:</strong> ${b.upi}</div>` : ''}
     ${!b.bankName && !b.upi ? '<div class="ftr-row" style="color:#ccc">Add bank details in Settings</div>' : ''}
   </div>
@@ -3361,7 +3389,7 @@ function SettingsTab({ isAdmin, currentUid }) {
   const [chList, setChList] = useState([]);
   const [newCh, setNewCh] = useState({ name: '', platform: 'YouTube' });
   const [addingCh, setAddingCh] = useState(false);
-  const [billing, setBilling] = useState({ companyName: '', gstin: '', address: '', bankName: '', accountHolder: '', accountType: 'Savings', accountNo: '', ifsc: '', upi: '' });
+  const [billing, setBilling] = useState({ companyName: '', gstin: '', pan: '', address: '', bankName: '', accountHolder: '', accountType: 'Savings', accountNo: '', ifsc: '', upi: '' });
   const [billingSaved, setBillingSaved] = useState(false);
 
   useEffect(() => {
@@ -3588,7 +3616,8 @@ function SettingsTab({ isAdmin, currentUid }) {
         <p style={{ fontSize: 12, color: 'var(--t-muted)', marginBottom: 16 }}>Appears on every invoice you print. GSTIN optional — add when registered.</p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
           <input className="input" placeholder="Company / Creator Name *" value={billing.companyName} onChange={e => setBilling({ ...billing, companyName: e.target.value })} style={{ flex: 2, minWidth: 160 }} />
-          <input className="input" placeholder="GSTIN (optional)" value={billing.gstin} onChange={e => setBilling({ ...billing, gstin: e.target.value })} style={{ flex: 1, minWidth: 140 }} />
+          <input className="input" placeholder="GSTIN (optional)" value={billing.gstin} onChange={e => setBilling({ ...billing, gstin: e.target.value })} style={{ flex: 1, minWidth: 130 }} />
+          <input className="input" placeholder="PAN Number" value={billing.pan} onChange={e => setBilling({ ...billing, pan: e.target.value.toUpperCase() })} style={{ flex: 1, minWidth: 120 }} />
         </div>
         <textarea className="input" placeholder="Your business address (appears on invoice)" value={billing.address} onChange={e => setBilling({ ...billing, address: e.target.value })} rows={2} style={{ marginBottom: 10, resize: 'vertical', fontFamily: 'inherit' }} />
         <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 8, fontWeight: 600 }}>Bank Details (for payment collection)</div>
