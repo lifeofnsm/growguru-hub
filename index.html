@@ -2504,6 +2504,10 @@ function InvoicesTab() {
   const [dateTo, setDateTo]             = useState('');
   const [sortBy, setSortBy]             = useState('newest');
   const [hovBar, setHovBar]             = useState(null);
+  const [chartFY, setChartFY]           = useState(() => {
+    const now = new Date();
+    return now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  });
   const [csvModal, setCsvModal]         = useState(false);
   const [csvLog, setCsvLog]             = useState('');
   const [csvRunning, setCsvRunning]     = useState(false);
@@ -2648,22 +2652,41 @@ function InvoicesTab() {
   const cntPending = statsBase.filter(c => c.status === 'Pending').length;
   const cntOverdue = statsBase.filter(c => c.status === 'Overdue').length;
 
-  // Monthly bar chart — last 12 months, brand-filtered
+  // Monthly bar chart — FY Apr–Mar, brand-filtered
   const barBase = filterBrand !== 'All' ? collabs.filter(c => c.brand === filterBrand) : collabs;
-  const monthlyData = (() => {
-    const months = [];
+
+  // Derive available FYs from data (plus current FY always included)
+  const availableFYs = (() => {
+    const fys = new Set();
     const now = new Date();
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleString('default', { month: 'short' });
-      const invoiced = barBase.filter(c => c.invoiceDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-      const received = barBase.filter(c => c.paidDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-      months.push({ ym, label, invoiced, received });
-    }
-    return months;
+    const curFY = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    fys.add(curFY);
+    collabs.forEach(c => {
+      const dt = c.invoiceDate || c.paidDate;
+      if (!dt) return;
+      const yr = parseInt(dt.slice(0, 4)), mo = parseInt(dt.slice(5, 7));
+      fys.add(mo >= 4 ? yr : yr - 1);
+    });
+    return [...fys].sort((a, b) => b - a);
+  })();
+
+  const monthlyData = (() => {
+    // Apr(chartFY) → Mar(chartFY+1)
+    const FY_MONTHS = [3,4,5,6,7,8,9,10,11,0,1,2]; // month index 0-based
+    const now = new Date();
+    return FY_MONTHS.map(mo => {
+      const yr = mo >= 3 ? chartFY : chartFY + 1;
+      const ym = `${yr}-${String(mo + 1).padStart(2, '0')}`;
+      const label = new Date(yr, mo, 1).toLocaleString('default', { month: 'short' });
+      // future months in current FY → show as empty
+      const isFuture = new Date(yr, mo, 1) > now;
+      const invoiced = isFuture ? 0 : barBase.filter(c => c.invoiceDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+      const received = isFuture ? 0 : barBase.filter(c => c.paidDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+      return { ym, label, invoiced, received, isFuture };
+    });
   })();
   const maxBar = Math.max(...monthlyData.map(m => Math.max(m.invoiced, m.received)), 1);
+  const fyTotal = monthlyData.reduce((s, m) => s + m.invoiced, 0);
 
   // Brand breakdown — uses statsBase
   const brandTotals = (() => {
@@ -2958,14 +2981,30 @@ td:last-child{text-align:right;font-weight:600}
           const fmtY = v => v >= 100000 ? `₹${(v/100000).toFixed(v % 100000 === 0 ? 0 : 1)}L` : v >= 1000 ? `₹${(v/1000).toFixed(0)}K` : `₹${v}`;
           return (
             <div className="card" style={{ padding: 18, minWidth: 0, overflow: 'visible' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8 }}>Monthly Revenue (last 12 months)</div>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--t-soft)' }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 2, background: '#F5C518cc' }} />Invoiced
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8 }}>Monthly Revenue — FY {chartFY}-{String(chartFY+1).slice(-2)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--t-faint)', marginTop: 2 }}>Total billed: <span style={{ color: '#F5C518', fontWeight: 600 }}>{fmt(fyTotal)}</span></div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {availableFYs.map(fy => (
+                      <button key={fy} onClick={() => { setChartFY(fy); setHovBar(null); }}
+                        style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', fontWeight: chartFY === fy ? 700 : 400,
+                          background: chartFY === fy ? 'var(--a20)' : 'transparent',
+                          color: chartFY === fy ? '#F5C518' : 'var(--t-faint)',
+                          border: `1px solid ${chartFY === fy ? '#F5C518' : 'var(--border-input)'}`, transition: 'all 0.15s' }}>
+                        FY{String(fy).slice(-2)}-{String(fy+1).slice(-2)}
+                      </button>
+                    ))}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--t-soft)' }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 2, background: '#4ade80bb' }} />Received
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--t-soft)' }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: '#F5C518cc' }} />Invoiced
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--t-soft)' }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: '#4ade80bb' }} />Received
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2974,7 +3013,7 @@ td:last-child{text-align:right;font-weight:600}
               <div style={{ height: 32, marginBottom: 8, display: 'flex', alignItems: 'center' }}>
                 {hovBar !== null && monthlyData[hovBar] ? (
                   <div style={{ padding: '5px 12px', background: 'var(--bg-sub)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, display: 'flex', gap: 14, alignItems: 'center' }}>
-                    <span style={{ color: 'var(--t-bright)', fontWeight: 700 }}>{monthlyData[hovBar].label} 2026</span>
+                    <span style={{ color: 'var(--t-bright)', fontWeight: 700 }}>{monthlyData[hovBar].label} {monthlyData[hovBar].ym.slice(0,4)}</span>
                     <span style={{ color: '#F5C518' }}>📄 {fmt(monthlyData[hovBar].invoiced)}</span>
                     <span style={{ color: '#4ade80' }}>✅ {fmt(monthlyData[hovBar].received)}</span>
                     {monthlyData[hovBar].invoiced > 0 && monthlyData[hovBar].received < monthlyData[hovBar].invoiced && (
@@ -3013,6 +3052,7 @@ td:last-child{text-align:right;font-weight:600}
                       const invH = m.invoiced > 0 ? Math.max(4, Math.round((m.invoiced / yMax) * CHART_H)) : 0;
                       const recH = m.received > 0 ? Math.max(4, Math.round((m.received / yMax) * CHART_H)) : 0;
                       const isHov = hovBar === i;
+                      const isFut = m.isFuture;
                       return (
                         <div key={m.ym}
                           onMouseEnter={() => setHovBar(i)}
