@@ -147,8 +147,8 @@ function Login() {
       <div className="fade" style={{ width: '100%', maxWidth: 360, padding: '40px 32px', background: '#141414', border: '1px solid #222', borderRadius: 16 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <div style={{ fontSize: 28, fontWeight: 800, color: GOLD, letterSpacing: '-0.5px' }}>GrowGuru Hub</div>
-          <div style={{ color: '#555', fontSize: 12, marginTop: 6, letterSpacing: 0.5 }}>ACTIVITY MANAGEMENT SYSTEM</div>
-          <div style={{ color: '#444', fontSize: 11, marginTop: 8, fontStyle: 'italic', letterSpacing: 0.3 }}>Guided by Krishna, Instrumented by GrowGuru</div>
+          <div style={{ color: '#888', fontSize: 12, marginTop: 6, letterSpacing: 0.5 }}>ACTIVITY MANAGEMENT SYSTEM</div>
+          <div style={{ color: '#666', fontSize: 11, marginTop: 8, fontStyle: 'italic', letterSpacing: 0.3 }}>Guided by Krishna, Instrumented by GrowGuru</div>
         </div>
         <form onSubmit={submit}>
           <div style={{ marginBottom: 12 }}>
@@ -192,7 +192,7 @@ function Dashboard({ user, profile }) {
         {/* Brand */}
         <div style={{ padding: '22px 18px 18px', borderBottom: '1px solid #161616' }}>
           <div style={{ fontWeight: 800, fontSize: 16, color: GOLD, letterSpacing: '-0.3px', lineHeight: 1.2 }}>GrowGuru</div>
-          <div style={{ fontSize: 10, color: '#333', fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 3 }}>Hub</div>
+          <div style={{ fontSize: 10, color: '#555', fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 3 }}>Hub</div>
         </div>
 
         {/* Nav items */}
@@ -216,7 +216,7 @@ function Dashboard({ user, profile }) {
 
         {/* User info + sign out */}
         <div style={{ padding: '14px 14px', borderTop: '1px solid #161616' }}>
-          <div style={{ fontSize: 12, color: '#444', marginBottom: 6, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: 12, color: '#666', marginBottom: 6, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {profile?.name || user.email}
           </div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
@@ -248,9 +248,9 @@ function Dashboard({ user, profile }) {
 function StatCard({ label, value, sub, color }) {
   return (
     <div className="card" style={{ padding: '18px 20px' }}>
-      <div style={{ fontSize: 11, color: '#555', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</div>
+      <div style={{ fontSize: 11, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</div>
       <div style={{ fontSize: 30, fontWeight: 800, color, letterSpacing: '-1px', lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 11, color: '#555', marginTop: 6 }}>{sub}</div>
+      <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>{sub}</div>
     </div>
   );
 }
@@ -285,13 +285,13 @@ function OverviewTab() {
   const totalDealValue = activeDeals.reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
   const totalOverdue   = overdueTasks.length + overduePipeline.length + overdueDeals.length;
 
-  if (loading) return <div style={{ color: '#444', textAlign: 'center', padding: 60 }}>Loading...</div>;
+  if (loading) return <div style={{ color: '#666', textAlign: 'center', padding: 60 }}>Loading...</div>;
 
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Overview</h1>
-        <div style={{ color: '#555', fontSize: 13 }}>{fmtDateFull()}</div>
+        <div style={{ color: '#888', fontSize: 13 }}>{fmtDateFull()}</div>
       </div>
 
       {/* Stat cards */}
@@ -326,7 +326,7 @@ function OverviewTab() {
         {/* Deals breakdown */}
         <div className="card" style={{ padding: 18 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>💼 Deals by Stage</div>
-          {activeDeals.length === 0 && <div style={{ color: '#444', fontSize: 12 }}>No active deals</div>}
+          {activeDeals.length === 0 && <div style={{ color: '#666', fontSize: 12 }}>No active deals</div>}
           {D_STAGES.map(s => {
             const grp = data.deals.filter(d => d.stage === s);
             if (!grp.length) return null;
@@ -349,17 +349,17 @@ function OverviewTab() {
           <div style={{ fontSize: 13, fontWeight: 600, color: '#ff6b6b', marginBottom: 12 }}>⚠️ Needs Attention ({totalOverdue})</div>
           {overdueTasks.slice(0, 3).map(t => (
             <div key={t.id} style={{ fontSize: 12, color: '#888', padding: '5px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
-              <span>⬜</span><span style={{ color: '#ccc', flex: 1 }}>{t.title}</span><span style={{ color: '#555' }}>{fmtDate(t.date)}</span>
+              <span>⬜</span><span style={{ color: '#ccc', flex: 1 }}>{t.title}</span><span style={{ color: '#888' }}>{fmtDate(t.date)}</span>
             </div>
           ))}
           {overduePipeline.slice(0, 2).map(p => (
             <div key={p.id} style={{ fontSize: 12, color: '#888', padding: '5px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
-              <span>🎬</span><span style={{ color: '#ccc', flex: 1 }}>{p.title}</span><span style={{ color: '#555' }}>due {fmtDate(p.publishDate)}</span>
+              <span>🎬</span><span style={{ color: '#ccc', flex: 1 }}>{p.title}</span><span style={{ color: '#888' }}>due {fmtDate(p.publishDate)}</span>
             </div>
           ))}
           {overdueDeals.slice(0, 2).map(d => (
             <div key={d.id} style={{ fontSize: 12, color: '#888', padding: '5px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
-              <span>💼</span><span style={{ color: '#ccc', flex: 1 }}>{d.brand}</span><span style={{ color: '#555' }}>deadline {fmtDate(d.deadline)}</span>
+              <span>💼</span><span style={{ color: '#ccc', flex: 1 }}>{d.brand}</span><span style={{ color: '#888' }}>deadline {fmtDate(d.deadline)}</span>
             </div>
           ))}
         </div>
@@ -434,7 +434,7 @@ function WeeklyTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Weekly Planner</h1>
-          <div style={{ color: '#555', fontSize: 13 }}>{weekLabel()}</div>
+          <div style={{ color: '#888', fontSize: 13 }}>{weekLabel()}</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button className="btn-ghost" onClick={() => setWeekOffset(v => v - 1)} style={{ fontSize: 13, padding: '6px 14px' }}>← Prev</button>
@@ -483,11 +483,11 @@ function WeeklyTab() {
                       <option>P1</option><option>P2</option><option>P3</option>
                     </select>
                     <button onClick={() => addTask(day)} disabled={saving} style={{ background: GOLD, border: 'none', borderRadius: 4, padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', color: '#000' }}>+</button>
-                    <button onClick={() => setAddingDay(null)} style={{ background: 'transparent', border: '1px solid #333', borderRadius: 4, padding: '3px 6px', fontSize: 10, color: '#555', cursor: 'pointer' }}>✕</button>
+                    <button onClick={() => setAddingDay(null)} style={{ background: 'transparent', border: '1px solid #333', borderRadius: 4, padding: '3px 6px', fontSize: 10, color: '#888', cursor: 'pointer' }}>✕</button>
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setAddingDay(day)} title="Add task to this day" style={{ marginTop: 5, background: 'none', border: '1px dashed #2a2a2a', borderRadius: 4, color: '#333', cursor: 'pointer', fontSize: 14, width: '100%', padding: '2px 0', transition: 'all 0.15s' }}
+                <button onClick={() => setAddingDay(day)} title="Add task to this day" style={{ marginTop: 5, background: 'none', border: '1px dashed #2a2a2a', borderRadius: 4, color: '#555', cursor: 'pointer', fontSize: 14, width: '100%', padding: '2px 0', transition: 'all 0.15s' }}
                   onMouseEnter={e => { e.target.style.borderColor = '#444'; e.target.style.color = '#666'; }}
                   onMouseLeave={e => { e.target.style.borderColor = '#2a2a2a'; e.target.style.color = '#333'; }}>+</button>
               )}
@@ -536,7 +536,7 @@ function TodayTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Today's Focus</h1>
-          <div style={{ color: '#555', fontSize: 13 }}>
+          <div style={{ color: '#888', fontSize: 13 }}>
             {fmtDateFull()}
             {tasks.length > 0 && <span style={{ marginLeft: 10, color: done === tasks.length && tasks.length > 0 ? '#4ade80' : GOLD }}>{done}/{tasks.length} done</span>}
           </div>
@@ -591,10 +591,10 @@ function TodayTab() {
                 <div style={{ fontSize: 14, color: t.done ? '#444' : '#ddd', textDecoration: t.done ? 'line-through' : 'none', marginBottom: t.notes ? 4 : 0 }}>{t.title}</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                   <span className="tag" style={{ background: '#1e1e1e', color: '#666' }}>{t.pillar}</span>
-                  {t.notes && <span style={{ fontSize: 12, color: '#555' }}>{t.notes}</span>}
+                  {t.notes && <span style={{ fontSize: 12, color: '#888' }}>{t.notes}</span>}
                 </div>
               </div>
-              <button onClick={() => del(t.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>x</button>
+              <button onClick={() => del(t.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>x</button>
             </div>
           ))}
         </div>
@@ -735,7 +735,7 @@ function PipelineTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Content Pipeline</h1>
-          <div style={{ color: '#555', fontSize: 13 }}>{items.length} items tracked</div>
+          <div style={{ color: '#888', fontSize: 13 }}>{items.length} items tracked</div>
         </div>
         <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditItem(null); }} style={{ fontSize: 13 }}>+ Add Content</button>
       </div>
@@ -908,20 +908,20 @@ function PipelineTab() {
                     {item.platform && <span className="tag" style={{ background: `${PLATFORM_COLORS[item.platform] || '#888'}18`, color: PLATFORM_COLORS[item.platform] || '#888', fontSize: 10 }}>{item.platform}</span>}
                     {item.recurring
                       ? <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8' }}>🔁 {item.frequency || 'Recurring'}</span>
-                      : <span className="tag" style={{ background: '#1e1e1e', color: '#555' }}>1️⃣ One-time</span>}
+                      : <span className="tag" style={{ background: '#1e1e1e', color: '#888' }}>1️⃣ One-time</span>}
                     {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>💼 {item.brandName || 'Brand Deal'}</span>}
                     {item.brandDeal && item.agreedRate && <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 600 }}>₹{item.agreedRate}</span>}
                     {item.brandDeal && item.pocName && <span style={{ fontSize: 11, color: '#666' }}>POC: {item.pocName}{item.pocContact ? ` · ${item.pocContact}` : ''}</span>}
                     {item.publishDate && <span style={{ fontSize: 11, color: '#666' }}>{item.recurring ? 'Next: ' : ''}{fmtDate(item.publishDate)}</span>}
-                    {item.notes && <span style={{ fontSize: 12, color: '#555' }}>{item.notes}</span>}
+                    {item.notes && <span style={{ fontSize: 12, color: '#888' }}>{item.notes}</span>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                   <select className="select" value={item.stage} onChange={e => updateStage(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
                     {P_STAGES.map(s => <option key={s}>{s}</option>)}
                   </select>
-                  <button onClick={() => { startEdit(item); setAdding(false); }} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#555', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
-                  <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+                  <button onClick={() => { startEdit(item); setAdding(false); }} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
+                  <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
                 </div>
               </div>
             ))}
@@ -966,7 +966,7 @@ function DealsTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Brand Deals</h1>
-          <div style={{ color: '#555', fontSize: 13 }}>{deals.length} deals tracked</div>
+          <div style={{ color: '#888', fontSize: 13 }}>{deals.length} deals tracked</div>
         </div>
         <button className="btn-gold" onClick={() => setAdding(v => !v)} style={{ fontSize: 13 }}>+ Add Deal</button>
       </div>
@@ -1017,13 +1017,13 @@ function DealsTab() {
                     {deal.deliverables && <span>{deal.deliverables}</span>}
                     {deal.deadline && <span>{fmtDate(deal.deadline)}</span>}
                   </div>
-                  {deal.notes && <div style={{ fontSize: 12, color: '#555', marginTop: 5 }}>{deal.notes}</div>}
+                  {deal.notes && <div style={{ fontSize: 12, color: '#888', marginTop: 5 }}>{deal.notes}</div>}
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
                   <select className="select" value={deal.stage} onChange={e => updateStage(deal.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
                     {D_STAGES.map(s => <option key={s}>{s}</option>)}
                   </select>
-                  <button onClick={() => del(deal.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>x</button>
+                  <button onClick={() => del(deal.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>x</button>
                 </div>
               </div>
             </div>
@@ -1060,7 +1060,7 @@ function IdeasTab() {
     <div>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Idea Swipe File</h1>
-        <div style={{ color: '#555', fontSize: 13 }}>{ideas.length} ideas captured</div>
+        <div style={{ color: '#888', fontSize: 13 }}>{ideas.length} ideas captured</div>
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
@@ -1079,12 +1079,12 @@ function IdeasTab() {
           <div key={idea.id} className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 14px' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, color: '#ddd', marginBottom: 4 }}>{idea.text}</div>
-              <div style={{ fontSize: 11, color: '#555' }}>
+              <div style={{ fontSize: 11, color: '#888' }}>
                 <span className="tag" style={{ background: '#1e1e1e', color: '#666', marginRight: 8 }}>{idea.category}</span>
                 {new Date(idea.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
               </div>
             </div>
-            <button onClick={() => del(idea.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1, marginTop: 2 }}>x</button>
+            <button onClick={() => del(idea.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1, marginTop: 2 }}>x</button>
           </div>
         ))}
       </div>
@@ -1155,23 +1155,23 @@ function TrainingsTab() {
       </div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Date</div>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Date</div>
           <input className="input" type="date" value={f.date} onChange={e => onChange({ ...f, date: e.target.value })} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Time</div>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Time</div>
           <input className="input" type="time" value={f.time} onChange={e => onChange({ ...f, time: e.target.value })} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Capacity</div>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Capacity</div>
           <input className="input" type="number" placeholder="e.g. 50" value={f.capacity} onChange={e => onChange({ ...f, capacity: e.target.value })} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Enrolled</div>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Enrolled</div>
           <input className="input" type="number" placeholder="0" value={f.enrolled} onChange={e => onChange({ ...f, enrolled: e.target.value })} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Revenue (₹)</div>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Revenue (₹)</div>
           <input className="input" placeholder="0" value={f.revenue} onChange={e => onChange({ ...f, revenue: e.target.value })} />
         </div>
       </div>
@@ -1199,7 +1199,7 @@ function TrainingsTab() {
               <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11, fontWeight: 600 }}>{item.status}</span>
               <span className="tag" style={{ background: '#1e1e1e', color: '#666', fontSize: 11 }}>{item.type}</span>
             </div>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: '#555', marginBottom: 6 }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: '#888', marginBottom: 6 }}>
               {item.date && <span>📅 {fmtDate(item.date)}{item.time ? ` · ${item.time}` : ''}</span>}
               {item.capacity && <span>👥 {item.enrolled || 0}/{item.capacity} enrolled</span>}
               {item.revenue && <span style={{ color: '#4ade80' }}>₹{item.revenue}</span>}
@@ -1211,15 +1211,15 @@ function TrainingsTab() {
                 </div>
               </div>
             )}
-            {item.notes && <div style={{ fontSize: 12, color: '#444', marginTop: 4 }}>{item.notes}</div>}
+            {item.notes && <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{item.notes}</div>}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
             <select className="select" value={item.status} onChange={e => updateStatus(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
               {T_STATUS.map(s => <option key={s}>{s}</option>)}
             </select>
             <button onClick={() => { setEditId(item.id); setEditForm({ title: item.title || '', type: item.type || 'Workshop', date: item.date || '', time: item.time || '', capacity: item.capacity || '', enrolled: item.enrolled || '', revenue: item.revenue || '', notes: item.notes || '' }); }}
-              style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: 16, padding: '2px 4px' }} title="Edit">✎</button>
-            <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+              style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: 16, padding: '2px 4px' }} title="Edit">✎</button>
+            <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
           </div>
         </div>
       </div>
@@ -1231,7 +1231,7 @@ function TrainingsTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Trainings</h1>
-          <div style={{ color: '#555', fontSize: 13 }}>{upcoming.length} upcoming · {completed.filter(i => i.status === 'Completed').length} completed{totalRev > 0 ? ` · ₹${totalRev.toLocaleString('en-IN')} revenue` : ''}</div>
+          <div style={{ color: '#888', fontSize: 13 }}>{upcoming.length} upcoming · {completed.filter(i => i.status === 'Completed').length} completed{totalRev > 0 ? ` · ₹${totalRev.toLocaleString('en-IN')} revenue` : ''}</div>
         </div>
         <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Plan Training</button>
       </div>
@@ -1243,7 +1243,7 @@ function TrainingsTab() {
           const col = T_COLORS[s];
           return (
             <div key={s} className="card" style={{ flex: 1, padding: '12px 14px' }}>
-              <div style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>{s}</div>
+              <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>{s}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: col }}>{cnt}</div>
             </div>
           );
@@ -1258,14 +1258,14 @@ function TrainingsTab() {
 
       {upcoming.length > 0 && (
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, color: '#444', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 12 }}>Upcoming & Live</div>
+          <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 12 }}>Upcoming & Live</div>
           {upcoming.map(item => <Card key={item.id} item={item} />)}
         </div>
       )}
 
       {completed.length > 0 && (
         <div>
-          <div style={{ fontSize: 11, color: '#444', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 12 }}>Completed & Cancelled</div>
+          <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 12 }}>Completed & Cancelled</div>
           {completed.map(item => <Card key={item.id} item={item} />)}
         </div>
       )}
@@ -1505,7 +1505,7 @@ function SettingsTab({ isAdmin, currentUid }) {
       {/* Discord */}
       <div className="card" style={{ padding: 20 }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>Discord Webhooks</h2>
-        <p style={{ fontSize: 12, color: '#555', marginBottom: 18 }}>Paste webhook URLs for each pillar channel. Notifications will route automatically.</p>
+        <p style={{ fontSize: 12, color: '#888', marginBottom: 18 }}>Paste webhook URLs for each pillar channel. Notifications will route automatically.</p>
         {[
           ['pipeline', '🎬 Content Pipeline', 'New content added, pipeline edits, task updates'],
           ['ideas',    '💡 Ideas Channel',    'Every idea captured — separate from pipeline for cleaner tracking'],
@@ -1515,7 +1515,7 @@ function SettingsTab({ isAdmin, currentUid }) {
         ].map(([key, label, hint]) => (
           <div key={key} style={{ marginBottom: 14 }}>
             <label style={{ display: 'block', fontSize: 12, color: '#888', marginBottom: 3 }}>{label}</label>
-            <div style={{ fontSize: 11, color: '#444', marginBottom: 5 }}>{hint}</div>
+            <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>{hint}</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input className="input" type="url" placeholder="https://discord.com/api/webhooks/..." value={webhooks[key] || ''}
                 onChange={e => setWebhooks({ ...webhooks, [key]: e.target.value })} style={{ flex: 1 }} />
@@ -1530,7 +1530,7 @@ function SettingsTab({ isAdmin, currentUid }) {
       {/* Daily Summary */}
       <div className="card" style={{ padding: 20, borderColor: '#F5C51830' }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>📊 Daily Summary</h2>
-        <p style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>Posts a full digest to your Discord Alerts channel — tasks done/pending, pipeline status, active deals, overdue items, and ideas captured today.</p>
+        <p style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Posts a full digest to your Discord Alerts channel — tasks done/pending, pipeline status, active deals, overdue items, and ideas captured today.</p>
         <div style={{ background: '#111', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 12, color: '#666', lineHeight: 1.8 }}>
           <div>✅ Today's tasks — done vs pending, by priority</div>
           <div>🎬 Pipeline — active videos per stage, what's due today</div>
@@ -1544,13 +1544,13 @@ function SettingsTab({ isAdmin, currentUid }) {
           </button>
           {summaryMsg && <span style={{ fontSize: 12, color: summaryMsg.startsWith('✅') ? '#4ade80' : summaryMsg.startsWith('⚠️') ? GOLD : '#ff6b6b' }}>{summaryMsg}</span>}
         </div>
-        <div style={{ fontSize: 11, color: '#444', marginTop: 10 }}>Requires Alerts webhook to be saved above. Click any time — morning check-in, end of day, whenever you need a snapshot.</div>
+        <div style={{ fontSize: 11, color: '#666', marginTop: 10 }}>Requires Alerts webhook to be saved above. Click any time — morning check-in, end of day, whenever you need a snapshot.</div>
       </div>
 
       {/* Channels */}
       <div className="card" style={{ padding: 20 }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>📡 Channels</h2>
-        <p style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>Manage your publishing channels. These appear in the Pipeline dropdown.</p>
+        <p style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Manage your publishing channels. These appear in the Pipeline dropdown.</p>
 
         {/* Grouped by platform */}
         {PLATFORMS.map(plat => {
@@ -1563,14 +1563,14 @@ function SettingsTab({ isAdmin, currentUid }) {
               {grp.map(ch => (
                 <div key={ch.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: '#111', borderRadius: 7, marginBottom: 5 }}>
                   <span style={{ fontSize: 13, color: '#ddd' }}>{ch.name}</span>
-                  <button onClick={() => deleteChannel(ch.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' }} title="Remove channel">✕</button>
+                  <button onClick={() => deleteChannel(ch.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' }} title="Remove channel">✕</button>
                 </div>
               ))}
             </div>
           );
         })}
 
-        {chList.length === 0 && <div style={{ fontSize: 13, color: '#444', marginBottom: 14 }}>No channels yet.</div>}
+        {chList.length === 0 && <div style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>No channels yet.</div>}
 
         {/* Add new channel */}
         <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
@@ -1616,13 +1616,13 @@ function SettingsTab({ isAdmin, currentUid }) {
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                     <span style={{ fontSize: 14, color: '#ddd' }}>{u.name}</span>
-                    {u.id === currentUid && <span style={{ fontSize: 10, color: '#444' }}>(you)</span>}
+                    {u.id === currentUid && <span style={{ fontSize: 10, color: '#666' }}>(you)</span>}
                     {canEditThisName && (
-                      <button onClick={() => startEditName(u.id, u.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', fontSize: 12, padding: '2px 4px', lineHeight: 1 }} title="Edit name">✎</button>
+                      <button onClick={() => startEditName(u.id, u.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 12, padding: '2px 4px', lineHeight: 1 }} title="Edit name">✎</button>
                     )}
                   </div>
                 )}
-                <div style={{ fontSize: 12, color: '#555', marginTop: 2 }}>{u.email}</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{u.email}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 <span className="tag" style={{ background: roleBg, color: roleColor, fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' }}>{u.role}</span>
@@ -1659,7 +1659,7 @@ function SettingsTab({ isAdmin, currentUid }) {
 // --- SHARED COMPONENTS ----------------------------------------
 function Empty({ icon, text }) {
   return (
-    <div style={{ textAlign: 'center', padding: '64px 20px', color: '#444' }}>
+    <div style={{ textAlign: 'center', padding: '64px 20px', color: '#666' }}>
       <div style={{ fontSize: 36, marginBottom: 12 }}>{icon}</div>
       <div style={{ fontSize: 14 }}>{text}</div>
     </div>
