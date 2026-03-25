@@ -1214,45 +1214,6 @@ function PipelineTab() {
     return db.collection('pipeline').orderBy('createdAt', 'desc').onSnapshot(snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, []);
 
-  const exportCSV = () => {
-    const rows = filtered.length > 0 ? filtered : collabs;
-    const cols = [
-      ['Invoice No',   r => r.invoiceNo],
-      ['Brand',        r => r.brand],
-      ['Description',  r => r.description],
-      ['Channel',      r => r.channel],
-      ['Deliverable',  r => r.deliverable],
-      ['Amount',       r => r.amount],
-      ['GST Rate',     r => r.gstRate],
-      ['GST Type',     r => r.gstType],
-      ['Status',       r => r.status],
-      ['Invoice Date', r => r.invoiceDate],
-      ['Due Date',     r => r.dueDate],
-      ['Paid Date',    r => r.paidDate],
-      ['POC',          r => r.poc],
-      ['Billing Entity', r => r.billingEntity],
-      ['Notes',        r => r.notes],
-    ];
-    const esc = v => {
-      const s = String(v ?? '');
-      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const header = cols.map(([h]) => h).join(',');
-    const body   = rows.map(r => cols.map(([, fn]) => esc(fn(r))).join(',')).join('\n');
-    const csv    = header + '\n' + body;
-    const blob   = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url    = URL.createObjectURL(blob);
-    const a      = document.createElement('a');
-    const activeFY = filterYear !== 'All' ? filterYear : chartFY;
-    const fyLabel = `FY${String(activeFY).slice(-2)}-${String(activeFY+1).slice(-2)}`;
-    const today  = new Date().toISOString().slice(0,10);
-    const brandPart = filterBrand !== 'All' ? `_${filterBrand.replace(/\s+/g,'-')}` : '';
-    a.href = url;
-    a.download = `GrowGuru_Invoices_${fyLabel}${brandPart}_${today}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
 
   useEffect(() => {
     db.collection('vendors').orderBy('name').get().then(snap => setVendors(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -2866,6 +2827,41 @@ function InvoicesTab() {
     if (c.linkedDealId) {
       await db.collection('deals').doc(c.linkedDealId).update({ paymentStatus: 'Overdue' });
     }
+  };
+
+
+  const exportCSV = () => {
+    const rows = filtered.length > 0 ? filtered : collabs;
+    const cols = [
+      ['Invoice No',     r => r.invoiceNo],
+      ['Brand',          r => r.brand],
+      ['Description',    r => r.description],
+      ['Channel',        r => r.channel],
+      ['Deliverable',    r => r.deliverable],
+      ['Amount',         r => r.amount],
+      ['GST Rate',       r => r.gstRate],
+      ['GST Type',       r => r.gstType],
+      ['Status',         r => r.status],
+      ['Invoice Date',   r => r.invoiceDate],
+      ['Due Date',       r => r.dueDate],
+      ['Paid Date',      r => r.paidDate],
+      ['POC',            r => r.poc],
+      ['Billing Entity', r => r.billingEntity],
+      ['Notes',          r => r.notes],
+    ];
+    const esc = v => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s; };
+    const header = cols.map(([h]) => h).join(',');
+    const body   = rows.map(r => cols.map(([, fn]) => esc(fn(r))).join(',')).join('\n');
+    const blob   = new Blob([header + '\n' + body], { type: 'text/csv;charset=utf-8;' });
+    const url    = URL.createObjectURL(blob);
+    const a      = document.createElement('a');
+    const activeFY = filterYear !== 'All' ? filterYear : chartFY;
+    const fyLabel  = `FY${String(activeFY).slice(-2)}-${String(activeFY+1).slice(-2)}`;
+    const brandPart = filterBrand !== 'All' ? `_${filterBrand.replace(/\s+/g,'-')}` : '';
+    a.href = url;
+    a.download = `GrowGuru_Invoices_${fyLabel}${brandPart}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const del = id => db.collection('collabs').doc(id).delete();
