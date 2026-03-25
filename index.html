@@ -1178,11 +1178,7 @@ function TodayTab() {
 }
 
 // --- PIPELINE -------------------------------------------------
-function PipelineTab() {
-  const [items, setItems] = useState([]);
-  const [channels, setChannels] = useState([]);
-  const [vendors, setVendors] = useState([]);
-// ── CSV export utility (shared across tabs) ──
+// ── CSV export utility — module level, shared by all tabs ──
 const exportTabCSV = (rows, cols, filename) => {
   const esc = v => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s; };
   const header = cols.map(([h]) => h).join(',');
@@ -1199,6 +1195,10 @@ const csvBtn = (onClick, count) => (
   </button>
 );
 
+function PipelineTab() {
+  const [items, setItems] = useState([]);
+  const [channels, setChannels] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', recurring: false, frequency: 'Weekly', brandDeal: false, brandId: '', brandName: '', pocName: '', pocContact: '', agreedRate: '', deliverableType: 'Integration', recordDate: '', editDate: '', publishDate: '', notes: '' };
   const [form, setForm] = useState(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
@@ -1243,7 +1243,8 @@ const csvBtn = (onClick, count) => (
     const blob   = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url    = URL.createObjectURL(blob);
     const a      = document.createElement('a');
-    const fyLabel = `FY${String(chartFY).slice(-2)}-${String(chartFY+1).slice(-2)}`;
+    const activeFY = filterYear !== 'All' ? filterYear : chartFY;
+    const fyLabel = `FY${String(activeFY).slice(-2)}-${String(activeFY+1).slice(-2)}`;
     const today  = new Date().toISOString().slice(0,10);
     const brandPart = filterBrand !== 'All' ? `_${filterBrand.replace(/\s+/g,'-')}` : '';
     a.href = url;
@@ -2605,6 +2606,7 @@ function InvoicesTab() {
     const now = new Date();
     return now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
   });
+  // filterYear stores FY start year (number) or 'All' — synced with chartFY
   const [csvModal, setCsvModal]         = useState(false);
   const [csvLog, setCsvLog]             = useState('');
   const [csvRunning, setCsvRunning]     = useState(false);
@@ -2707,18 +2709,25 @@ function InvoicesTab() {
     );
   }, []);
 
-  const years = [...new Set(collabs.map(c => c.invoiceDate?.slice(0, 4)).filter(Boolean))].sort((a, b) => b - a);
+  const fyYears = [...new Set(collabs.map(c => {
+    if (!c.invoiceDate) return null;
+    const yr = parseInt(c.invoiceDate.slice(0,4)), mo = parseInt(c.invoiceDate.slice(5,7));
+    return mo >= 4 ? yr : yr - 1;
+  }).filter(v => v !== null))].sort((a, b) => b - a);
   const brands = [...new Set(collabs.map(c => c.brand).filter(Boolean))].sort();
 
   const hasDateRange = dateFrom || dateTo;
 
+  // FY boundary helper: Apr(fy) → Mar(fy+1)
+  const inFY = (dt, fy) => !!dt && dt >= `${fy}-04-01` && dt <= `${fy+1}-03-31`;
+
   const filtered = collabs.filter(c => {
-    // Date range overrides year pill
+    // Date range overrides FY pill
     if (hasDateRange) {
       if (dateFrom && (!c.invoiceDate || c.invoiceDate < dateFrom)) return false;
       if (dateTo   && (!c.invoiceDate || c.invoiceDate > dateTo))   return false;
     } else {
-      if (filterYear !== 'All' && c.invoiceDate?.slice(0, 4) !== filterYear) return false;
+      if (filterYear !== 'All' && !inFY(c.invoiceDate, filterYear)) return false;
     }
     if (filterBrand  !== 'All' && c.brand !== filterBrand)   return false;
     if (filterStatus !== 'All' && c.status !== filterStatus) return false;
@@ -2736,7 +2745,7 @@ function InvoicesTab() {
       if (dateFrom && (!c.invoiceDate || c.invoiceDate < dateFrom)) return false;
       if (dateTo   && (!c.invoiceDate || c.invoiceDate > dateTo))   return false;
     } else {
-      if (filterYear !== 'All' && c.invoiceDate?.slice(0, 4) !== filterYear) return false;
+      if (filterYear !== 'All' && !inFY(c.invoiceDate, filterYear)) return false;
     }
     if (filterBrand !== 'All' && c.brand !== filterBrand) return false;
     return true;
@@ -3021,18 +3030,22 @@ td:last-child{text-align:right;font-weight:600}
 
       {adding && <CollabForm f={form} onChange={setForm} onSave={add} onCancel={() => setAdding(false)} btnLabel="Save Invoice" loading={saving} accentColor={GOLD} vendors={vendors} />}
 
-      {/* ── Year filter ── */}
+      {/* ── FY filter pills (Apr–Mar) — synced with chart ── */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--t-soft)', marginRight: 4, textTransform: 'uppercase', letterSpacing: 0.8 }}>Year:</span>
-        {['All', ...years].map(y => (
-          <button key={y} onClick={() => { setFilterYear(y); setDateFrom(''); setDateTo(''); }} style={{
-            padding: '4px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: filterYear === y && !hasDateRange ? 700 : 400,
-            background: filterYear === y && !hasDateRange ? 'var(--a20)' : 'transparent',
-            color: hasDateRange ? '#444' : filterYear === y ? GOLD : 'var(--t-soft)',
-            border: `1px solid ${filterYear === y && !hasDateRange ? GOLD : 'var(--border-input)'}`, transition: 'all 0.15s',
-            opacity: hasDateRange ? 0.45 : 1,
-          }}>{y}</button>
-        ))}
+        <span style={{ fontSize: 11, color: 'var(--t-soft)', marginRight: 4, textTransform: 'uppercase', letterSpacing: 0.8 }}>FY:</span>
+        {['All', ...fyYears].map(y => {
+          const label = y === 'All' ? 'All' : `FY${String(y).slice(-2)}-${String(y+1).slice(-2)}`;
+          const active = filterYear === y && !hasDateRange;
+          return (
+            <button key={y} onClick={() => { setFilterYear(y); setDateFrom(''); setDateTo(''); if (y !== 'All') setChartFY(y); }} style={{
+              padding: '4px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: active ? 700 : 400,
+              background: active ? 'var(--a20)' : 'transparent',
+              color: hasDateRange ? 'var(--t-faint)' : active ? GOLD : 'var(--t-soft)',
+              border: `1px solid ${active ? GOLD : 'var(--border-input)'}`, transition: 'all 0.15s',
+              opacity: hasDateRange ? 0.45 : 1,
+            }}>{label}</button>
+          );
+        })}
       </div>
 
       {/* ── Date range filter ── */}
@@ -3091,7 +3104,7 @@ td:last-child{text-align:right;font-weight:600}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <div style={{ display: 'flex', gap: 4 }}>
                     {availableFYs.map(fy => (
-                      <button key={fy} onClick={() => { setChartFY(fy); setHovBar(null); }}
+                      <button key={fy} onClick={() => { setChartFY(fy); setFilterYear(fy); setHovBar(null); setDateFrom(''); setDateTo(''); }}
                         style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', fontWeight: chartFY === fy ? 700 : 400,
                           background: chartFY === fy ? 'var(--a20)' : 'transparent',
                           color: chartFY === fy ? '#F5C518' : 'var(--t-faint)',
