@@ -58,7 +58,14 @@ const db = firebase.firestore();
 // --- CONSTANTS ------------------------------------------------
 const GOLD = '#F5C518';
 const PILLARS = ['Content', 'Business Ops', 'Training', 'Daily Publishing'];
-const CHANNELS = ['GrowGuru Kannada - YouTube', 'GrowGuru English - YouTube', 'GrowGuru Reels - Instagram', 'Hashnode'];
+const PLATFORMS = ['YouTube', 'Instagram', 'Blog', 'Other'];
+const PLATFORM_COLORS = { YouTube: '#ff4444', Instagram: '#e1306c', Blog: '#4ade80', Other: '#888888' };
+const DEFAULT_CHANNELS = [
+  { name: 'GrowGuru Kannada', platform: 'YouTube' },
+  { name: 'GrowGuru English', platform: 'YouTube' },
+  { name: 'GrowGuru Reels', platform: 'Instagram' },
+  { name: 'Hashnode', platform: 'Blog' },
+];
 const P_STAGES = ['Idea', 'Script', 'Record', 'Edit', 'Review', 'Published'];
 const D_STAGES = ['Lead', 'Negotiation', 'Confirmed', 'Script Approval', 'Live', 'Invoiced', 'Paid'];
 const P_COLORS = { P1: '#ff6b6b', P2: '#F5C518', P3: '#4ade80' };
@@ -162,16 +169,18 @@ function Login() {
 
 // --- DASHBOARD ------------------------------------------------
 function Dashboard({ user, profile }) {
-  const [tab, setTab] = useState('today');
+  const [tab, setTab] = useState('overview');
   const isAdmin = profile?.role === 'admin';
   const isPartner = profile?.role === 'partner';
   const canSeeSettings = isAdmin || isPartner;
   const tabs = [
-    { id: 'today', icon: '', label: 'Today' },
-    { id: 'pipeline', icon: '', label: 'Pipeline' },
-    { id: 'deals', icon: '', label: 'Deals' },
-    { id: 'ideas', icon: '', label: 'Ideas' },
-    ...(canSeeSettings ? [{ id: 'settings', icon: '', label: 'Settings' }] : []),
+    { id: 'overview',  label: '📊 Overview' },
+    { id: 'today',     label: '✅ Today' },
+    { id: 'weekly',    label: '📅 Weekly' },
+    { id: 'pipeline',  label: '🎬 Pipeline' },
+    { id: 'deals',     label: '💼 Deals' },
+    { id: 'ideas',     label: '💡 Ideas' },
+    ...(canSeeSettings ? [{ id: 'settings', label: '⚙️ Settings' }] : []),
   ];
 
   return (
@@ -194,9 +203,9 @@ function Dashboard({ user, profile }) {
             padding: '10px 14px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13,
             color: tab === t.id ? GOLD : '#555', fontWeight: tab === t.id ? 600 : 400,
             borderBottom: tab === t.id ? `2px solid ${GOLD}` : '2px solid transparent',
-            transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6,
+            transition: 'all 0.15s', whiteSpace: 'nowrap',
           }}>
-            <span>{t.icon}</span><span>{t.label}</span>
+            {t.label}
           </button>
         ))}
       </nav>
@@ -204,13 +213,270 @@ function Dashboard({ user, profile }) {
       {/* Content */}
       <main style={{ flex: 1, padding: '24px 20px', maxWidth: 960, width: '100%', margin: '0 auto' }}>
         <div className="fade" key={tab}>
+          {tab === 'overview'  && <OverviewTab />}
           {tab === 'today'    && <TodayTab />}
+          {tab === 'weekly'   && <WeeklyTab />}
           {tab === 'pipeline' && <PipelineTab />}
           {tab === 'deals'    && <DealsTab />}
           {tab === 'ideas'    && <IdeasTab />}
-          {tab === 'settings' && canSeeSettings && <SettingsTab isAdmin={isAdmin} />}
+          {tab === 'settings' && canSeeSettings && <SettingsTab isAdmin={isAdmin} currentUid={user.uid} />}
         </div>
       </main>
+    </div>
+  );
+}
+
+// --- OVERVIEW -------------------------------------------------
+function StatCard({ label, value, sub, color }) {
+  return (
+    <div className="card" style={{ padding: '18px 20px' }}>
+      <div style={{ fontSize: 11, color: '#555', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</div>
+      <div style={{ fontSize: 30, fontWeight: 800, color, letterSpacing: '-1px', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 11, color: '#555', marginTop: 6 }}>{sub}</div>
+    </div>
+  );
+}
+
+function OverviewTab() {
+  const [data, setData] = useState({ tasks: [], pipeline: [], deals: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      db.collection('tasks').get(),
+      db.collection('pipeline').get(),
+      db.collection('deals').get(),
+    ]).then(([t, p, d]) => {
+      setData({
+        tasks:    t.docs.map(x => ({ id: x.id, ...x.data() })),
+        pipeline: p.docs.map(x => ({ id: x.id, ...x.data() })),
+        deals:    d.docs.map(x => ({ id: x.id, ...x.data() })),
+      });
+      setLoading(false);
+    });
+  }, []);
+
+  const today = todayStr();
+  const todayTasks     = data.tasks.filter(t => t.date === today);
+  const doneTasks      = todayTasks.filter(t => t.done);
+  const overdueTasks   = data.tasks.filter(t => t.date < today && !t.done);
+  const activePipeline = data.pipeline.filter(p => p.stage !== 'Published');
+  const overduePipeline= data.pipeline.filter(p => p.publishDate && p.publishDate < today && p.stage !== 'Published');
+  const activeDeals    = data.deals.filter(d => !['Paid'].includes(d.stage));
+  const overdueDeals   = data.deals.filter(d => d.deadline && d.deadline < today && !['Paid'].includes(d.stage));
+  const totalDealValue = activeDeals.reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
+  const totalOverdue   = overdueTasks.length + overduePipeline.length + overdueDeals.length;
+
+  if (loading) return <div style={{ color: '#444', textAlign: 'center', padding: 60 }}>Loading...</div>;
+
+  return (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Overview</h1>
+        <div style={{ color: '#555', fontSize: 13 }}>{fmtDateFull()}</div>
+      </div>
+
+      {/* Stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+        <StatCard label="Today's Tasks" value={`${doneTasks.length}/${todayTasks.length}`} sub="completed" color={doneTasks.length === todayTasks.length && todayTasks.length > 0 ? '#4ade80' : GOLD} />
+        <StatCard label="Active Pipeline" value={activePipeline.length} sub={`of ${data.pipeline.length} total`} color="#38bdf8" />
+        <StatCard label="Active Deals" value={activeDeals.length} sub={totalDealValue ? `₹${totalDealValue.toLocaleString('en-IN')} pipeline` : 'deals'} color={GOLD} />
+        <StatCard label="Overdue" value={totalOverdue} sub={totalOverdue === 0 ? 'all clear ✓' : 'need attention'} color={totalOverdue > 0 ? '#ff6b6b' : '#4ade80'} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        {/* Pipeline breakdown */}
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>🎬 Pipeline by Stage</div>
+          {P_STAGES.map(s => {
+            const cnt = data.pipeline.filter(p => p.stage === s).length;
+            const pct = data.pipeline.length ? (cnt / data.pipeline.length) * 100 : 0;
+            return (
+              <div key={s} style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                  <span style={{ color: '#666' }}>{s}</span>
+                  <span style={{ color: cnt > 0 ? '#ddd' : '#333', fontWeight: 600 }}>{cnt}</span>
+                </div>
+                <div style={{ height: 4, background: '#1e1e1e', borderRadius: 4 }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: s === 'Published' ? '#4ade80' : GOLD, borderRadius: 4, transition: 'width 0.5s ease' }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Deals breakdown */}
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>💼 Deals by Stage</div>
+          {activeDeals.length === 0 && <div style={{ color: '#444', fontSize: 12 }}>No active deals</div>}
+          {D_STAGES.map(s => {
+            const grp = data.deals.filter(d => d.stage === s);
+            if (!grp.length) return null;
+            const sc = D_COLORS[s] || '#888';
+            const val = grp.reduce((sum, d) => sum + (parseFloat(d.agreedRate) || 0), 0);
+            return (
+              <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #1a1a1a', fontSize: 12, gap: 8 }}>
+                <span className="tag" style={{ background: `${sc}18`, color: sc, flexShrink: 0 }}>{s}</span>
+                <span style={{ color: '#777', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{grp.map(d => d.brand).join(', ')}</span>
+                {val > 0 && <span style={{ color: '#4ade80', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>₹{val.toLocaleString('en-IN')}</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Overdue / attention */}
+      {totalOverdue > 0 && (
+        <div className="card" style={{ padding: 18, borderColor: '#ff6b6b33' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#ff6b6b', marginBottom: 12 }}>⚠️ Needs Attention ({totalOverdue})</div>
+          {overdueTasks.slice(0, 3).map(t => (
+            <div key={t.id} style={{ fontSize: 12, color: '#888', padding: '5px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
+              <span>⬜</span><span style={{ color: '#ccc', flex: 1 }}>{t.title}</span><span style={{ color: '#555' }}>{fmtDate(t.date)}</span>
+            </div>
+          ))}
+          {overduePipeline.slice(0, 2).map(p => (
+            <div key={p.id} style={{ fontSize: 12, color: '#888', padding: '5px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
+              <span>🎬</span><span style={{ color: '#ccc', flex: 1 }}>{p.title}</span><span style={{ color: '#555' }}>due {fmtDate(p.publishDate)}</span>
+            </div>
+          ))}
+          {overdueDeals.slice(0, 2).map(d => (
+            <div key={d.id} style={{ fontSize: 12, color: '#888', padding: '5px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
+              <span>💼</span><span style={{ color: '#ccc', flex: 1 }}>{d.brand}</span><span style={{ color: '#555' }}>deadline {fmtDate(d.deadline)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {totalOverdue === 0 && (
+        <div style={{ textAlign: 'center', padding: '28px 0', color: '#4ade80', fontSize: 13 }}>✨ No overdue items — you're on track.</div>
+      )}
+    </div>
+  );
+}
+
+// --- WEEKLY PLANNER -------------------------------------------
+function WeeklyTab() {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [tasks, setTasks] = useState([]);
+  const [pipeline, setPipeline] = useState([]);
+  const [addingDay, setAddingDay] = useState(null);
+  const [newTask, setNewTask] = useState({ title: '', pillar: 'Content', priority: 'P2' });
+  const [saving, setSaving] = useState(false);
+
+  const getWeekDays = (offset) => {
+    const now = new Date();
+    const day = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1) + offset * 7);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d.toISOString().split('T')[0];
+    });
+  };
+
+  const weekDays = getWeekDays(weekOffset);
+  const startDate = weekDays[0];
+  const endDate   = weekDays[6];
+
+  useEffect(() => {
+    const unsub = db.collection('tasks')
+      .where('date', '>=', startDate)
+      .where('date', '<=', endDate)
+      .onSnapshot(snap => setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    db.collection('pipeline')
+      .where('publishDate', '>=', startDate)
+      .where('publishDate', '<=', endDate)
+      .get()
+      .then(snap => setPipeline(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return unsub;
+  }, [startDate, endDate]);
+
+  const addTask = async (day) => {
+    if (!newTask.title.trim()) return;
+    setSaving(true);
+    await db.collection('tasks').add({ ...newTask, date: day, done: false, createdAt: new Date().toISOString() });
+    setNewTask({ title: '', pillar: 'Content', priority: 'P2' });
+    setAddingDay(null);
+    setSaving(false);
+  };
+
+  const toggle = (id, done) => db.collection('tasks').doc(id).update({ done: !done });
+  const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const today = todayStr();
+  const weekLabel = () => {
+    const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    if (weekOffset === 0) return `This Week · ${fmt(weekDays[0])} — ${fmt(weekDays[6])}`;
+    if (weekOffset === -1) return `Last Week · ${fmt(weekDays[0])} — ${fmt(weekDays[6])}`;
+    if (weekOffset === 1) return `Next Week · ${fmt(weekDays[0])} — ${fmt(weekDays[6])}`;
+    return `${fmt(weekDays[0])} — ${fmt(weekDays[6])}`;
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Weekly Planner</h1>
+          <div style={{ color: '#555', fontSize: 13 }}>{weekLabel()}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn-ghost" onClick={() => setWeekOffset(v => v - 1)} style={{ fontSize: 13, padding: '6px 14px' }}>← Prev</button>
+          {weekOffset !== 0 && <button className="btn-ghost" onClick={() => setWeekOffset(0)} style={{ fontSize: 12, padding: '6px 12px', color: GOLD, borderColor: GOLD + '44' }}>Today</button>}
+          <button className="btn-ghost" onClick={() => setWeekOffset(v => v + 1)} style={{ fontSize: 13, padding: '6px 14px' }}>Next →</button>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
+        {weekDays.map((day, idx) => {
+          const dayTasks = tasks.filter(t => t.date === day);
+          const dayPipe  = pipeline.filter(p => p.publishDate === day);
+          const isToday  = day === today;
+          const done     = dayTasks.filter(t => t.done).length;
+          return (
+            <div key={day} className="card" style={{ padding: '12px 10px', borderColor: isToday ? GOLD + '66' : '#222', minHeight: 150 }}>
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? GOLD : '#555', textTransform: 'uppercase', letterSpacing: 0.8 }}>{DAY_NAMES[idx]}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: isToday ? GOLD : '#666', lineHeight: 1.1 }}>{new Date(day + 'T00:00:00').getDate()}</div>
+                {dayTasks.length > 0 && <div style={{ fontSize: 10, color: done === dayTasks.length ? '#4ade80' : '#555', marginTop: 2 }}>{done}/{dayTasks.length} done</div>}
+              </div>
+              {dayPipe.map(p => (
+                <div key={p.id} style={{ fontSize: 10, color: '#38bdf8', background: '#38bdf810', borderRadius: 4, padding: '3px 6px', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.title}>
+                  🎬 {p.title}
+                </div>
+              ))}
+              {dayTasks.map(t => (
+                <div key={t.id} onClick={() => toggle(t.id, t.done)} style={{
+                  fontSize: 10, padding: '3px 6px', marginBottom: 3, borderRadius: 4, cursor: 'pointer',
+                  background: t.done ? '#4ade8012' : `${P_COLORS[t.priority]}12`,
+                  color: t.done ? '#4ade80' : P_COLORS[t.priority],
+                  textDecoration: t.done ? 'line-through' : 'none',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: t.done ? 0.55 : 1,
+                }} title={t.title}>
+                  {t.done ? '✓' : '·'} {t.title}
+                </div>
+              ))}
+              {addingDay === day ? (
+                <div style={{ marginTop: 6 }}>
+                  <input className="input" placeholder="Task..." autoFocus value={newTask.title}
+                    onChange={e => setNewTask(v => ({ ...v, title: e.target.value }))}
+                    onKeyDown={e => { if (e.key === 'Enter') addTask(day); if (e.key === 'Escape') setAddingDay(null); }}
+                    style={{ fontSize: 11, padding: '4px 7px', marginBottom: 4 }} />
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <select className="select" value={newTask.priority} onChange={e => setNewTask(v => ({ ...v, priority: e.target.value }))} style={{ fontSize: 10, padding: '3px 5px', flex: 1 }}>
+                      <option>P1</option><option>P2</option><option>P3</option>
+                    </select>
+                    <button onClick={() => addTask(day)} disabled={saving} style={{ background: GOLD, border: 'none', borderRadius: 4, padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', color: '#000' }}>+</button>
+                    <button onClick={() => setAddingDay(null)} style={{ background: 'transparent', border: '1px solid #333', borderRadius: 4, padding: '3px 6px', fontSize: 10, color: '#555', cursor: 'pointer' }}>✕</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setAddingDay(day)} title="Add task to this day" style={{ marginTop: 5, background: 'none', border: '1px dashed #2a2a2a', borderRadius: 4, color: '#333', cursor: 'pointer', fontSize: 14, width: '100%', padding: '2px 0', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.target.style.borderColor = '#444'; e.target.style.color = '#666'; }}
+                  onMouseLeave={e => { e.target.style.borderColor = '#2a2a2a'; e.target.style.color = '#333'; }}>+</button>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -234,7 +500,7 @@ function TodayTab() {
     if (!form.title.trim()) return;
     setSaving(true);
     await db.collection('tasks').add({ ...form, date: todayStr(), done: false, createdAt: new Date().toISOString() });
-    notify('content', `New task: **${form.title}** - ${form.priority} - ${form.pillar}`);
+    notify('content', `✅  **New Task Added**\n> **${form.title}**\n> \`${form.priority}\`  ·  ${form.pillar}`);
     setForm({ title: '', pillar: 'Content', priority: 'P1', notes: '' });
     setAdding(false);
     setSaving(false);
@@ -322,19 +588,47 @@ function TodayTab() {
 // --- PIPELINE -------------------------------------------------
 function PipelineTab() {
   const [items, setItems] = useState([]);
-  const [form, setForm] = useState({ title: '', stage: 'Idea', channel: CHANNELS[0], brandDeal: false, brandName: '', publishDate: '', notes: '' });
+  const [channels, setChannels] = useState([]);
+  const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', brandDeal: false, brandName: '', pocName: '', pocContact: '', agreedRate: '', publishDate: '', notes: '' };
+  const [form, setForm] = useState(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [editForm, setEditForm] = useState(EMPTY_FORM);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     return db.collection('pipeline').orderBy('createdAt', 'desc').onSnapshot(snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  useEffect(() => {
+    db.collection('channels').orderBy('createdAt', 'asc').get().then(async snap => {
+      if (snap.empty) {
+        // Seed default channels on first load
+        const batch = db.batch();
+        DEFAULT_CHANNELS.forEach(ch => {
+          const ref = db.collection('channels').doc();
+          batch.set(ref, { ...ch, createdAt: new Date().toISOString() });
+        });
+        await batch.commit();
+        db.collection('channels').orderBy('createdAt', 'asc').get().then(s => {
+          const chs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+          setChannels(chs);
+          if (chs.length) setForm(f => ({ ...f, channel: chs[0].name, platform: chs[0].platform }));
+        });
+      } else {
+        const chs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setChannels(chs);
+        if (chs.length) setForm(f => ({ ...f, channel: chs[0].name, platform: chs[0].platform }));
+      }
+    });
   }, []);
 
   const add = async () => {
     if (!form.title.trim()) return;
     setSaving(true);
     await db.collection('pipeline').add({ ...form, createdAt: new Date().toISOString() });
-    notify('content', `🎬 Pipeline: **${form.title}** added — Stage: ${form.stage}${form.brandDeal ? ` | 💼 Brand: ${form.brandName}` : ''}`);
+    notify('content', `🎬  **Pipeline — Video Added**\n> **${form.title}**\n> Stage: \`${form.stage}\`  ·  ${form.channel}${form.brandDeal ? `\n> 💼 Brand Deal: **${form.brandName}**${form.agreedRate ? `  ·  ₹${form.agreedRate}` : ''}` : ''}${form.publishDate ? `\n> 📅 Publish: ${form.publishDate}` : ''}`);
 
     // Auto-create deal entry if marked as brand collaboration
     if (form.brandDeal && form.brandName.trim()) {
@@ -343,26 +637,41 @@ function PipelineTab() {
         await db.collection('deals').add({
           brand: form.brandName.trim(),
           stage: 'Confirmed',
-          contact: '',
+          contact: form.pocName.trim() || '',
+          pocContact: form.pocContact.trim() || '',
           platform: '',
-          agreedRate: '',
+          agreedRate: form.agreedRate.trim() || '',
           deliverables: form.title,
           paymentStatus: 'Pending',
           deadline: form.publishDate || '',
           notes: `Auto-created from pipeline: ${form.title}`,
           createdAt: new Date().toISOString(),
         });
-        notify('brand', `💼 Deal auto-created: **${form.brandName}** — from pipeline video "${form.title}"`);
+        notify('brand', `💼  **Deal Auto-Created**\n> Brand: **${form.brandName}**\n> POC: ${form.pocName || '—'}${form.pocContact ? `  ·  ${form.pocContact}` : ''}\n> Rate: ${form.agreedRate ? `₹${form.agreedRate}` : 'TBD'}  ·  Deadline: ${form.publishDate || 'TBD'}\n> Linked video: "${form.title}"`);
       }
     }
 
-    setForm({ title: '', stage: 'Idea', channel: CHANNELS[0], brandDeal: false, brandName: '', publishDate: '', notes: '' });
+    setForm({ ...EMPTY_FORM, channel: channels[0]?.name || '', platform: channels[0]?.platform || '' });
     setAdding(false);
     setSaving(false);
   };
 
   const updateStage = (id, stage) => db.collection('pipeline').doc(id).update({ stage });
   const del = id => db.collection('pipeline').doc(id).delete();
+
+  const startEdit = (item) => {
+    setEditItem(item.id);
+    setEditForm({ title: item.title || '', stage: item.stage || 'Idea', channel: item.channel || '', platform: item.platform || '', brandDeal: item.brandDeal || false, brandName: item.brandName || '', pocName: item.pocName || '', pocContact: item.pocContact || '', agreedRate: item.agreedRate || '', publishDate: item.publishDate || '', notes: item.notes || '' });
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.title.trim()) return;
+    setUpdating(true);
+    await db.collection('pipeline').doc(editItem).update({ ...editForm });
+    notify('content', `✏️  **Pipeline Updated**\n> **${editForm.title}**\n> Stage: \`${editForm.stage}\`  ·  ${editForm.channel}`);
+    setEditItem(null);
+    setUpdating(false);
+  };
 
   const stageCount = s => items.filter(i => i.stage === s).length;
 
@@ -371,9 +680,9 @@ function PipelineTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Content Pipeline</h1>
-          <div style={{ color: '#555', fontSize: 13 }}>{items.length} videos tracked</div>
+          <div style={{ color: '#555', fontSize: 13 }}>{items.length} items tracked</div>
         </div>
-        <button className="btn-gold" onClick={() => setAdding(v => !v)} style={{ fontSize: 13 }}>+ Add Video</button>
+        <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditItem(null); }} style={{ fontSize: 13 }}>+ Add Content</button>
       </div>
 
       {/* Stage counts */}
@@ -392,8 +701,15 @@ function PipelineTab() {
             <select className="select" value={form.stage} onChange={e => setForm({ ...form, stage: e.target.value })} style={{ flex: 1 }}>
               {P_STAGES.map(s => <option key={s}>{s}</option>)}
             </select>
-            <select className="select" value={form.channel} onChange={e => setForm({ ...form, channel: e.target.value })} style={{ flex: 2 }}>
-              {CHANNELS.map(c => <option key={c}>{c}</option>)}
+            <select className="select" value={form.channel} onChange={e => {
+              const ch = channels.find(c => c.name === e.target.value);
+              setForm({ ...form, channel: e.target.value, platform: ch?.platform || '' });
+            }} style={{ flex: 2 }}>
+              {PLATFORMS.map(plat => {
+                const grp = channels.filter(c => c.platform === plat);
+                if (!grp.length) return null;
+                return <optgroup key={plat} label={plat}>{grp.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</optgroup>;
+              })}
             </select>
           </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
@@ -401,9 +717,25 @@ function PipelineTab() {
               <input type="checkbox" checked={form.brandDeal} onChange={e => setForm({ ...form, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
               Brand Deal
             </label>
-            {form.brandDeal && <input className="input" placeholder="Brand name" value={form.brandName} onChange={e => setForm({ ...form, brandName: e.target.value })} style={{ flex: 1 }} />}
+            {form.brandDeal && <input className="input" placeholder="Brand name *" value={form.brandName} onChange={e => setForm({ ...form, brandName: e.target.value })} style={{ flex: 1 }} />}
             <input className="input" type="date" value={form.publishDate} onChange={e => setForm({ ...form, publishDate: e.target.value })} style={{ flex: 1 }} />
           </div>
+          {form.brandDeal && (
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: `${GOLD}08`, border: `1px solid ${GOLD}22`, borderRadius: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>POC Name</div>
+                <input className="input" placeholder="e.g. Rahul Sharma" value={form.pocName} onChange={e => setForm({ ...form, pocName: e.target.value })} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>POC Phone / Email</div>
+                <input className="input" placeholder="e.g. 9876543210" value={form.pocContact} onChange={e => setForm({ ...form, pocContact: e.target.value })} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>Agreed Rate (₹)</div>
+                <input className="input" placeholder="e.g. 25000" value={form.agreedRate} onChange={e => setForm({ ...form, agreedRate: e.target.value })} />
+              </div>
+            </div>
+          )}
           <input className="input" placeholder="Notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ marginBottom: 12 }} />
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? 'Saving...' : 'Add'}</button>
@@ -412,7 +744,59 @@ function PipelineTab() {
         </div>
       )}
 
-      {items.length === 0 && !adding && <Empty icon="" text="Pipeline is empty. Add your first video." />}
+      {/* Edit modal */}
+      {editItem && (
+        <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: '#38bdf844' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#38bdf8', marginBottom: 12 }}>✏️ Edit Content</div>
+          <input className="input" placeholder="Title..." value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} style={{ marginBottom: 10 }} autoFocus />
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <select className="select" value={editForm.stage} onChange={e => setEditForm({ ...editForm, stage: e.target.value })} style={{ flex: 1 }}>
+              {P_STAGES.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <select className="select" value={editForm.channel} onChange={e => {
+              const ch = channels.find(c => c.name === e.target.value);
+              setEditForm({ ...editForm, channel: e.target.value, platform: ch?.platform || '' });
+            }} style={{ flex: 2 }}>
+              {PLATFORMS.map(plat => {
+                const grp = channels.filter(c => c.platform === plat);
+                if (!grp.length) return null;
+                return <optgroup key={plat} label={plat}>{grp.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</optgroup>;
+              })}
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#888', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={editForm.brandDeal} onChange={e => setEditForm({ ...editForm, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
+              Brand Deal
+            </label>
+            {editForm.brandDeal && <input className="input" placeholder="Brand name" value={editForm.brandName} onChange={e => setEditForm({ ...editForm, brandName: e.target.value })} style={{ flex: 1 }} />}
+            <input className="input" type="date" value={editForm.publishDate} onChange={e => setEditForm({ ...editForm, publishDate: e.target.value })} style={{ flex: 1 }} />
+          </div>
+          {editForm.brandDeal && (
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: `${GOLD}08`, border: `1px solid ${GOLD}22`, borderRadius: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>POC Name</div>
+                <input className="input" placeholder="e.g. Rahul Sharma" value={editForm.pocName} onChange={e => setEditForm({ ...editForm, pocName: e.target.value })} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>POC Phone / Email</div>
+                <input className="input" placeholder="e.g. 9876543210" value={editForm.pocContact} onChange={e => setEditForm({ ...editForm, pocContact: e.target.value })} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>Agreed Rate (₹)</div>
+                <input className="input" placeholder="e.g. 25000" value={editForm.agreedRate} onChange={e => setEditForm({ ...editForm, agreedRate: e.target.value })} />
+              </div>
+            </div>
+          )}
+          <input className="input" placeholder="Notes" value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} style={{ marginBottom: 12 }} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-gold" onClick={saveEdit} disabled={updating} style={{ fontSize: 13 }}>{updating ? 'Saving...' : 'Save Changes'}</button>
+            <button className="btn-ghost" onClick={() => setEditItem(null)} style={{ fontSize: 13 }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {items.length === 0 && !adding && <Empty icon="" text="Pipeline is empty. Add your first content." />
 
       {P_STAGES.map(stage => {
         const grp = items.filter(i => i.stage === stage);
@@ -425,17 +809,21 @@ function PipelineTab() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 500, color: '#ddd', marginBottom: 6 }}>{item.title}</div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span className="tag" style={{ background: '#1e1e1e', color: '#666' }}>{item.channel}</span>
-                    {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>{item.brandName || 'Brand Deal'}</span>}
+                    <span className="tag" style={{ background: '#1e1e1e', color: '#ccc' }}>{item.channel}</span>
+                    {item.platform && <span className="tag" style={{ background: `${PLATFORM_COLORS[item.platform] || '#888'}18`, color: PLATFORM_COLORS[item.platform] || '#888', fontSize: 10 }}>{item.platform}</span>}
+                    {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>💼 {item.brandName || 'Brand Deal'}</span>}
+                    {item.brandDeal && item.agreedRate && <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 600 }}>₹{item.agreedRate}</span>}
+                    {item.brandDeal && item.pocName && <span style={{ fontSize: 11, color: '#666' }}>POC: {item.pocName}{item.pocContact ? ` · ${item.pocContact}` : ''}</span>}
                     {item.publishDate && <span style={{ fontSize: 11, color: '#666' }}>{fmtDate(item.publishDate)}</span>}
                     {item.notes && <span style={{ fontSize: 12, color: '#555' }}>{item.notes}</span>}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                   <select className="select" value={item.stage} onChange={e => updateStage(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
                     {P_STAGES.map(s => <option key={s}>{s}</option>)}
                   </select>
-                  <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>x</button>
+                  <button onClick={() => { startEdit(item); setAdding(false); }} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#555', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
+                  <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
                 </div>
               </div>
             ))}
@@ -461,7 +849,7 @@ function DealsTab() {
     if (!form.brand.trim()) return;
     setSaving(true);
     await db.collection('deals').add({ ...form, createdAt: new Date().toISOString() });
-    notify('brand', `New deal: **${form.brand}** - Stage: ${form.stage}`);
+    notify('brand', `💼  **New Deal Added**\n> Brand: **${form.brand}**\n> Stage: \`${form.stage}\`${form.agreedRate ? `  ·  ₹${form.agreedRate}` : ''}${form.contact ? `\n> POC: ${form.contact}` : ''}${form.deadline ? `\n> Deadline: ${form.deadline}` : ''}`);
     setForm({ brand: '', stage: 'Lead', contact: '', platform: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', notes: '' });
     setAdding(false);
     setSaving(false);
@@ -470,7 +858,7 @@ function DealsTab() {
   const updateStage = async (id, stage) => {
     await db.collection('deals').doc(id).update({ stage });
     const d = deals.find(x => x.id === id);
-    notify('brand', `**${d?.brand}** -> ${stage}`);
+    notify('brand', `🔄  **Deal Stage Updated**\n> **${d?.brand}**\n> Moved to: \`${stage}\`${d?.agreedRate ? `  ·  ₹${d.agreedRate}` : ''}`);
   };
 
   const del = id => db.collection('deals').doc(id).delete();
@@ -563,7 +951,7 @@ function IdeasTab() {
     if (!text.trim()) return;
     setSaving(true);
     await db.collection('ideas').add({ text, category: cat, createdAt: new Date().toISOString() });
-    notify('content', `💡 New idea captured: **${text}** [${cat}]`);
+    notify('content', `💡  **New Idea Captured**\n> ${text}\n> Category: \`${cat}\``);
     setText('');
     setSaving(false);
   };
@@ -607,7 +995,7 @@ function IdeasTab() {
 }
 
 // --- SETTINGS -------------------------------------------------
-function SettingsTab({ isAdmin }) {
+function SettingsTab({ isAdmin, currentUid }) {
   const [users, setUsers] = useState([]);
   const [webhooks, setWebhooks] = useState({ content: '', brand: '', training: '', alerts: '' });
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'member' });
@@ -618,11 +1006,31 @@ function SettingsTab({ isAdmin }) {
   const [changingRole, setChangingRole] = useState({});
   const [summarySending, setSummarySending] = useState(false);
   const [summaryMsg, setSummaryMsg] = useState('');
+  const [editingName, setEditingName] = useState({});
+  const [savingName, setSavingName] = useState({});
+  const [chList, setChList] = useState([]);
+  const [newCh, setNewCh] = useState({ name: '', platform: 'YouTube' });
+  const [addingCh, setAddingCh] = useState(false);
 
   useEffect(() => {
     db.collection('users').get().then(s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))));
     db.collection('settings').doc('webhooks').get().then(d => { if (d.exists) setWebhooks(d.data()); });
+    db.collection('channels').orderBy('createdAt', 'asc').get().then(s => setChList(s.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, []);
+
+  const addChannel = async () => {
+    if (!newCh.name.trim()) return;
+    setAddingCh(true);
+    const ref = await db.collection('channels').add({ name: newCh.name.trim(), platform: newCh.platform, createdAt: new Date().toISOString() });
+    setChList(prev => [...prev, { id: ref.id, name: newCh.name.trim(), platform: newCh.platform }]);
+    setNewCh({ name: '', platform: 'YouTube' });
+    setAddingCh(false);
+  };
+
+  const deleteChannel = async (id) => {
+    await db.collection('channels').doc(id).delete();
+    setChList(prev => prev.filter(c => c.id !== id));
+  };
 
   const saveWebhooks = async () => {
     await db.collection('settings').doc('webhooks').set(webhooks);
@@ -667,68 +1075,65 @@ function SettingsTab({ isAdmin }) {
 
       const doneTasks    = todayTasks.filter(t => t.done);
       const pendingTasks = todayTasks.filter(t => !t.done);
+      const activeVids   = pipeline.filter(p => p.stage !== 'Published');
+      const pubToday     = pipeline.filter(p => p.publishDate === today);
+      const hasOverdue   = overdueTasks.length || overduePipe.length || overdueDeals.length;
 
-      const lines = [];
-      lines.push(`📊 **GrowGuru Hub — Daily Summary**`);
-      lines.push(`📅 ${fmtDateFull()}`);
-      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      lines.push('');
+      // Build embed fields
+      const fields = [];
 
-      // --- Tasks ---
-      lines.push(`**✅ TODAY'S TASKS** — ${doneTasks.length}/${todayTasks.length} done`);
-      if (todayTasks.length === 0) {
-        lines.push('No tasks logged today.');
-      } else {
-        doneTasks.slice(0, 4).forEach(t => lines.push(`  ✅ [${t.priority}] ${t.title}`));
-        pendingTasks.slice(0, 4).forEach(t => lines.push(`  ⬜ [${t.priority}] ${t.title}`));
-        if (todayTasks.length > 8) lines.push(`  ...and ${todayTasks.length - 8} more`);
+      // Tasks field
+      let taskVal = todayTasks.length === 0 ? '_No tasks logged today_' : '';
+      if (todayTasks.length > 0) {
+        const taskLines = [];
+        doneTasks.slice(0, 4).forEach(t => taskLines.push(`✅ \`${t.priority}\` ${t.title}`));
+        pendingTasks.slice(0, 4).forEach(t => taskLines.push(`⬜ \`${t.priority}\` ${t.title}`));
+        if (todayTasks.length > 8) taskLines.push(`_...and ${todayTasks.length - 8} more_`);
+        taskVal = taskLines.join('\n');
       }
-      lines.push('');
+      fields.push({ name: `✅ TODAY'S TASKS — ${doneTasks.length}/${todayTasks.length} done`, value: taskVal, inline: false });
 
-      // --- Pipeline ---
-      const activeVids = pipeline.filter(p => p.stage !== 'Published');
-      lines.push(`**🎬 CONTENT PIPELINE** — ${activeVids.length} active`);
+      // Pipeline field
+      const pipeLines = [];
       ['Idea','Script','Record','Edit','Review'].forEach(s => {
         const grp = pipeline.filter(p => p.stage === s);
-        if (grp.length) lines.push(`  • ${s}: ${grp.length} video${grp.length > 1 ? 's' : ''}`);
+        if (grp.length) pipeLines.push(`\`${s}\` — ${grp.length} video${grp.length > 1 ? 's' : ''}`);
       });
-      const pubToday = pipeline.filter(p => p.publishDate === today);
-      if (pubToday.length) lines.push(`  🚀 Due today: ${pubToday.map(p => p.title).join(', ')}`);
-      lines.push('');
+      if (pubToday.length) pipeLines.push(`🚀 **Due today:** ${pubToday.map(p => p.title).join(', ')}`);
+      fields.push({ name: `🎬 CONTENT PIPELINE — ${activeVids.length} active`, value: pipeLines.length ? pipeLines.join('\n') : '_No active videos_', inline: false });
 
-      // --- Deals ---
-      lines.push(`**💼 BRAND DEALS** — ${activeDeals.length} active`);
-      if (activeDeals.length === 0) {
-        lines.push('  No active deals.');
-      } else {
-        ['Lead','Negotiation','Confirmed','Script Approval','Live','Invoiced'].forEach(s => {
-          const grp = deals.filter(d => d.stage === s);
-          if (grp.length) lines.push(`  • ${s}: ${grp.map(d => `${d.brand}${d.agreedRate ? ` ₹${d.agreedRate}` : ''}`).join(', ')}`);
-        });
-      }
-      lines.push('');
+      // Deals field
+      const dealLines = [];
+      ['Lead','Negotiation','Confirmed','Script Approval','Live','Invoiced'].forEach(s => {
+        const grp = deals.filter(d => d.stage === s);
+        if (grp.length) dealLines.push(`\`${s}\` — ${grp.map(d => `${d.brand}${d.agreedRate ? ` ₹${d.agreedRate}` : ''}`).join(', ')}`);
+      });
+      fields.push({ name: `💼 BRAND DEALS — ${activeDeals.length} active`, value: dealLines.length ? dealLines.join('\n') : '_No active deals_', inline: false });
 
-      // --- Overdue / Follow-up ---
-      const hasOverdue = overdueTasks.length || overduePipe.length || overdueDeals.length;
+      // Overdue field
       if (hasOverdue) {
-        lines.push(`**⚠️ OVERDUE / NEEDS FOLLOW-UP**`);
-        if (overdueTasks.length) lines.push(`  🔴 ${overdueTasks.length} task${overdueTasks.length > 1 ? 's' : ''} incomplete from past days`);
-        if (overduePipe.length) lines.push(`  🎬 ${overduePipe.length} video${overduePipe.length > 1 ? 's' : ''} past publish date: ${overduePipe.map(p => p.title).slice(0, 3).join(', ')}`);
-        if (overdueDeals.length) lines.push(`  💼 ${overdueDeals.length} deal${overdueDeals.length > 1 ? 's' : ''} past deadline: ${overdueDeals.map(d => `${d.brand} (${fmtDate(d.deadline)})`).join(', ')}`);
-        lines.push('');
+        const ovLines = [];
+        if (overdueTasks.length) ovLines.push(`🔴 **${overdueTasks.length} task${overdueTasks.length > 1 ? 's' : ''}** incomplete from past days`);
+        if (overduePipe.length) ovLines.push(`🎬 **${overduePipe.length} video${overduePipe.length > 1 ? 's' : ''}** past publish date: ${overduePipe.map(p => p.title).slice(0, 3).join(', ')}`);
+        if (overdueDeals.length) ovLines.push(`💼 **${overdueDeals.length} deal${overdueDeals.length > 1 ? 's' : ''}** past deadline: ${overdueDeals.map(d => `${d.brand} (${fmtDate(d.deadline)})`).join(', ')}`);
+        fields.push({ name: '⚠️ OVERDUE / NEEDS FOLLOW-UP', value: ovLines.join('\n'), inline: false });
       } else {
-        lines.push(`**✨ NO OVERDUE ITEMS** — All clear!`);
-        lines.push('');
+        fields.push({ name: '✨ ALL CLEAR', value: 'No overdue tasks, videos, or deals.', inline: false });
       }
 
-      // --- Ideas ---
+      // Ideas field
       if (todayIdeas.length) {
-        lines.push(`**💡 IDEAS CAPTURED TODAY** (${todayIdeas.length})`);
-        todayIdeas.slice(0, 5).forEach(i => lines.push(`  • ${i.text}`));
-        lines.push('');
+        fields.push({ name: `💡 IDEAS CAPTURED TODAY (${todayIdeas.length})`, value: todayIdeas.slice(0, 5).map(i => `• ${i.text}`).join('\n'), inline: false });
       }
 
-      lines.push(`_GrowGuru Hub CMS — ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}_`);
+      const embed = {
+        title: '📊  GrowGuru Hub — Daily Summary',
+        description: `📅 ${fmtDateFull()}`,
+        color: 16106776,
+        fields,
+        footer: { text: 'GrowGuru Hub CMS' },
+        timestamp: new Date().toISOString(),
+      };
 
       // Get alerts webhook URL
       const wDoc = await db.collection('settings').doc('webhooks').get();
@@ -741,7 +1146,7 @@ function SettingsTab({ isAdmin }) {
       const resp = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: lines.join('\n') })
+        body: JSON.stringify({ embeds: [embed] })
       });
       if (resp.ok || resp.status === 204) {
         setSummaryMsg('✅ Summary posted to Discord!');
@@ -762,6 +1167,24 @@ function SettingsTab({ isAdmin }) {
     setChangingRole(prev => ({ ...prev, [uid]: false }));
   };
 
+  const startEditName = (uid, currentName) => {
+    setEditingName(prev => ({ ...prev, [uid]: currentName }));
+  };
+
+  const cancelEditName = (uid) => {
+    setEditingName(prev => { const n = { ...prev }; delete n[uid]; return n; });
+  };
+
+  const saveName = async (uid) => {
+    const newName = (editingName[uid] || '').trim();
+    if (!newName) return;
+    setSavingName(prev => ({ ...prev, [uid]: true }));
+    await db.collection('users').doc(uid).update({ name: newName });
+    setUsers(prev => prev.map(u => u.id === uid ? { ...u, name: newName } : u));
+    cancelEditName(uid);
+    setSavingName(prev => { const n = { ...prev }; delete n[uid]; return n; });
+  };
+
   const createUser = async () => {
     if (!newUser.name || !newUser.email || !newUser.password) { setUserErr('All fields required.'); return; }
     if (newUser.password.length < 6) { setUserErr('Password must be at least 6 characters.'); return; }
@@ -772,7 +1195,7 @@ function SettingsTab({ isAdmin }) {
       const sec = firebase.initializeApp(firebase.app().options, appName);
       const cred = await sec.auth().createUserWithEmailAndPassword(newUser.email, newUser.password);
       await db.collection('users').doc(cred.user.uid).set({ name: newUser.name, email: newUser.email, role: newUser.role, createdAt: todayStr() });
-      notify('alerts', `👤 New member added: **${newUser.name}** (${newUser.email}) — Role: ${newUser.role}`);
+      notify('alerts', `👤  **New Member Added**\n> Name: **${newUser.name}**\n> Email: ${newUser.email}\n> Role: \`${newUser.role.toUpperCase()}\``);
       await sec.auth().signOut();
       sec.delete();
       setUsers(prev => [...prev, { id: cred.user.uid, name: newUser.name, email: newUser.email, role: newUser.role }]);
@@ -831,19 +1254,84 @@ function SettingsTab({ isAdmin }) {
         <div style={{ fontSize: 11, color: '#444', marginTop: 10 }}>Requires Alerts webhook to be saved above. Click any time — morning check-in, end of day, whenever you need a snapshot.</div>
       </div>
 
+      {/* Channels */}
+      <div className="card" style={{ padding: 20 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>📡 Channels</h2>
+        <p style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>Manage your publishing channels. These appear in the Pipeline dropdown.</p>
+
+        {/* Grouped by platform */}
+        {PLATFORMS.map(plat => {
+          const grp = chList.filter(c => c.platform === plat);
+          if (!grp.length) return null;
+          const col = PLATFORM_COLORS[plat];
+          return (
+            <div key={plat} style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: col, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>{plat}</div>
+              {grp.map(ch => (
+                <div key={ch.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: '#111', borderRadius: 7, marginBottom: 5 }}>
+                  <span style={{ fontSize: 13, color: '#ddd' }}>{ch.name}</span>
+                  <button onClick={() => deleteChannel(ch.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' }} title="Remove channel">✕</button>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+
+        {chList.length === 0 && <div style={{ fontSize: 13, color: '#444', marginBottom: 14 }}>No channels yet.</div>}
+
+        {/* Add new channel */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+          <input className="input" placeholder="Channel name" value={newCh.name}
+            onChange={e => setNewCh({ ...newCh, name: e.target.value })}
+            onKeyDown={e => e.key === 'Enter' && addChannel()}
+            style={{ flex: 2, fontSize: 13 }} />
+          <select className="select" value={newCh.platform} onChange={e => setNewCh({ ...newCh, platform: e.target.value })} style={{ flex: 1, fontSize: 13 }}>
+            {PLATFORMS.map(p => <option key={p}>{p}</option>)}
+          </select>
+          <button className="btn-gold" onClick={addChannel} disabled={addingCh || !newCh.name.trim()} style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+            {addingCh ? '...' : '+ Add'}
+          </button>
+        </div>
+      </div>
+
       {/* Users */}
       <div className="card" style={{ padding: 20 }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: '#ddd' }}>Team Members</h2>
         {users.map(u => {
           const roleColor = u.role === 'admin' ? GOLD : u.role === 'partner' ? '#38bdf8' : '#666';
           const roleBg = u.role === 'admin' ? `${GOLD}18` : u.role === 'partner' ? '#38bdf818' : '#1e1e1e';
+          const canEditThisName = isAdmin || u.id === currentUid;
+          const isEditingThis = editingName.hasOwnProperty(u.id);
           return (
-            <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #1c1c1c' }}>
-              <div>
-                <div style={{ fontSize: 14, color: '#ddd' }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: '#555' }}>{u.email}</div>
+            <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #1c1c1c' }}>
+              <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
+                {isEditingThis ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      className="input"
+                      value={editingName[u.id]}
+                      onChange={e => setEditingName(prev => ({ ...prev, [u.id]: e.target.value }))}
+                      onKeyDown={e => { if (e.key === 'Enter') saveName(u.id); if (e.key === 'Escape') cancelEditName(u.id); }}
+                      autoFocus
+                      style={{ fontSize: 13, padding: '5px 10px', maxWidth: 200 }}
+                    />
+                    <button className="btn-gold" onClick={() => saveName(u.id)} disabled={savingName[u.id]} style={{ fontSize: 11, padding: '5px 12px' }}>
+                      {savingName[u.id] ? '...' : 'Save'}
+                    </button>
+                    <button className="btn-ghost" onClick={() => cancelEditName(u.id)} style={{ fontSize: 11, padding: '5px 10px' }}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ fontSize: 14, color: '#ddd' }}>{u.name}</span>
+                    {u.id === currentUid && <span style={{ fontSize: 10, color: '#444' }}>(you)</span>}
+                    {canEditThisName && (
+                      <button onClick={() => startEditName(u.id, u.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', fontSize: 12, padding: '2px 4px', lineHeight: 1 }} title="Edit name">✎</button>
+                    )}
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: '#555', marginTop: 2 }}>{u.email}</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 <span className="tag" style={{ background: roleBg, color: roleColor, fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' }}>{u.role}</span>
                 {isAdmin && u.role !== 'admin' && (
                   <select className="select" value={u.role} disabled={changingRole[u.id]}
