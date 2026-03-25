@@ -1459,7 +1459,24 @@ function DealsTab() {
   const saveEdit = async () => {
     if (!editForm.brand.trim()) return;
     setUpdating(true);
+    const prev = deals.find(d => d.id === editId);
     await db.collection('deals').doc(editId).update({ ...editForm });
+    // ── Sync → invoice: push rate / payment / dueDate changes to linked collab ──
+    const collabSync = {};
+    if (editForm.agreedRate !== prev?.agreedRate) collabSync.amount = editForm.agreedRate;
+    if (editForm.paymentDue !== prev?.paymentDue) collabSync.dueDate = editForm.paymentDue;
+    if (editForm.paymentStatus === 'Paid' && prev?.paymentStatus !== 'Paid') {
+      collabSync.status = 'Paid';
+      collabSync.paidDate = todayStr();
+    }
+    if (Object.keys(collabSync).length) {
+      const snap = await db.collection('collabs').where('linkedDealId', '==', editId).get();
+      if (!snap.empty) {
+        const batch = db.batch();
+        snap.docs.forEach(doc => batch.update(doc.ref, collabSync));
+        await batch.commit();
+      }
+    }
     notify('brand', `✏️  **Deal Updated**\n> **${editForm.brand}**\n> Stage: \`${editForm.stage}\`${editForm.agreedRate ? `  ·  ₹${editForm.agreedRate}` : ''}${editForm.deadline ? `\n> Deadline: ${fmtDate(editForm.deadline)}` : ''}`);
     setEditId(null);
     setUpdating(false);
@@ -1468,6 +1485,15 @@ function DealsTab() {
   const updateStage = async (id, stage) => {
     await db.collection('deals').doc(id).update({ stage });
     const d = deals.find(x => x.id === id);
+    // ── Sync → invoice: deal Paid → mark linked invoice Paid ──
+    if (stage === 'Paid') {
+      const snap = await db.collection('collabs').where('linkedDealId', '==', id).get();
+      if (!snap.empty) {
+        const batch = db.batch();
+        snap.docs.forEach(doc => batch.update(doc.ref, { status: 'Paid', paidDate: todayStr() }));
+        await batch.commit();
+      }
+    }
     notify('brand', `🔄  **Deal Stage Updated**\n> **${d?.brand}**\n> Moved to: \`${stage}\`${d?.agreedRate ? `  ·  ₹${d.agreedRate}` : ''}`);
   };
 
@@ -2029,7 +2055,24 @@ function InvoicesTab() {
   const saveEdit = async () => {
     if (!editForm.brand.trim()) return;
     setUpdating(true);
+    const prev = collabs.find(c => c.id === editId);
     await db.collection('collabs').doc(editId).update({ ...editForm });
+    // ── Sync → deal: push status / amount / dueDate changes to linked deal ──
+    if (editForm.linkedDealId) {
+      const dealSync = {};
+      if (editForm.amount !== prev?.amount)   dealSync.agreedRate  = editForm.amount;
+      if (editForm.dueDate !== prev?.dueDate) dealSync.paymentDue  = editForm.dueDate;
+      if (editForm.status === 'Paid' && prev?.status !== 'Paid') {
+        dealSync.paymentStatus = 'Paid';
+        dealSync.stage         = 'Paid';
+      }
+      if (editForm.status === 'Overdue' && prev?.status !== 'Overdue') {
+        dealSync.paymentStatus = 'Overdue';
+      }
+      if (Object.keys(dealSync).length) {
+        await db.collection('deals').doc(editForm.linkedDealId).update(dealSync);
+      }
+    }
     setEditId(null);
     setUpdating(false);
   };
@@ -2044,8 +2087,12 @@ function InvoicesTab() {
     notify('brand', `✅  **Payment Received**\n> **${c.brand}**  ·  ${c.invoiceNo}\n> ₹${c.amount} marked as Paid`);
   };
 
-  const markOverdue = async (id) => {
-    await db.collection('collabs').doc(id).update({ status: 'Overdue' });
+  const markOverdue = async (c) => {
+    await db.collection('collabs').doc(c.id).update({ status: 'Overdue' });
+    // ── Sync → deal ──
+    if (c.linkedDealId) {
+      await db.collection('deals').doc(c.linkedDealId).update({ paymentStatus: 'Overdue' });
+    }
   };
 
   const del = id => db.collection('collabs').doc(id).delete();
@@ -2240,7 +2287,7 @@ function InvoicesTab() {
                     <button onClick={() => markPaid(c)} style={{ background: '#4ade8012', border: '1px solid #4ade8044', borderRadius: 6, color: '#4ade80', cursor: 'pointer', fontSize: 11, padding: '4px 10px', fontWeight: 700 }}>✓ Mark Paid</button>
                   )}
                   {c.status === 'Pending' && c.dueDate && c.dueDate < today && (
-                    <button onClick={() => markOverdue(c.id)} style={{ background: '#ff6b6b12', border: '1px solid #ff6b6b44', borderRadius: 6, color: '#ff6b6b', cursor: 'pointer', fontSize: 11, padding: '4px 10px' }}>! Overdue</button>
+                    <button onClick={() => markOverdue(c)} style={{ background: '#ff6b6b12', border: '1px solid #ff6b6b44', borderRadius: 6, color: '#ff6b6b', cursor: 'pointer', fontSize: 11, padding: '4px 10px' }}>! Overdue</button>
                   )}
                   <button onClick={() => startEdit(c)} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px' }}>✎</button>
                   <button onClick={() => del(c.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
