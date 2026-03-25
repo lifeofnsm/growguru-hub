@@ -1752,6 +1752,14 @@ function DealsTab() {
     if (!editForm.brand.trim()) return;
     setUpdating(true);
     const prev = deals.find(d => d.id === editId);
+    // ── Auto-generate invoice if stage changed to Invoiced and no invoice yet ──
+    if (editForm.stage === 'Invoiced' && prev?.stage !== 'Invoiced' && !prev?.invoiceNo) {
+      await db.collection('deals').doc(editId).update({ ...editForm });
+      await generateInvoice({ ...editForm, id: editId });
+      setEditId(null);
+      setUpdating(false);
+      return;
+    }
     await db.collection('deals').doc(editId).update({ ...editForm });
     // ── Sync → invoice: push rate / payment / dueDate changes to linked collab ──
     const collabSync = {};
@@ -1797,25 +1805,30 @@ function DealsTab() {
   const del = id => db.collection('deals').doc(id).delete();
 
   const generateInvoice = async (deal) => {
-    const invNo = await autoInvoiceNo();
-    await db.collection('collabs').add({
-      brand: deal.brand || '',
-      invoiceNo: invNo,
-      description: deal.deliverables || '',
-      amount: deal.agreedRate || '',
-      channel: deal.platform || '',
-      poc: deal.contact || '',
-      deliverable: 'Integration',
-      invoiceDate: todayStr(),
-      dueDate: deal.paymentDue || '',
-      status: 'Pending',
-      paidDate: '',
-      notes: `Generated from Deal: ${deal.brand}`,
-      linkedDealId: deal.id,
-      createdAt: new Date().toISOString(),
-    });
-    await db.collection('deals').doc(deal.id).update({ stage: 'Invoiced', invoiceNo: invNo });
-    notify('brand', `🧾  **Invoice Generated**\n> **${deal.brand}**  ·  ${invNo}\n> ₹${deal.agreedRate || '—'}  ·  Deal → Invoiced`);
+    try {
+      const invNo = await autoInvoiceNo();
+      await db.collection('collabs').add({
+        brand: deal.brand || '',
+        invoiceNo: invNo,
+        description: deal.deliverables || '',
+        amount: deal.agreedRate || '',
+        channel: deal.platform || '',
+        poc: deal.contact || '',
+        deliverable: 'Integration',
+        invoiceDate: todayStr(),
+        dueDate: deal.paymentDue || '',
+        status: 'Pending',
+        paidDate: '',
+        notes: `Generated from Deal: ${deal.brand}`,
+        linkedDealId: deal.id,
+        createdAt: new Date().toISOString(),
+      });
+      await db.collection('deals').doc(deal.id).update({ stage: 'Invoiced', invoiceNo: invNo });
+      notify('brand', `🧾  **Invoice Generated**\n> **${deal.brand}**  ·  ${invNo}\n> ₹${deal.agreedRate || '—'}  ·  Deal → Invoiced`);
+    } catch (err) {
+      console.error('generateInvoice failed:', err);
+      alert(`Invoice generation failed: ${err.message}`);
+    }
   };
 
   // Shared form — vendor-aware (brand selector + contacted via + agency selector)
@@ -2570,7 +2583,7 @@ function InvoicesTab() {
 }
 
 // --- VENDORS --------------------------------------------------
-const V_EMPTY = { name: '', type: 'Agency', contactPerson: '', email: '', phone: '', commission: '', gstin: '', paymentTerms: '', notes: '' };
+const V_EMPTY = { name: '', type: 'Agency', contactPerson: '', email: '', phone: '', commission: '', gstin: '', paymentTerms: '', address: '', notes: '' };
 
 function VendorForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor }) {
   return (
@@ -2584,12 +2597,11 @@ function VendorForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentCo
         <input className="input" placeholder="Phone" value={f.phone} onChange={e => onChange({ ...f, phone: e.target.value })} style={{ flex: 1, minWidth: 110 }} />
         {f.type === 'Agency' && <input className="input" placeholder="Commission %" type="number" value={f.commission} onChange={e => onChange({ ...f, commission: e.target.value })} style={{ width: 110 }} />}
       </div>
-      {f.type === 'Agency' && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-          <input className="input" placeholder="GSTIN" value={f.gstin} onChange={e => onChange({ ...f, gstin: e.target.value })} style={{ flex: 1, minWidth: 140 }} />
-          <input className="input" placeholder="Payment terms (e.g. 30 days from invoice)" value={f.paymentTerms} onChange={e => onChange({ ...f, paymentTerms: e.target.value })} style={{ flex: 1, minWidth: 160 }} />
-        </div>
-      )}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+        <input className="input" placeholder="GSTIN" value={f.gstin} onChange={e => onChange({ ...f, gstin: e.target.value })} style={{ flex: 1, minWidth: 140 }} />
+        {f.type === 'Agency' && <input className="input" placeholder="Payment terms (e.g. 30 days from invoice)" value={f.paymentTerms} onChange={e => onChange({ ...f, paymentTerms: e.target.value })} style={{ flex: 1, minWidth: 160 }} />}
+      </div>
+      <textarea className="input" placeholder="Billing address (for invoice)" value={f.address} onChange={e => onChange({ ...f, address: e.target.value })} rows={2} style={{ marginBottom: 10, resize: 'vertical', fontFamily: 'inherit' }} />
       <input className="input" placeholder="Notes" value={f.notes} onChange={e => onChange({ ...f, notes: e.target.value })} style={{ marginBottom: 12 }} />
       <div style={{ display: 'flex', gap: 8 }}>
         <button className="btn-gold" onClick={onSave} disabled={loading} style={{ fontSize: 13 }}>{loading ? 'Saving...' : btnLabel}</button>
@@ -2638,7 +2650,7 @@ function VendorsTab() {
 
   const startEdit = v => {
     setEditId(v.id);
-    setEditForm({ name: v.name || '', type: v.type || 'Agency', contactPerson: v.contactPerson || '', email: v.email || '', phone: v.phone || '', commission: v.commission || '', gstin: v.gstin || '', paymentTerms: v.paymentTerms || '', notes: v.notes || '' });
+    setEditForm({ name: v.name || '', type: v.type || 'Agency', contactPerson: v.contactPerson || '', email: v.email || '', phone: v.phone || '', commission: v.commission || '', gstin: v.gstin || '', paymentTerms: v.paymentTerms || '', address: v.address || '', notes: v.notes || '' });
     setAdding(false);
   };
 
@@ -2673,6 +2685,7 @@ function VendorsTab() {
               {v.phone         && <span>📱 {v.phone}</span>}
               {v.gstin         && <span>🏛️ {v.gstin}</span>}
               {v.paymentTerms  && <span>📋 {v.paymentTerms}</span>}
+              {v.address       && <span title={v.address}>📍 {v.address.length > 40 ? v.address.slice(0, 40) + '…' : v.address}</span>}
             </div>
             {s.count > 0 && (
               <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
