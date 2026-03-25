@@ -1597,8 +1597,13 @@ function DealsTab() {
   };
 
   const updateStage = async (id, stage) => {
-    await db.collection('deals').doc(id).update({ stage });
     const d = deals.find(x => x.id === id);
+    // ── Auto-generate invoice when moving to Invoiced ──
+    if (stage === 'Invoiced' && d && !d.invoiceNo) {
+      await generateInvoice(d); // generateInvoice handles stage update + collab creation
+      return;
+    }
+    await db.collection('deals').doc(id).update({ stage });
     // ── Sync → invoice: deal Paid → mark linked invoice Paid ──
     if (stage === 'Paid') {
       const snap = await db.collection('collabs').where('linkedDealId', '==', id).get();
