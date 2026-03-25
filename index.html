@@ -287,11 +287,11 @@ function Dashboard({ user, profile }) {
     { id: 'weekly',     label: '📅', full: 'Weekly Planner' },
     { id: 'pipeline',   label: '🎬', full: 'Content Pipeline' },
     { id: 'deals',      label: '💼', full: 'Deals' },
-    { id: 'vendors',    label: '🏢', full: 'Vendors' },
+    { id: 'invoices',   label: '🧾', full: 'Invoices' },
     { id: 'trainings',  label: '📚', full: 'Trainings' },
     { id: 'ideas',      label: '💡', full: 'Ideas' },
-    { id: 'invoices',   label: '🧾', full: 'Invoices' },
     { id: 'search',     label: '🔍', full: 'Search' },
+    { id: 'vendors',    label: '🏢', full: 'Vendors' },
     ...(canSeeSettings ? [{ id: 'settings', label: '⚙️', full: 'Settings' }] : []),
   ];
 
@@ -1716,6 +1716,13 @@ function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColo
   );
 }
 
+const autoInvoiceNo = async () => {
+  const year = new Date().getFullYear();
+  const snap = await db.collection('collabs').where('invoiceNo', '>=', `NSM-${year}-`).where('invoiceNo', '<', `NSM-${year+1}-`).get();
+  const num  = snap.size + 1;
+  return `NSM-${year}-${String(num).padStart(3, '0')}`;
+};
+
 function DealsTab() {
   const [deals, setDeals]       = useState([]);
   const [vendors, setVendors]   = useState([]);
@@ -1785,9 +1792,13 @@ function DealsTab() {
   const updateStage = async (id, stage) => {
     const d = deals.find(x => x.id === id);
     // ── Auto-generate invoice when moving to Invoiced ──
-    if (stage === 'Invoiced' && d && !d.invoiceNo) {
-      await generateInvoice(d); // generateInvoice handles stage update + collab creation
-      return;
+    if (stage === 'Invoiced' && d) {
+      // Check if a linked invoice already exists — avoids duplicate collab records
+      const existingCollab = await db.collection('collabs').where('linkedDealId', '==', id).get();
+      if (existingCollab.empty) {
+        await generateInvoice(d); // handles stage update + collab creation
+        return;
+      }
     }
     await db.collection('deals').doc(id).update({ stage });
     // ── Sync → invoice: deal Paid → mark linked invoice Paid ──
@@ -2286,13 +2297,6 @@ function CollabForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentCo
   );
 }
 
-const autoInvoiceNo = async () => {
-  const year = new Date().getFullYear();
-  const snap = await db.collection('collabs').where('invoiceNo', '>=', `NSM-${year}-`).where('invoiceNo', '<', `NSM-${year+1}-`).get();
-  const num  = snap.size + 1;
-  return `NSM-${year}-${String(num).padStart(3, '0')}`;
-};
-
 function InvoicesTab() {
   const [collabs, setCollabs]   = useState([]);
   const [form, setForm]         = useState({ ...INV_EMPTY });
@@ -2306,8 +2310,17 @@ function InvoicesTab() {
   const [filterStatus, setFilterStatus] = useState('All');
 
   useEffect(() => {
-    return db.collection('collabs').orderBy('createdAt', 'desc').onSnapshot(snap =>
-      setCollabs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    return db.collection('collabs').orderBy('createdAt', 'desc').onSnapshot(
+      snap => setCollabs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      err => {
+        console.error('InvoicesTab collabs listener error:', err);
+        // Fallback: load without ordering if index issue
+        db.collection('collabs').get().then(snap =>
+          setCollabs(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) =>
+            (b.createdAt || '').localeCompare(a.createdAt || '')
+          ))
+        );
+      }
     );
   }, []);
 
