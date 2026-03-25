@@ -1791,6 +1791,8 @@ function DealsTab() {
   const [editId, setEditId]     = useState(null);
   const [editForm, setEditForm] = useState({ ...D_EMPTY });
   const [updating, setUpdating] = useState(false);
+  const [filterStage, setFilterStage] = useState('All');
+  const [sortBy, setSortBy]           = useState('newest');
 
   useEffect(() => {
     const u1 = db.collection('deals').orderBy('createdAt', 'desc').onSnapshot(snap => setDeals(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -1926,10 +1928,43 @@ function DealsTab() {
 
       {adding && <DealForm f={form} onChange={setForm} onSave={add} onCancel={() => setAdding(false)} btnLabel="Add Deal" loading={saving} accentColor={GOLD} vendors={vendors} />}
 
-      {deals.length === 0 && !adding && <Empty icon="" text="No brand deals yet. Add your first one." />}
+      {/* ── Stage filter pills ── */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        {['All', ...D_STAGES].map(s => {
+          const sc = s === 'All' ? GOLD : (D_COLORS[s] || '#888');
+          const active = filterStage === s;
+          return (
+            <button key={s} onClick={() => setFilterStage(s)} style={{
+              padding: '3px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
+              background: active ? `${sc}20` : 'transparent', color: active ? sc : 'var(--t-soft)',
+              border: `1px solid ${active ? sc : '#222'}`, fontWeight: active ? 700 : 400, transition: 'all 0.15s',
+            }}>{s === 'All' ? `All (${deals.length})` : `${s} (${deals.filter(d => d.stage === s).length})`}</button>
+          );
+        })}
+        <select className="select" value={sortBy} onChange={e => setSortBy(e.target.value)}
+          style={{ marginLeft: 'auto', fontSize: 12, padding: '3px 8px' }}>
+          <option value="newest">Newest first</option>
+          <option value="amount">Amount ↓</option>
+          <option value="deadline">Deadline ↑</option>
+          <option value="stage">By stage</option>
+        </select>
+      </div>
 
-      <div style={{ display: 'grid', gap: 10 }}>
-        {deals.map(deal => {
+      {(() => {
+        const visibleDeals = deals
+          .filter(d => filterStage === 'All' || d.stage === filterStage)
+          .sort((a, b) => {
+            if (sortBy === 'amount')   return (parseFloat(b.agreedRate) || 0) - (parseFloat(a.agreedRate) || 0);
+            if (sortBy === 'deadline') { if (!a.deadline && !b.deadline) return 0; if (!a.deadline) return 1; if (!b.deadline) return -1; return a.deadline.localeCompare(b.deadline); }
+            if (sortBy === 'stage')    return D_STAGES.indexOf(a.stage) - D_STAGES.indexOf(b.stage);
+            return (b.createdAt || '').localeCompare(a.createdAt || '');
+          });
+        return (
+          <>
+            {deals.length === 0 && !adding && <Empty icon="" text="No brand deals yet. Add your first one." />}
+            {deals.length > 0 && visibleDeals.length === 0 && <div style={{ color: 'var(--t-soft)', fontSize: 13, padding: '16px 0' }}>No deals match this stage.</div>}
+            <div style={{ display: 'grid', gap: 10 }}>
+        {visibleDeals.map(deal => {
           const sc = D_COLORS[deal.stage] || '#888';
           const isEditing = editId === deal.id;
           if (isEditing) return (
@@ -1980,7 +2015,10 @@ function DealsTab() {
             </div>
           );
         })}
-      </div>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -2411,6 +2449,7 @@ function InvoicesTab() {
   const [filterStatus, setFilterStatus] = useState('All');
   const [dateFrom, setDateFrom]         = useState('');
   const [dateTo, setDateTo]             = useState('');
+  const [sortBy, setSortBy]             = useState('newest');
 
   useEffect(() => {
     // Auto-mark overdue: any Pending invoice past its due date
@@ -2452,7 +2491,12 @@ function InvoicesTab() {
     if (filterBrand  !== 'All' && c.brand !== filterBrand)   return false;
     if (filterStatus !== 'All' && c.status !== filterStatus) return false;
     return true;
-  }).sort((a, b) => (b.invoiceDate || b.createdAt || '').localeCompare(a.invoiceDate || a.createdAt || ''));
+  }).sort((a, b) => {
+    if (sortBy === 'amount')  return (parseFloat(b.amount) || 0) - (parseFloat(a.amount) || 0);
+    if (sortBy === 'duedate') { if (!a.dueDate && !b.dueDate) return 0; if (!a.dueDate) return 1; if (!b.dueDate) return -1; return a.dueDate.localeCompare(b.dueDate); }
+    if (sortBy === 'status')  { const o = { Overdue: 0, Pending: 1, Paid: 2 }; return (o[a.status] ?? 3) - (o[b.status] ?? 3); }
+    return (b.invoiceDate || b.createdAt || '').localeCompare(a.invoiceDate || a.createdAt || '');
+  });
 
   // ── Analytics — respect active date filter ──
   const allForYear = hasDateRange
@@ -2806,6 +2850,12 @@ td:last-child{text-align:right;font-weight:600}
         <select className="select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ fontSize: 12, padding: '5px 10px' }}>
           <option value="All">All Status</option>
           {INV_STATUSES.map(s => <option key={s}>{s}</option>)}
+        </select>
+        <select className="select" value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ fontSize: 12, padding: '5px 10px' }}>
+          <option value="newest">Newest first</option>
+          <option value="amount">Amount ↓</option>
+          <option value="duedate">Due date ↑</option>
+          <option value="status">By status</option>
         </select>
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--t-faint)' }}>{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>
       </div>
