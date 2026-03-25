@@ -3178,7 +3178,7 @@ td:last-child{text-align:right;font-weight:600}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                 <div>
                   <div style={{ fontSize: 11, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8 }}>Monthly Revenue — FY {chartFY}-{String(chartFY+1).slice(-2)}</div>
-                  <div style={{ fontSize: 11, color: 'var(--t-faint)', marginTop: 2 }}>Total billed: <span style={{ color: '#F5C518', fontWeight: 600 }}>{fmt(fyTotal)}</span></div>
+                  <div style={{ fontSize: 11, color: 'var(--t-faint)', marginTop: 2 }}>Total billed: <span className="pv" style={{ color: '#F5C518', fontWeight: 600 }}>{fmt(fyTotal)}</span></div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <div style={{ display: 'flex', gap: 4 }}>
@@ -3208,10 +3208,10 @@ td:last-child{text-align:right;font-weight:600}
                 {hovBar !== null && monthlyData[hovBar] ? (
                   <div style={{ padding: '5px 12px', background: 'var(--bg-sub)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, display: 'flex', gap: 14, alignItems: 'center' }}>
                     <span style={{ color: 'var(--t-bright)', fontWeight: 700 }}>{monthlyData[hovBar].label} {monthlyData[hovBar].ym.slice(0,4)}</span>
-                    <span style={{ color: '#F5C518' }}>📄 {fmt(monthlyData[hovBar].invoiced)}</span>
-                    <span style={{ color: '#4ade80' }}>✅ {fmt(monthlyData[hovBar].received)}</span>
+                    <span style={{ color: '#F5C518' }}>📄 <span className="pv">{fmt(monthlyData[hovBar].invoiced)}</span></span>
+                    <span style={{ color: '#4ade80' }}>✅ <span className="pv">{fmt(monthlyData[hovBar].received)}</span></span>
                     {monthlyData[hovBar].invoiced > 0 && monthlyData[hovBar].received < monthlyData[hovBar].invoiced && (
-                      <span style={{ color: '#f97316', fontSize: 11 }}>⏳ {fmt(monthlyData[hovBar].invoiced - monthlyData[hovBar].received)} pending</span>
+                      <span style={{ color: '#f97316', fontSize: 11 }}>⏳ <span className="pv">{fmt(monthlyData[hovBar].invoiced - monthlyData[hovBar].received)}</span> pending</span>
                     )}
                   </div>
                 ) : (
@@ -3224,7 +3224,7 @@ td:last-child{text-align:right;font-weight:600}
                 {/* Y-axis labels */}
                 <div style={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', width: 38, flexShrink: 0, height: CHART_H, paddingBottom: 2 }}>
                   {ticks.map(t => (
-                    <div key={t} style={{ fontSize: 9, color: 'var(--t-soft)', textAlign: 'right', lineHeight: 1 }}>{fmtY(t)}</div>
+                    <div key={t} className="pv" style={{ fontSize: 9, color: 'var(--t-soft)', textAlign: 'right', lineHeight: 1 }}>{fmtY(t)}</div>
                   ))}
                 </div>
 
@@ -3289,7 +3289,7 @@ td:last-child{text-align:right;font-weight:600}
               <div key={b.brand}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3, fontSize: 11 }}>
                   <span style={{ color: b.color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{b.brand}</span>
-                  <span style={{ color: 'var(--t-strong)', fontWeight: 600, marginLeft: 8, whiteSpace: 'nowrap' }}>{fmt(b.total)}</span>
+                  <span className="pv" style={{ color: 'var(--t-strong)', fontWeight: 600, marginLeft: 8, whiteSpace: 'nowrap' }}>{fmt(b.total)}</span>
                 </div>
                 <div style={{ height: 4, background: 'var(--border-soft)', borderRadius: 2, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${(b.total / maxBrand) * 100}%`, background: b.color, borderRadius: 2, transition: 'width 0.4s ease' }} />
