@@ -174,52 +174,70 @@ function Dashboard({ user, profile }) {
   const isPartner = profile?.role === 'partner';
   const canSeeSettings = isAdmin || isPartner;
   const tabs = [
-    { id: 'overview',  label: '📊 Overview' },
-    { id: 'today',     label: '✅ Today' },
-    { id: 'weekly',    label: '📅 Weekly' },
-    { id: 'pipeline',  label: '🎬 Pipeline' },
-    { id: 'deals',     label: '💼 Deals' },
-    { id: 'ideas',     label: '💡 Ideas' },
-    ...(canSeeSettings ? [{ id: 'settings', label: '⚙️ Settings' }] : []),
+    { id: 'overview',   label: '📊', full: 'Overview' },
+    { id: 'today',      label: '✅', full: 'Today' },
+    { id: 'weekly',     label: '📅', full: 'Weekly Planner' },
+    { id: 'pipeline',   label: '🎬', full: 'Content Pipeline' },
+    { id: 'deals',      label: '💼', full: 'Deals' },
+    { id: 'trainings',  label: '📚', full: 'Trainings' },
+    { id: 'ideas',      label: '💡', full: 'Ideas' },
+    ...(canSeeSettings ? [{ id: 'settings', label: '⚙️', full: 'Settings' }] : []),
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* Header */}
-      <header style={{ height: 52, background: '#0f0f0f', borderBottom: '1px solid #1e1e1e', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', flexShrink: 0 }}>
-        <span style={{ fontWeight: 800, fontSize: 17, color: GOLD, letterSpacing: '-0.3px' }}>GrowGuru Hub</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: '#555', fontSize: 12 }}>{profile?.name || user.email}</span>
-          {isAdmin && <span className="tag" style={{ background: `${GOLD}22`, color: GOLD, fontSize: 10, letterSpacing: 0.5 }}>ADMIN</span>}
-          {isPartner && <span className="tag" style={{ background: '#38bdf822', color: '#38bdf8', fontSize: 10, letterSpacing: 0.5 }}>PARTNER</span>}
-          <button className="btn-ghost" onClick={() => auth.signOut()} style={{ padding: '4px 12px', fontSize: 12 }}>Sign out</button>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0d0d0d' }}>
+
+      {/* ── Sidebar ── */}
+      <aside style={{ width: 220, background: '#0a0a0a', borderRight: '1px solid #1a1a1a', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        {/* Brand */}
+        <div style={{ padding: '22px 18px 18px', borderBottom: '1px solid #161616' }}>
+          <div style={{ fontWeight: 800, fontSize: 16, color: GOLD, letterSpacing: '-0.3px', lineHeight: 1.2 }}>GrowGuru</div>
+          <div style={{ fontSize: 10, color: '#333', fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 3 }}>Hub</div>
         </div>
-      </header>
 
-      {/* Tab Nav */}
-      <nav style={{ background: '#0f0f0f', borderBottom: '1px solid #1a1a1a', display: 'flex', padding: '0 16px', flexShrink: 0 }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: '10px 14px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13,
-            color: tab === t.id ? GOLD : '#555', fontWeight: tab === t.id ? 600 : 400,
-            borderBottom: tab === t.id ? `2px solid ${GOLD}` : '2px solid transparent',
-            transition: 'all 0.15s', whiteSpace: 'nowrap',
-          }}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
+        {/* Nav items */}
+        <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+              padding: '9px 12px', marginBottom: 2,
+              background: tab === t.id ? `${GOLD}12` : 'transparent',
+              border: tab === t.id ? `1px solid ${GOLD}28` : '1px solid transparent',
+              borderRadius: 8, cursor: 'pointer', fontSize: 13,
+              color: tab === t.id ? GOLD : '#555',
+              fontWeight: tab === t.id ? 600 : 400,
+              textAlign: 'left', transition: 'all 0.15s',
+            }}>
+              <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{t.label}</span>
+              <span style={{ fontSize: 13 }}>{t.full}</span>
+            </button>
+          ))}
+        </nav>
 
-      {/* Content */}
-      <main style={{ flex: 1, padding: '24px 20px', maxWidth: 960, width: '100%', margin: '0 auto' }}>
-        <div className="fade" key={tab}>
+        {/* User info + sign out */}
+        <div style={{ padding: '14px 14px', borderTop: '1px solid #161616' }}>
+          <div style={{ fontSize: 12, color: '#444', marginBottom: 6, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {profile?.name || user.email}
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {isAdmin && <span className="tag" style={{ background: `${GOLD}22`, color: GOLD, fontSize: 10, letterSpacing: 0.5 }}>ADMIN</span>}
+            {isPartner && <span className="tag" style={{ background: '#38bdf822', color: '#38bdf8', fontSize: 10, letterSpacing: 0.5 }}>PARTNER</span>}
+          </div>
+          <button className="btn-ghost" onClick={() => auth.signOut()} style={{ padding: '6px 12px', fontSize: 12, width: '100%' }}>Sign out</button>
+        </div>
+      </aside>
+
+      {/* ── Content Canvas ── */}
+      <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+        <div className="fade" key={tab} style={{ maxWidth: 920, margin: '0 auto' }}>
           {tab === 'overview'  && <OverviewTab />}
-          {tab === 'today'    && <TodayTab />}
-          {tab === 'weekly'   && <WeeklyTab />}
-          {tab === 'pipeline' && <PipelineTab />}
-          {tab === 'deals'    && <DealsTab />}
-          {tab === 'ideas'    && <IdeasTab />}
-          {tab === 'settings' && canSeeSettings && <SettingsTab isAdmin={isAdmin} currentUid={user.uid} />}
+          {tab === 'today'     && <TodayTab />}
+          {tab === 'weekly'    && <WeeklyTab />}
+          {tab === 'pipeline'  && <PipelineTab />}
+          {tab === 'deals'     && <DealsTab />}
+          {tab === 'trainings' && <TrainingsTab />}
+          {tab === 'ideas'     && <IdeasTab />}
+          {tab === 'settings'  && canSeeSettings && <SettingsTab isAdmin={isAdmin} currentUid={user.uid} />}
         </div>
       </main>
     </div>
@@ -500,7 +518,7 @@ function TodayTab() {
     if (!form.title.trim()) return;
     setSaving(true);
     await db.collection('tasks').add({ ...form, date: todayStr(), done: false, createdAt: new Date().toISOString() });
-    notify('content', `✅  **New Task Added**\n> **${form.title}**\n> \`${form.priority}\`  ·  ${form.pillar}`);
+    notify('pipeline', `✅  **New Task Added**\n> **${form.title}**\n> \`${form.priority}\`  ·  ${form.pillar}`);
     setForm({ title: '', pillar: 'Content', priority: 'P1', notes: '' });
     setAdding(false);
     setSaving(false);
@@ -628,23 +646,26 @@ function PipelineTab() {
     if (!form.title.trim()) return;
     setSaving(true);
     await db.collection('pipeline').add({ ...form, createdAt: new Date().toISOString() });
-    notify('content', `🎬  **Pipeline — Video Added**\n> **${form.title}**\n> Stage: \`${form.stage}\`  ·  ${form.channel}${form.brandDeal ? `\n> 💼 Brand Deal: **${form.brandName}**${form.agreedRate ? `  ·  ₹${form.agreedRate}` : ''}` : ''}${form.publishDate ? `\n> 📅 Publish: ${form.publishDate}` : ''}`);
+    notify('pipeline', `🎬  **Pipeline — Content Added**\n> **${form.title}**\n> Stage: \`${form.stage}\`  ·  ${form.channel}${form.brandDeal ? `\n> 💼 Brand Deal: **${form.brandName}**${form.agreedRate ? `  ·  ₹${form.agreedRate}` : ''}` : ''}${form.publishDate ? `\n> 📅 Publish: ${form.publishDate}` : ''}`);
 
-    // Auto-create deal entry if marked as brand collaboration
+    // Auto-create deal entry if marked as brand collaboration (check by brand + deliverable to avoid duplicates)
     if (form.brandDeal && form.brandName.trim()) {
-      const existingDeals = await db.collection('deals').where('brand', '==', form.brandName.trim()).get();
+      const existingDeals = await db.collection('deals')
+        .where('brand', '==', form.brandName.trim())
+        .where('deliverables', '==', form.title.trim())
+        .get();
       if (existingDeals.empty) {
         await db.collection('deals').add({
           brand: form.brandName.trim(),
           stage: 'Confirmed',
           contact: form.pocName.trim() || '',
           pocContact: form.pocContact.trim() || '',
-          platform: '',
+          platform: form.channel || '',
           agreedRate: form.agreedRate.trim() || '',
-          deliverables: form.title,
+          deliverables: form.title.trim(),
           paymentStatus: 'Pending',
           deadline: form.publishDate || '',
-          notes: `Auto-created from pipeline: ${form.title}`,
+          notes: `Linked from pipeline: ${form.title}`,
           createdAt: new Date().toISOString(),
         });
         notify('brand', `💼  **Deal Auto-Created**\n> Brand: **${form.brandName}**\n> POC: ${form.pocName || '—'}${form.pocContact ? `  ·  ${form.pocContact}` : ''}\n> Rate: ${form.agreedRate ? `₹${form.agreedRate}` : 'TBD'}  ·  Deadline: ${form.publishDate || 'TBD'}\n> Linked video: "${form.title}"`);
@@ -668,7 +689,32 @@ function PipelineTab() {
     if (!editForm.title.trim()) return;
     setUpdating(true);
     await db.collection('pipeline').doc(editItem).update({ ...editForm });
-    notify('content', `✏️  **Pipeline Updated**\n> **${editForm.title}**\n> Stage: \`${editForm.stage}\`  ·  ${editForm.channel}`);
+    notify('pipeline', `✏️  **Pipeline Updated**\n> **${editForm.title}**\n> Stage: \`${editForm.stage}\`  ·  ${editForm.channel}${editForm.brandDeal ? `\n> 💼 Brand Deal: **${editForm.brandName}**` : ''}`);
+
+    // Auto-create deal if brand deal is marked (check by brand + deliverable to avoid duplicates)
+    if (editForm.brandDeal && editForm.brandName.trim()) {
+      const existingDeals = await db.collection('deals')
+        .where('brand', '==', editForm.brandName.trim())
+        .where('deliverables', '==', editForm.title.trim())
+        .get();
+      if (existingDeals.empty) {
+        await db.collection('deals').add({
+          brand: editForm.brandName.trim(),
+          stage: 'Confirmed',
+          contact: editForm.pocName?.trim() || '',
+          pocContact: editForm.pocContact?.trim() || '',
+          platform: editForm.channel || '',
+          agreedRate: editForm.agreedRate?.trim() || '',
+          deliverables: editForm.title.trim(),
+          paymentStatus: 'Pending',
+          deadline: editForm.publishDate || '',
+          notes: `Linked from pipeline: ${editForm.title}`,
+          createdAt: new Date().toISOString(),
+        });
+        notify('brand', `💼  **Deal Created from Pipeline**\n> Brand: **${editForm.brandName}**\n> Content: "${editForm.title}"\n> POC: ${editForm.pocName || '—'}${editForm.pocContact ? `  ·  ${editForm.pocContact}` : ''}\n> Rate: ${editForm.agreedRate ? `₹${editForm.agreedRate}` : 'TBD'}  ·  Deadline: ${editForm.publishDate || 'TBD'}`);
+      }
+    }
+
     setEditItem(null);
     setUpdating(false);
   };
@@ -994,7 +1040,7 @@ function IdeasTab() {
     if (!text.trim()) return;
     setSaving(true);
     await db.collection('ideas').add({ text, category: cat, createdAt: new Date().toISOString() });
-    notify('content', `💡  **New Idea Captured**\n> ${text}\n> Category: \`${cat}\``);
+    notify('ideas', `💡  **New Idea Captured**\n> ${text}\n> Category: \`${cat}\``);
     setText('');
     setSaving(false);
   };
@@ -1037,10 +1083,191 @@ function IdeasTab() {
   );
 }
 
+// --- TRAININGS ------------------------------------------------
+const T_TYPES   = ['Workshop', 'Webinar', 'Mentoring Batch', 'ETF Program', 'Options Program', 'Other'];
+const T_STATUS  = ['Upcoming', 'Live', 'Completed', 'Cancelled'];
+const T_COLORS  = { Upcoming: '#38bdf8', Live: '#4ade80', Completed: '#666', Cancelled: '#ff6b6b' };
+const T_EMPTY   = { title: '', type: 'Workshop', date: '', time: '', capacity: '', enrolled: '', revenue: '', notes: '' };
+
+function TrainingsTab() {
+  const [items, setItems]   = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm]     = useState({ ...T_EMPTY });
+  const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [editForm, setEditForm] = useState({ ...T_EMPTY });
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    return db.collection('trainings').orderBy('date', 'desc').onSnapshot(snap =>
+      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+  }, []);
+
+  const add = async () => {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    const doc = { ...form, status: 'Upcoming', createdAt: new Date().toISOString() };
+    await db.collection('trainings').add(doc);
+    notify('training', `📚  **Training Planned**\n> **${form.title}**\n> Type: \`${form.type}\`${form.date ? `  ·  Date: ${fmtDate(form.date)}` : ''}${form.capacity ? `\n> Capacity: ${form.capacity}` : ''}${form.revenue ? `  ·  Expected Revenue: ₹${form.revenue}` : ''}`);
+    setForm({ ...T_EMPTY });
+    setAdding(false);
+    setSaving(false);
+  };
+
+  const updateStatus = (id, status) => {
+    db.collection('trainings').doc(id).update({ status });
+    const item = items.find(i => i.id === id);
+    if (item) notify('training', `🔄  **Training Status Updated**\n> **${item.title}**\n> Status → \`${status}\``);
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.title.trim()) return;
+    setUpdating(true);
+    await db.collection('trainings').doc(editId).update({ ...editForm });
+    notify('training', `✏️  **Training Updated**\n> **${editForm.title}**\n> ${editForm.type}${editForm.date ? `  ·  ${fmtDate(editForm.date)}` : ''}`);
+    setEditId(null);
+    setUpdating(false);
+  };
+
+  const del = id => db.collection('trainings').doc(id).delete();
+
+  const upcoming  = items.filter(i => i.status === 'Upcoming' || i.status === 'Live');
+  const completed = items.filter(i => i.status === 'Completed' || i.status === 'Cancelled');
+  const totalRev  = items.filter(i => i.status === 'Completed').reduce((s, i) => s + (parseFloat(i.revenue) || 0), 0);
+
+  const FormBlock = ({ f, onChange, onSave, onCancel, btnLabel, loading }) => (
+    <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${GOLD}30` }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+        <input className="input" placeholder="Training title *" value={f.title} onChange={e => onChange({ ...f, title: e.target.value })} style={{ flex: 2 }} autoFocus />
+        <select className="select" value={f.type} onChange={e => onChange({ ...f, type: e.target.value })} style={{ flex: 1 }}>
+          {T_TYPES.map(t => <option key={t}>{t}</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Date</div>
+          <input className="input" type="date" value={f.date} onChange={e => onChange({ ...f, date: e.target.value })} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Time</div>
+          <input className="input" type="time" value={f.time} onChange={e => onChange({ ...f, time: e.target.value })} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Capacity</div>
+          <input className="input" type="number" placeholder="e.g. 50" value={f.capacity} onChange={e => onChange({ ...f, capacity: e.target.value })} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Enrolled</div>
+          <input className="input" type="number" placeholder="0" value={f.enrolled} onChange={e => onChange({ ...f, enrolled: e.target.value })} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Revenue (₹)</div>
+          <input className="input" placeholder="0" value={f.revenue} onChange={e => onChange({ ...f, revenue: e.target.value })} />
+        </div>
+      </div>
+      <textarea className="input" placeholder="Notes / description..." rows={2} value={f.notes} onChange={e => onChange({ ...f, notes: e.target.value })} style={{ marginBottom: 12, resize: 'vertical' }} />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn-gold" onClick={onSave} disabled={loading} style={{ fontSize: 13 }}>{loading ? 'Saving...' : btnLabel}</button>
+        <button className="btn-ghost" onClick={onCancel} style={{ fontSize: 13 }}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  const Card = ({ item }) => {
+    const sc = T_COLORS[item.status] || '#888';
+    const isEditing = editId === item.id;
+    const fillPct = item.capacity && item.enrolled ? Math.min(100, Math.round((item.enrolled / item.capacity) * 100)) : null;
+    if (isEditing) return (
+      <FormBlock f={editForm} onChange={setEditForm} onSave={saveEdit} onCancel={() => setEditId(null)} btnLabel="Save Changes" loading={updating} />
+    );
+    return (
+      <div className="card" style={{ padding: '14px 16px', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{item.title}</span>
+              <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11, fontWeight: 600 }}>{item.status}</span>
+              <span className="tag" style={{ background: '#1e1e1e', color: '#666', fontSize: 11 }}>{item.type}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: '#555', marginBottom: 6 }}>
+              {item.date && <span>📅 {fmtDate(item.date)}{item.time ? ` · ${item.time}` : ''}</span>}
+              {item.capacity && <span>👥 {item.enrolled || 0}/{item.capacity} enrolled</span>}
+              {item.revenue && <span style={{ color: '#4ade80' }}>₹{item.revenue}</span>}
+            </div>
+            {fillPct !== null && (
+              <div style={{ marginBottom: 6 }}>
+                <div style={{ background: '#1a1a1a', borderRadius: 4, height: 4, overflow: 'hidden', maxWidth: 200 }}>
+                  <div style={{ width: `${fillPct}%`, height: '100%', background: fillPct >= 90 ? '#4ade80' : fillPct >= 60 ? GOLD : '#38bdf8', borderRadius: 4, transition: 'width 0.3s' }} />
+                </div>
+              </div>
+            )}
+            {item.notes && <div style={{ fontSize: 12, color: '#444', marginTop: 4 }}>{item.notes}</div>}
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+            <select className="select" value={item.status} onChange={e => updateStatus(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
+              {T_STATUS.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <button onClick={() => { setEditId(item.id); setEditForm({ title: item.title || '', type: item.type || 'Workshop', date: item.date || '', time: item.time || '', capacity: item.capacity || '', enrolled: item.enrolled || '', revenue: item.revenue || '', notes: item.notes || '' }); }}
+              style={{ background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: 16, padding: '2px 4px' }} title="Edit">✎</button>
+            <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Trainings</h1>
+          <div style={{ color: '#555', fontSize: 13 }}>{upcoming.length} upcoming · {completed.filter(i => i.status === 'Completed').length} completed{totalRev > 0 ? ` · ₹${totalRev.toLocaleString('en-IN')} revenue` : ''}</div>
+        </div>
+        <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Plan Training</button>
+      </div>
+
+      {/* Stat strip */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+        {T_STATUS.map(s => {
+          const cnt = items.filter(i => i.status === s).length;
+          const col = T_COLORS[s];
+          return (
+            <div key={s} className="card" style={{ flex: 1, padding: '12px 14px' }}>
+              <div style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>{s}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: col }}>{cnt}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {adding && (
+        <FormBlock f={form} onChange={setForm} onSave={add} onCancel={() => setAdding(false)} btnLabel="Add Training" loading={saving} />
+      )}
+
+      {upcoming.length === 0 && completed.length === 0 && !adding && <Empty icon="📚" text="No trainings planned yet. Schedule your first one." />}
+
+      {upcoming.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, color: '#444', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 12 }}>Upcoming & Live</div>
+          {upcoming.map(item => <Card key={item.id} item={item} />)}
+        </div>
+      )}
+
+      {completed.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, color: '#444', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 12 }}>Completed & Cancelled</div>
+          {completed.map(item => <Card key={item.id} item={item} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- SETTINGS -------------------------------------------------
 function SettingsTab({ isAdmin, currentUid }) {
   const [users, setUsers] = useState([]);
-  const [webhooks, setWebhooks] = useState({ content: '', brand: '', training: '', alerts: '' });
+  const [webhooks, setWebhooks] = useState({ pipeline: '', ideas: '', brand: '', training: '', alerts: '' });
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'member' });
   const [creating, setCreating] = useState(false);
   const [userErr, setUserErr] = useState('');
@@ -1258,10 +1485,11 @@ function SettingsTab({ isAdmin, currentUid }) {
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>Discord Webhooks</h2>
         <p style={{ fontSize: 12, color: '#555', marginBottom: 18 }}>Paste webhook URLs for each pillar channel. Notifications will route automatically.</p>
         {[
-          ['content', '🎬 Content Channel', 'Pipeline, tasks, ideas'],
-          ['brand',   '💼 Brand Channel',   'New deals, stage changes'],
-          ['training','📚 Training Channel', 'Training updates'],
-          ['alerts',  '⚙️ Alerts & Summary', 'New members, daily summary — use this for daily digest'],
+          ['pipeline', '🎬 Content Pipeline', 'New content added, pipeline edits, task updates'],
+          ['ideas',    '💡 Ideas Channel',    'Every idea captured — separate from pipeline for cleaner tracking'],
+          ['brand',    '💼 Brand Channel',    'New deals, stage changes, POC details'],
+          ['training', '📚 Training Channel', 'Training program updates and announcements'],
+          ['alerts',   '⚙️ Alerts & Summary', 'New members, daily summary digest'],
         ].map(([key, label, hint]) => (
           <div key={key} style={{ marginBottom: 14 }}>
             <label style={{ display: 'block', fontSize: 12, color: '#888', marginBottom: 3 }}>{label}</label>
