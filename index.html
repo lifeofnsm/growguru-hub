@@ -677,7 +677,16 @@ function PipelineTab() {
     setSaving(false);
   };
 
-  const updateStage = (id, stage) => db.collection('pipeline').doc(id).update({ stage });
+  const updateStage = (id, stage) => {
+    db.collection('pipeline').doc(id).update({ stage });
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    if (stage === 'Published') {
+      notify('pipeline', `🚀  **Published!**\n> **${item.title}**\n> Channel: ${item.channel}${item.brandDeal ? `\n> 💼 Brand Deal: ${item.brandName}` : ''}`);
+    } else {
+      notify('pipeline', `🔄  **Stage Updated**\n> **${item.title}**\n> ${item.stage} → \`${stage}\``);
+    }
+  };
   const del = id => db.collection('pipeline').doc(id).delete();
 
   const startEdit = (item) => {
@@ -1322,11 +1331,12 @@ function SettingsTab({ isAdmin, currentUid }) {
       const today = todayStr();
 
       // Fetch all collections in parallel
-      const [tasksSnap, pipeSnap, dealsSnap, ideasSnap] = await Promise.all([
+      const [tasksSnap, pipeSnap, dealsSnap, ideasSnap, trainSnap] = await Promise.all([
         db.collection('tasks').get(),
         db.collection('pipeline').get(),
         db.collection('deals').get(),
         db.collection('ideas').get(),
+        db.collection('trainings').get(),
       ]);
 
       const allTasks   = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -1342,6 +1352,10 @@ function SettingsTab({ isAdmin, currentUid }) {
 
       const todayIdeas    = ideasSnap.docs.map(d => ({ id: d.id, ...d.data() }))
         .filter(i => i.createdAt && i.createdAt.startsWith(today));
+
+      const allTrainings  = trainSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const todayTrainings = allTrainings.filter(t => t.date === today);
+      const upcomingTrainings = allTrainings.filter(t => t.date > today && t.status === 'Upcoming').slice(0, 3);
 
       const doneTasks    = todayTasks.filter(t => t.done);
       const pendingTasks = todayTasks.filter(t => !t.done);
@@ -1389,6 +1403,14 @@ function SettingsTab({ isAdmin, currentUid }) {
         fields.push({ name: '⚠️ OVERDUE / NEEDS FOLLOW-UP', value: ovLines.join('\n'), inline: false });
       } else {
         fields.push({ name: '✨ ALL CLEAR', value: 'No overdue tasks, videos, or deals.', inline: false });
+      }
+
+      // Trainings field
+      if (todayTrainings.length || upcomingTrainings.length) {
+        const tLines = [];
+        todayTrainings.forEach(t => tLines.push(`🔴 **TODAY:** ${t.title}${t.time ? ` @ ${t.time}` : ''} — \`${t.type}\`${t.enrolled ? ` · ${t.enrolled} enrolled` : ''}`));
+        upcomingTrainings.forEach(t => tLines.push(`📅 ${fmtDate(t.date)} — ${t.title} (\`${t.type}\`)`));
+        fields.push({ name: `📚 TRAININGS`, value: tLines.join('\n'), inline: false });
       }
 
       // Ideas field
