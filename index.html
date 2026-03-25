@@ -1555,20 +1555,27 @@ function IdeasTab() {
       </div>
 
       {/* Quick capture */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <input className="input" placeholder="Capture an idea... (Enter to save)" value={text}
-          onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()} style={{ flex: 1 }} autoFocus />
-        <div style={{ display: 'flex', gap: 4 }}>
-          {IDEA_CATS.map(c => (
-            <button key={c} onClick={() => setCat(c)} style={{
-              padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: cat === c ? 700 : 400,
-              background: cat === c ? `${IDEA_CAT_COLORS[c]}22` : 'transparent',
-              color: cat === c ? IDEA_CAT_COLORS[c] : '#555',
-              border: `1px solid ${cat === c ? IDEA_CAT_COLORS[c] : '#222'}`,
-            }}>{IDEA_CAT_ICONS[c]} {c}</button>
-          ))}
+      <div className="capture-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16, padding: '14px', background: '#111', borderRadius: 10, border: '1px solid #222' }}>
+        <input className="input" placeholder="Type your idea here..." value={text}
+          onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
+          style={{ fontSize: 15, padding: '12px 14px' }} autoFocus />
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: 6, flex: 1 }}>
+            {IDEA_CATS.map(c => (
+              <button key={c} onClick={() => setCat(c)} style={{
+                flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: cat === c ? 700 : 400,
+                background: cat === c ? `${IDEA_CAT_COLORS[c]}22` : 'transparent',
+                color: cat === c ? IDEA_CAT_COLORS[c] : '#555',
+                border: `1px solid ${cat === c ? IDEA_CAT_COLORS[c] : '#222'}`,
+                textAlign: 'center',
+              }}>{IDEA_CAT_ICONS[c]}<br/><span style={{ fontSize: 10 }}>{c}</span></button>
+            ))}
+          </div>
+          <button className="btn-gold" onClick={add} disabled={saving}
+            style={{ fontSize: 14, fontWeight: 700, padding: '8px 20px', borderRadius: 8, flexShrink: 0 }}>
+            {saving ? '...' : '+ Capture'}
+          </button>
         </div>
-        <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? '...' : '+ Capture'}</button>
       </div>
 
       {/* Category filter */}
