@@ -341,9 +341,8 @@ function OverviewTab({ onNavigate }) {
         <StatCard label="Overdue" value={totalOverdue} sub={totalOverdue === 0 ? 'all clear ✓' : 'need attention'} color={totalOverdue > 0 ? '#ff6b6b' : '#4ade80'} onClick={totalOverdue > 0 ? () => onNavigate('today') : undefined} />
       </div>
       {/* Stat cards — row 2 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 24 }}>
         <StatCard label="Active Deals" value={activeDeals.length} sub={totalDealValue ? `₹${totalDealValue.toLocaleString('en-IN')} in pipeline` : 'no active deals'} color={GOLD} onClick={() => onNavigate('deals')} />
-        <StatCard label="Deal Revenue" value={paidDealsValue ? `₹${(paidDealsValue/1000).toFixed(0)}k` : '₹0'} sub={`${data.deals.filter(d=>d.stage==='Paid').length} deals paid`} color="#4ade80" onClick={() => onNavigate('deals')} />
         <StatCard label="Upcoming Trainings" value={upcomingTrainings.length} sub={trainingRevenue ? `₹${trainingRevenue.toLocaleString('en-IN')} earned` : 'sessions planned'} color="#a78bfa" onClick={() => onNavigate('trainings')} />
       </div>
 
@@ -1388,16 +1387,21 @@ function DealsTab() {
 }
 
 // --- IDEAS ----------------------------------------------------
-const IDEA_STATUSES = ['Captured', 'Shortlisted', 'In Pipeline'];
-const IDEA_STATUS_COLORS = { Captured: '#888', Shortlisted: '#F5C518', 'In Pipeline': '#4ade80' };
+const IDEA_CATS         = ['Content', 'Training', 'Other'];
+const IDEA_CAT_COLORS   = { Content: '#38bdf8', Training: '#a78bfa', Other: '#888' };
+const IDEA_CAT_ICONS    = { Content: '🎬', Training: '📚', Other: '💡' };
+const IDEA_STATUSES     = ['Captured', 'Shortlisted', 'In Pipeline', 'In Trainings', 'Archived'];
+const IDEA_STATUS_COLORS = { Captured: '#888', Shortlisted: '#F5C518', 'In Pipeline': '#38bdf8', 'In Trainings': '#a78bfa', Archived: '#333' };
+const IDEA_ARCHIVE_DAYS = 30;
 
 function IdeasTab() {
-  const [ideas, setIdeas]     = useState([]);
-  const [text, setText]       = useState('');
-  const [cat, setCat]         = useState('Content');
-  const [saving, setSaving]   = useState(false);
+  const [ideas, setIdeas]         = useState([]);
+  const [text, setText]           = useState('');
+  const [cat, setCat]             = useState('Content');
+  const [saving, setSaving]       = useState(false);
   const [filterCat, setFilterCat] = useState('All');
-  const [pushing, setPushing] = useState({});
+  const [showArchived, setShowArchived] = useState(false);
+  const [pushing, setPushing]     = useState({});
 
   useEffect(() => {
     return db.collection('ideas').orderBy('createdAt', 'desc').onSnapshot(snap =>
@@ -1405,11 +1409,28 @@ function IdeasTab() {
     );
   }, []);
 
+  // Auto-archive Captured ideas older than 30 days
+  useEffect(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - IDEA_ARCHIVE_DAYS);
+    const cutoffStr = cutoff.toISOString();
+    db.collection('ideas')
+      .where('status', '==', 'Captured')
+      .get()
+      .then(snap => {
+        const old = snap.docs.filter(d => d.data().createdAt < cutoffStr);
+        if (!old.length) return;
+        const batch = db.batch();
+        old.forEach(d => batch.update(d.ref, { status: 'Archived' }));
+        return batch.commit();
+      });
+  }, []);
+
   const add = async () => {
     if (!text.trim()) return;
     setSaving(true);
     await db.collection('ideas').add({ text, category: cat, status: 'Captured', starred: false, createdAt: new Date().toISOString() });
-    notify('ideas', `💡  **Idea Captured**\n> ${text}\n> Category: \`${cat}\``);
+    notify('ideas', `${IDEA_CAT_ICONS[cat] || '💡'}  **Idea Captured**\n> ${text}\n> Category: \`${cat}\``);
     setText('');
     setSaving(false);
   };
@@ -1419,38 +1440,46 @@ function IdeasTab() {
   const del = id => db.collection('ideas').doc(id).delete();
 
   const pushToPipeline = async (idea) => {
-    setPushing(p => ({ ...p, [idea.id]: true }));
+    setPushing(p => ({ ...p, [idea.id]: 'pipeline' }));
     await db.collection('pipeline').add({
-      title: idea.text,
-      stage: 'Idea',
-      channel: '',
-      platform: '',
-      recurring: false,
-      frequency: 'Weekly',
-      brandDeal: false,
-      brandName: '',
-      pocName: '',
-      pocContact: '',
-      agreedRate: '',
-      publishDate: '',
-      notes: `From Idea Bank · ${idea.category}`,
-      createdAt: new Date().toISOString(),
+      title: idea.text, stage: 'Idea', channel: '', platform: '',
+      recurring: false, frequency: 'Weekly', brandDeal: false,
+      brandName: '', pocName: '', pocContact: '', agreedRate: '',
+      publishDate: '', notes: `From Idea Bank`, createdAt: new Date().toISOString(),
     });
     await db.collection('ideas').doc(idea.id).update({ status: 'In Pipeline' });
-    notify('pipeline', `🎬  **Idea → Pipeline**\n> **${idea.text}**\n> Moved from Idea Bank · ${idea.category}`);
-    setPushing(p => ({ ...p, [idea.id]: false }));
+    notify('pipeline', `🎬  **Idea → Pipeline**\n> **${idea.text}**\n> Moved from Idea Bank`);
+    setPushing(p => ({ ...p, [idea.id]: null }));
   };
 
-  const visible = filterCat === 'All' ? ideas : ideas.filter(i => i.category === filterCat);
-  const starred = visible.filter(i => i.starred);
-  const unstarred = visible.filter(i => !i.starred);
+  const pushToTrainings = async (idea) => {
+    setPushing(p => ({ ...p, [idea.id]: 'training' }));
+    await db.collection('trainings').add({
+      title: idea.text, category: 'Paid Program', type: 'Workshop',
+      status: 'Upcoming', date: '', time: '', capacity: '', enrolled: '',
+      revenue: '', batch: '', duration: '', notes: `From Idea Bank`,
+      createdAt: new Date().toISOString(),
+    });
+    await db.collection('ideas').doc(idea.id).update({ status: 'In Trainings' });
+    notify('training', `📚  **Idea → Trainings**\n> **${idea.text}**\n> Added as Upcoming · Paid Program`);
+    setPushing(p => ({ ...p, [idea.id]: null }));
+  };
+
+  const active   = ideas.filter(i => i.status !== 'Archived');
+  const archived = ideas.filter(i => i.status === 'Archived');
+
+  const baseList = filterCat === 'All' ? active : active.filter(i => i.category === filterCat);
+  const starred   = baseList.filter(i => i.starred);
+  const unstarred = baseList.filter(i => !i.starred);
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Idea Bank</h1>
-          <div style={{ color: '#888', fontSize: 13 }}>{ideas.length} ideas · {ideas.filter(i => i.status === 'Shortlisted').length} shortlisted · {ideas.filter(i => i.status === 'In Pipeline').length} in pipeline</div>
+          <div style={{ color: '#888', fontSize: 13 }}>
+            {active.length} active · {active.filter(i => i.status === 'Shortlisted').length} shortlisted · {active.filter(i => i.status === 'In Pipeline').length} in pipeline · {active.filter(i => i.status === 'In Trainings').length} in trainings
+          </div>
         </div>
       </div>
 
@@ -1458,75 +1487,115 @@ function IdeasTab() {
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         <input className="input" placeholder="Capture an idea... (Enter to save)" value={text}
           onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()} style={{ flex: 1 }} autoFocus />
-        <select className="select" value={cat} onChange={e => setCat(e.target.value)}>
-          {PILLARS.map(p => <option key={p}>{p}</option>)}
-        </select>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {IDEA_CATS.map(c => (
+            <button key={c} onClick={() => setCat(c)} style={{
+              padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: cat === c ? 700 : 400,
+              background: cat === c ? `${IDEA_CAT_COLORS[c]}22` : 'transparent',
+              color: cat === c ? IDEA_CAT_COLORS[c] : '#555',
+              border: `1px solid ${cat === c ? IDEA_CAT_COLORS[c] : '#222'}`,
+            }}>{IDEA_CAT_ICONS[c]} {c}</button>
+          ))}
+        </div>
         <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? '...' : '+ Capture'}</button>
       </div>
 
       {/* Category filter */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-        {['All', ...PILLARS].map(c => {
-          const active = filterCat === c;
+        {['All', ...IDEA_CATS].map(c => {
+          const active_c = filterCat === c;
+          const col = c === 'All' ? GOLD : IDEA_CAT_COLORS[c];
+          const count = c === 'All' ? active.length : active.filter(i => i.category === c).length;
           return (
             <button key={c} onClick={() => setFilterCat(c)} style={{
-              padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: active ? 700 : 400,
-              background: active ? `${GOLD}20` : 'transparent',
-              color: active ? GOLD : '#666',
-              border: `1px solid ${active ? GOLD : '#222'}`,
-            }}>
-              {c === 'All' ? `All (${ideas.length})` : `${c} (${ideas.filter(i => i.category === c).length})`}
-            </button>
+              padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: active_c ? 700 : 400,
+              background: active_c ? `${col}20` : 'transparent',
+              color: active_c ? col : '#666',
+              border: `1px solid ${active_c ? col : '#222'}`,
+            }}>{c === 'All' ? 'All' : IDEA_CAT_ICONS[c] + ' ' + c} ({count})</button>
           );
         })}
       </div>
 
-      {ideas.length === 0 && <Empty icon="💡" text="No ideas yet. Start capturing them here." />}
+      {active.length === 0 && !showArchived && <Empty icon="💡" text="No ideas yet. Start capturing them here." />}
 
-      {/* Starred/shortlisted first */}
+      {/* Shortlisted first */}
       {starred.length > 0 && (
         <div style={{ marginBottom: 18 }}>
           <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 8 }}>⭐ Shortlisted</div>
-          {starred.map(idea => <IdeaCard key={idea.id} idea={idea} onStar={toggleStar} onStatus={setStatus} onPush={pushToPipeline} onDel={del} pushing={pushing[idea.id]} />)}
+          {starred.map(idea => (
+            <IdeaCard key={idea.id} idea={idea} onStar={toggleStar} onStatus={setStatus}
+              onPushPipeline={pushToPipeline} onPushTraining={pushToTrainings} onDel={del} pushing={pushing[idea.id]} />
+          ))}
         </div>
       )}
 
       {unstarred.length > 0 && (
-        <div>
+        <div style={{ marginBottom: 18 }}>
           {starred.length > 0 && <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 8 }}>All Ideas</div>}
-          {unstarred.map(idea => <IdeaCard key={idea.id} idea={idea} onStar={toggleStar} onStatus={setStatus} onPush={pushToPipeline} onDel={del} pushing={pushing[idea.id]} />)}
+          {unstarred.map(idea => (
+            <IdeaCard key={idea.id} idea={idea} onStar={toggleStar} onStatus={setStatus}
+              onPushPipeline={pushToPipeline} onPushTraining={pushToTrainings} onDel={del} pushing={pushing[idea.id]} />
+          ))}
+        </div>
+      )}
+
+      {/* Archived section */}
+      {archived.length > 0 && (
+        <div>
+          <button onClick={() => setShowArchived(v => !v)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 12, padding: '4px 0', marginBottom: 8 }}>
+            {showArchived ? '▾' : '▸'} Archived ({archived.length}) — auto-archived after {IDEA_ARCHIVE_DAYS} days
+          </button>
+          {showArchived && archived.map(idea => (
+            <IdeaCard key={idea.id} idea={idea} onStar={toggleStar} onStatus={setStatus}
+              onPushPipeline={pushToPipeline} onPushTraining={pushToTrainings} onDel={del} pushing={pushing[idea.id]} />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function IdeaCard({ idea, onStar, onStatus, onPush, onDel, pushing }) {
-  const sc = IDEA_STATUS_COLORS[idea.status] || '#888';
-  const alreadyInPipeline = idea.status === 'In Pipeline';
+function IdeaCard({ idea, onStar, onStatus, onPushPipeline, onPushTraining, onDel, pushing }) {
+  const sc      = IDEA_STATUS_COLORS[idea.status] || '#888';
+  const catCol  = IDEA_CAT_COLORS[idea.category] || '#888';
+  const promoted = idea.status === 'In Pipeline' || idea.status === 'In Trainings';
+  const isContent  = idea.category === 'Content'  || idea.category === 'Other';
+  const isTraining = idea.category === 'Training' || idea.category === 'Other';
+
   return (
-    <div className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', marginBottom: 8 }}>
-      <button onClick={() => onStar(idea.id, idea.starred)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: idea.starred ? '#F5C518' : '#333', padding: 0, marginTop: 2, flexShrink: 0 }}>★</button>
+    <div className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', marginBottom: 8, opacity: idea.status === 'Archived' ? 0.5 : 1 }}>
+      <button onClick={() => onStar(idea.id, idea.starred)}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: idea.starred ? '#F5C518' : '#333', padding: 0, marginTop: 2, flexShrink: 0 }}>★</button>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, color: '#ddd', marginBottom: 6, lineHeight: 1.4 }}>{idea.text}</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="tag" style={{ background: '#1e1e1e', color: '#666', fontSize: 11 }}>{idea.category}</span>
+          <span className="tag" style={{ background: `${catCol}18`, color: catCol, fontSize: 11 }}>{IDEA_CAT_ICONS[idea.category]} {idea.category}</span>
           <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11 }}>{idea.status}</span>
           <span style={{ fontSize: 11, color: '#555' }}>{new Date(idea.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-        <select value={idea.status} onChange={e => onStatus(idea.id, e.target.value)}
-          style={{ fontSize: 11, background: '#141414', border: '1px solid #2a2a2a', color: '#888', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}>
-          {IDEA_STATUSES.map(s => <option key={s}>{s}</option>)}
-        </select>
-        {!alreadyInPipeline && (
-          <button onClick={() => onPush(idea)} disabled={pushing}
-            style={{ fontSize: 11, background: `${GOLD}18`, border: `1px solid ${GOLD}40`, color: GOLD, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            {pushing ? '...' : '→ Pipeline'}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 260 }}>
+        {!promoted && (
+          <select value={idea.status} onChange={e => onStatus(idea.id, e.target.value)}
+            style={{ fontSize: 11, background: '#141414', border: '1px solid #2a2a2a', color: '#888', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}>
+            {IDEA_STATUSES.filter(s => s !== 'In Pipeline' && s !== 'In Trainings').map(s => <option key={s}>{s}</option>)}
+          </select>
+        )}
+        {!promoted && isContent && (
+          <button onClick={() => onPushPipeline(idea)} disabled={pushing === 'pipeline'}
+            style={{ fontSize: 11, background: '#38bdf818', border: '1px solid #38bdf840', color: '#38bdf8', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            {pushing === 'pipeline' ? '...' : '🎬 → Pipeline'}
           </button>
         )}
-        {alreadyInPipeline && <span style={{ fontSize: 11, color: '#4ade80' }}>✓ In Pipeline</span>}
+        {!promoted && isTraining && (
+          <button onClick={() => onPushTraining(idea)} disabled={pushing === 'training'}
+            style={{ fontSize: 11, background: '#a78bfa18', border: '1px solid #a78bfa40', color: '#a78bfa', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            {pushing === 'training' ? '...' : '📚 → Trainings'}
+          </button>
+        )}
+        {idea.status === 'In Pipeline'  && <span style={{ fontSize: 11, color: '#38bdf8' }}>✓ In Pipeline</span>}
+        {idea.status === 'In Trainings' && <span style={{ fontSize: 11, color: '#a78bfa' }}>✓ In Trainings</span>}
         <button onClick={() => onDel(idea.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
       </div>
     </div>
