@@ -291,7 +291,7 @@ function StatCard({ label, value, sub, color, onClick }) {
 }
 
 function OverviewTab({ onNavigate }) {
-  const [data, setData] = useState({ tasks: [], pipeline: [], deals: [] });
+  const [data, setData] = useState({ tasks: [], pipeline: [], deals: [], trainings: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -299,26 +299,31 @@ function OverviewTab({ onNavigate }) {
       db.collection('tasks').get(),
       db.collection('pipeline').get(),
       db.collection('deals').get(),
-    ]).then(([t, p, d]) => {
+      db.collection('trainings').get(),
+    ]).then(([t, p, d, tr]) => {
       setData({
-        tasks:    t.docs.map(x => ({ id: x.id, ...x.data() })),
-        pipeline: p.docs.map(x => ({ id: x.id, ...x.data() })),
-        deals:    d.docs.map(x => ({ id: x.id, ...x.data() })),
+        tasks:     t.docs.map(x => ({ id: x.id, ...x.data() })),
+        pipeline:  p.docs.map(x => ({ id: x.id, ...x.data() })),
+        deals:     d.docs.map(x => ({ id: x.id, ...x.data() })),
+        trainings: tr.docs.map(x => ({ id: x.id, ...x.data() })),
       });
       setLoading(false);
     });
   }, []);
 
   const today = todayStr();
-  const todayTasks     = data.tasks.filter(t => t.date === today);
-  const doneTasks      = todayTasks.filter(t => t.done);
-  const overdueTasks   = data.tasks.filter(t => t.date < today && !t.done);
-  const activePipeline = data.pipeline.filter(p => p.stage !== 'Published');
-  const overduePipeline= data.pipeline.filter(p => p.publishDate && p.publishDate < today && p.stage !== 'Published');
-  const activeDeals    = data.deals.filter(d => !['Paid'].includes(d.stage));
-  const overdueDeals   = data.deals.filter(d => d.deadline && d.deadline < today && !['Paid'].includes(d.stage));
-  const totalDealValue = activeDeals.reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
-  const totalOverdue   = overdueTasks.length + overduePipeline.length + overdueDeals.length;
+  const todayTasks        = data.tasks.filter(t => t.date === today);
+  const doneTasks         = todayTasks.filter(t => t.done);
+  const overdueTasks      = data.tasks.filter(t => t.date < today && !t.done);
+  const activePipeline    = data.pipeline.filter(p => p.stage !== 'Published');
+  const overduePipeline   = data.pipeline.filter(p => p.publishDate && p.publishDate < today && p.stage !== 'Published');
+  const activeDeals       = data.deals.filter(d => !['Paid'].includes(d.stage));
+  const overdueDeals      = data.deals.filter(d => d.deadline && d.deadline < today && !['Paid'].includes(d.stage));
+  const totalDealValue    = activeDeals.reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
+  const paidDealsValue    = data.deals.filter(d => d.stage === 'Paid').reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
+  const upcomingTrainings = data.trainings.filter(t => t.status === 'Upcoming' || t.status === 'Live');
+  const trainingRevenue   = data.trainings.filter(t => t.status === 'Completed' && t.category === 'Paid Program').reduce((s, t) => s + (parseFloat(t.revenue) || 0), 0);
+  const totalOverdue      = overdueTasks.length + overduePipeline.length + overdueDeals.length;
 
   if (loading) return <div style={{ color: '#666', textAlign: 'center', padding: 60 }}>Loading...</div>;
 
@@ -329,15 +334,20 @@ function OverviewTab({ onNavigate }) {
         <div style={{ color: '#888', fontSize: 13 }}>{fmtDateFull()}</div>
       </div>
 
-      {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-        <StatCard label="Today's Tasks" value={`${doneTasks.length}/${todayTasks.length}`} sub="completed" color={doneTasks.length === todayTasks.length && todayTasks.length > 0 ? '#4ade80' : GOLD} onClick={() => onNavigate('today')} />
-        <StatCard label="Active Pipeline" value={activePipeline.length} sub={`of ${data.pipeline.length} total`} color="#38bdf8" onClick={() => onNavigate('pipeline')} />
-        <StatCard label="Active Deals" value={activeDeals.length} sub={totalDealValue ? `₹${totalDealValue.toLocaleString('en-IN')} pipeline` : 'deals'} color={GOLD} onClick={() => onNavigate('deals')} />
+      {/* Stat cards — row 1 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
+        <StatCard label="Today's Tasks" value={`${doneTasks.length}/${todayTasks.length}`} sub="completed today" color={doneTasks.length === todayTasks.length && todayTasks.length > 0 ? '#4ade80' : GOLD} onClick={() => onNavigate('today')} />
+        <StatCard label="Active Pipeline" value={activePipeline.length} sub={`of ${data.pipeline.length} total items`} color="#38bdf8" onClick={() => onNavigate('pipeline')} />
         <StatCard label="Overdue" value={totalOverdue} sub={totalOverdue === 0 ? 'all clear ✓' : 'need attention'} color={totalOverdue > 0 ? '#ff6b6b' : '#4ade80'} onClick={totalOverdue > 0 ? () => onNavigate('today') : undefined} />
       </div>
+      {/* Stat cards — row 2 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+        <StatCard label="Active Deals" value={activeDeals.length} sub={totalDealValue ? `₹${totalDealValue.toLocaleString('en-IN')} in pipeline` : 'no active deals'} color={GOLD} onClick={() => onNavigate('deals')} />
+        <StatCard label="Deal Revenue" value={paidDealsValue ? `₹${(paidDealsValue/1000).toFixed(0)}k` : '₹0'} sub={`${data.deals.filter(d=>d.stage==='Paid').length} deals paid`} color="#4ade80" onClick={() => onNavigate('deals')} />
+        <StatCard label="Upcoming Trainings" value={upcomingTrainings.length} sub={trainingRevenue ? `₹${trainingRevenue.toLocaleString('en-IN')} earned` : 'sessions planned'} color="#a78bfa" onClick={() => onNavigate('trainings')} />
+      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
         {/* Pipeline breakdown */}
         <div className="card" onClick={() => onNavigate('pipeline')} style={{ padding: 18, cursor: 'pointer' }}
           onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
@@ -376,6 +386,27 @@ function OverviewTab({ onNavigate }) {
                 <span className="tag" style={{ background: `${sc}18`, color: sc, flexShrink: 0 }}>{s}</span>
                 <span style={{ color: '#888', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{grp.map(d => d.brand).join(', ')}</span>
                 {val > 0 && <span style={{ color: '#4ade80', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>₹{val.toLocaleString('en-IN')}</span>}
+              </div>
+            );
+          })}
+        </div>
+        {/* Trainings breakdown */}
+        <div className="card" onClick={() => onNavigate('trainings')} style={{ padding: 18, cursor: 'pointer' }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>📚 Trainings <span style={{ fontSize: 10, color: '#666', marginLeft: 4 }}>VIEW →</span></div>
+          {data.trainings.length === 0 && <div style={{ color: '#666', fontSize: 12 }}>No trainings yet</div>}
+          {['Paid Program', 'Live Session', 'Recording'].map(cat => {
+            const grp = data.trainings.filter(t => t.category === cat);
+            if (!grp.length) return null;
+            const catCol = { 'Paid Program': GOLD, 'Live Session': '#4ade80', 'Recording': '#a78bfa' }[cat];
+            const upcoming = grp.filter(t => t.status === 'Upcoming' || t.status === 'Live').length;
+            const rev = grp.filter(t => t.status === 'Completed').reduce((s, t) => s + (parseFloat(t.revenue)||0), 0);
+            return (
+              <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #1a1a1a', fontSize: 12, gap: 8 }}>
+                <span className="tag" style={{ background: `${catCol}18`, color: catCol, flexShrink: 0, fontSize: 11 }}>{cat}</span>
+                <span style={{ color: '#888', flex: 1 }}>{upcoming} upcoming · {grp.length} total</span>
+                {rev > 0 && <span style={{ color: '#4ade80', fontWeight: 600, fontSize: 11 }}>₹{rev.toLocaleString('en-IN')}</span>}
               </div>
             );
           })}
@@ -896,6 +927,7 @@ function PipelineTab() {
   const [editItem, setEditItem] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [updating, setUpdating] = useState(false);
+  const [filterCh, setFilterCh] = useState('All');
 
   useEffect(() => {
     return db.collection('pipeline').orderBy('createdAt', 'desc').onSnapshot(snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -1010,16 +1042,36 @@ function PipelineTab() {
     setUpdating(false);
   };
 
-  const stageCount = s => items.filter(i => i.stage === s).length;
+  const visibleItems = filterCh === 'All' ? items : items.filter(i => i.channel === filterCh);
+  const stageCount = s => visibleItems.filter(i => i.stage === s).length;
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Content Pipeline</h1>
-          <div style={{ color: '#888', fontSize: 13 }}>{items.length} items tracked</div>
+          <div style={{ color: '#888', fontSize: 13 }}>{visibleItems.length} of {items.length} items</div>
         </div>
         <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditItem(null); }} style={{ fontSize: 13 }}>+ Add Content</button>
+      </div>
+
+      {/* Channel filter */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: '#666', marginRight: 4, textTransform: 'uppercase', letterSpacing: 0.8 }}>Channel:</span>
+        {['All', ...channels.map(c => c.name)].map(ch => {
+          const active = filterCh === ch;
+          const chObj = channels.find(c => c.name === ch);
+          const col = chObj ? (PLATFORM_COLORS[chObj.platform] || GOLD) : GOLD;
+          return (
+            <button key={ch} onClick={() => setFilterCh(ch)} style={{
+              padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: active ? 700 : 400,
+              background: active ? `${col}20` : 'transparent',
+              color: active ? col : '#666',
+              border: `1px solid ${active ? col : '#222'}`,
+              transition: 'all 0.15s',
+            }}>{ch}</button>
+          );
+        })}
       </div>
 
       {/* Stage counts */}
@@ -1174,9 +1226,10 @@ function PipelineTab() {
       )}
 
       {items.length === 0 && !adding && <Empty icon="" text="Pipeline is empty. Add your first content." />}
+      {items.length > 0 && visibleItems.length === 0 && <div style={{ color: '#666', fontSize: 13, marginBottom: 20 }}>No content for <strong style={{ color: '#aaa' }}>{filterCh}</strong> yet.</div>}
 
       {P_STAGES.map(stage => {
-        const grp = items.filter(i => i.stage === stage);
+        const grp = visibleItems.filter(i => i.stage === stage);
         if (!grp.length) return null;
         return (
           <div key={stage} style={{ marginBottom: 24 }}>
@@ -1317,68 +1370,159 @@ function DealsTab() {
 }
 
 // --- IDEAS ----------------------------------------------------
+const IDEA_STATUSES = ['Captured', 'Shortlisted', 'In Pipeline'];
+const IDEA_STATUS_COLORS = { Captured: '#888', Shortlisted: '#F5C518', 'In Pipeline': '#4ade80' };
+
 function IdeasTab() {
-  const [ideas, setIdeas] = useState([]);
-  const [text, setText] = useState('');
-  const [cat, setCat] = useState('Content');
-  const [saving, setSaving] = useState(false);
+  const [ideas, setIdeas]     = useState([]);
+  const [text, setText]       = useState('');
+  const [cat, setCat]         = useState('Content');
+  const [saving, setSaving]   = useState(false);
+  const [filterCat, setFilterCat] = useState('All');
+  const [pushing, setPushing] = useState({});
 
   useEffect(() => {
-    return db.collection('ideas').orderBy('createdAt', 'desc').onSnapshot(snap => setIdeas(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return db.collection('ideas').orderBy('createdAt', 'desc').onSnapshot(snap =>
+      setIdeas(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
   }, []);
 
   const add = async () => {
     if (!text.trim()) return;
     setSaving(true);
-    await db.collection('ideas').add({ text, category: cat, createdAt: new Date().toISOString() });
-    notify('ideas', `💡  **New Idea Captured**\n> ${text}\n> Category: \`${cat}\``);
+    await db.collection('ideas').add({ text, category: cat, status: 'Captured', starred: false, createdAt: new Date().toISOString() });
+    notify('ideas', `💡  **Idea Captured**\n> ${text}\n> Category: \`${cat}\``);
     setText('');
     setSaving(false);
   };
 
+  const setStatus = (id, status) => db.collection('ideas').doc(id).update({ status });
+  const toggleStar = (id, starred) => db.collection('ideas').doc(id).update({ starred: !starred });
   const del = id => db.collection('ideas').doc(id).delete();
+
+  const pushToPipeline = async (idea) => {
+    setPushing(p => ({ ...p, [idea.id]: true }));
+    await db.collection('pipeline').add({
+      title: idea.text,
+      stage: 'Idea',
+      channel: '',
+      platform: '',
+      recurring: false,
+      frequency: 'Weekly',
+      brandDeal: false,
+      brandName: '',
+      pocName: '',
+      pocContact: '',
+      agreedRate: '',
+      publishDate: '',
+      notes: `From Idea Bank · ${idea.category}`,
+      createdAt: new Date().toISOString(),
+    });
+    await db.collection('ideas').doc(idea.id).update({ status: 'In Pipeline' });
+    notify('pipeline', `🎬  **Idea → Pipeline**\n> **${idea.text}**\n> Moved from Idea Bank · ${idea.category}`);
+    setPushing(p => ({ ...p, [idea.id]: false }));
+  };
+
+  const visible = filterCat === 'All' ? ideas : ideas.filter(i => i.category === filterCat);
+  const starred = visible.filter(i => i.starred);
+  const unstarred = visible.filter(i => !i.starred);
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Idea Swipe File</h1>
-        <div style={{ color: '#888', fontSize: 13 }}>{ideas.length} ideas captured</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Idea Bank</h1>
+          <div style={{ color: '#888', fontSize: 13 }}>{ideas.length} ideas · {ideas.filter(i => i.status === 'Shortlisted').length} shortlisted · {ideas.filter(i => i.status === 'In Pipeline').length} in pipeline</div>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
-        <input className="input" placeholder="Capture an idea... (Enter to save)" value={text} onChange={e => setText(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && add()} style={{ flex: 1 }} />
+      {/* Quick capture */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <input className="input" placeholder="Capture an idea... (Enter to save)" value={text}
+          onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()} style={{ flex: 1 }} autoFocus />
         <select className="select" value={cat} onChange={e => setCat(e.target.value)}>
           {PILLARS.map(p => <option key={p}>{p}</option>)}
         </select>
-        <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? '...' : 'Save'}</button>
+        <button className="btn-gold" onClick={add} disabled={saving} style={{ fontSize: 13 }}>{saving ? '...' : '+ Capture'}</button>
       </div>
 
-      {ideas.length === 0 && <Empty icon="" text="No ideas yet. Start capturing them here." />}
+      {/* Category filter */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+        {['All', ...PILLARS].map(c => {
+          const active = filterCat === c;
+          return (
+            <button key={c} onClick={() => setFilterCat(c)} style={{
+              padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: active ? 700 : 400,
+              background: active ? `${GOLD}20` : 'transparent',
+              color: active ? GOLD : '#666',
+              border: `1px solid ${active ? GOLD : '#222'}`,
+            }}>
+              {c === 'All' ? `All (${ideas.length})` : `${c} (${ideas.filter(i => i.category === c).length})`}
+            </button>
+          );
+        })}
+      </div>
 
-      <div style={{ display: 'grid', gap: 8 }}>
-        {ideas.map(idea => (
-          <div key={idea.id} className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 14px' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, color: '#ddd', marginBottom: 4 }}>{idea.text}</div>
-              <div style={{ fontSize: 11, color: '#888' }}>
-                <span className="tag" style={{ background: '#1e1e1e', color: '#666', marginRight: 8 }}>{idea.category}</span>
-                {new Date(idea.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-              </div>
-            </div>
-            <button onClick={() => del(idea.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1, marginTop: 2 }}>x</button>
-          </div>
-        ))}
+      {ideas.length === 0 && <Empty icon="💡" text="No ideas yet. Start capturing them here." />}
+
+      {/* Starred/shortlisted first */}
+      {starred.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 8 }}>⭐ Shortlisted</div>
+          {starred.map(idea => <IdeaCard key={idea.id} idea={idea} onStar={toggleStar} onStatus={setStatus} onPush={pushToPipeline} onDel={del} pushing={pushing[idea.id]} />)}
+        </div>
+      )}
+
+      {unstarred.length > 0 && (
+        <div>
+          {starred.length > 0 && <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 8 }}>All Ideas</div>}
+          {unstarred.map(idea => <IdeaCard key={idea.id} idea={idea} onStar={toggleStar} onStatus={setStatus} onPush={pushToPipeline} onDel={del} pushing={pushing[idea.id]} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IdeaCard({ idea, onStar, onStatus, onPush, onDel, pushing }) {
+  const sc = IDEA_STATUS_COLORS[idea.status] || '#888';
+  const alreadyInPipeline = idea.status === 'In Pipeline';
+  return (
+    <div className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', marginBottom: 8 }}>
+      <button onClick={() => onStar(idea.id, idea.starred)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: idea.starred ? '#F5C518' : '#333', padding: 0, marginTop: 2, flexShrink: 0 }}>★</button>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, color: '#ddd', marginBottom: 6, lineHeight: 1.4 }}>{idea.text}</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span className="tag" style={{ background: '#1e1e1e', color: '#666', fontSize: 11 }}>{idea.category}</span>
+          <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11 }}>{idea.status}</span>
+          <span style={{ fontSize: 11, color: '#555' }}>{new Date(idea.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+        <select value={idea.status} onChange={e => onStatus(idea.id, e.target.value)}
+          style={{ fontSize: 11, background: '#141414', border: '1px solid #2a2a2a', color: '#888', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}>
+          {IDEA_STATUSES.map(s => <option key={s}>{s}</option>)}
+        </select>
+        {!alreadyInPipeline && (
+          <button onClick={() => onPush(idea)} disabled={pushing}
+            style={{ fontSize: 11, background: `${GOLD}18`, border: `1px solid ${GOLD}40`, color: GOLD, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            {pushing ? '...' : '→ Pipeline'}
+          </button>
+        )}
+        {alreadyInPipeline && <span style={{ fontSize: 11, color: '#4ade80' }}>✓ In Pipeline</span>}
+        <button onClick={() => onDel(idea.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
       </div>
     </div>
   );
 }
 
 // --- TRAININGS ------------------------------------------------
-const T_TYPES   = ['Workshop', 'Webinar', 'Mentoring Batch', 'ETF Program', 'Options Program', 'Other'];
-const T_STATUS  = ['Upcoming', 'Live', 'Completed', 'Cancelled'];
-const T_COLORS  = { Upcoming: '#38bdf8', Live: '#4ade80', Completed: '#666', Cancelled: '#ff6b6b' };
-const T_EMPTY   = { title: '', type: 'Workshop', date: '', time: '', capacity: '', enrolled: '', revenue: '', notes: '' };
+const T_CATEGORIES  = ['Paid Program', 'Live Session', 'Recording'];
+const T_PROG_TYPES  = ['Workshop', 'Webinar', 'Mentoring Batch', 'ETF Program', 'Options Program', 'Other'];
+const T_STATUS      = ['Upcoming', 'Live', 'Completed', 'Cancelled'];
+const T_COLORS      = { Upcoming: '#38bdf8', Live: '#4ade80', Completed: '#666', Cancelled: '#ff6b6b' };
+const T_CAT_COLORS  = { 'Paid Program': '#F5C518', 'Live Session': '#4ade80', 'Recording': '#a78bfa' };
+const T_CAT_ICONS   = { 'Paid Program': '💰', 'Live Session': '🔴', 'Recording': '🎙️' };
+const T_EMPTY       = { title: '', category: 'Paid Program', type: 'Workshop', date: '', time: '', capacity: '', enrolled: '', revenue: '', batch: '', duration: '', notes: '' };
 
 function TrainingsTab() {
   const [items, setItems]   = useState([]);
@@ -1400,7 +1544,7 @@ function TrainingsTab() {
     setSaving(true);
     const doc = { ...form, status: 'Upcoming', createdAt: new Date().toISOString() };
     await db.collection('trainings').add(doc);
-    notify('training', `📚  **Training Planned**\n> **${form.title}**\n> Type: \`${form.type}\`${form.date ? `  ·  Date: ${fmtDate(form.date)}` : ''}${form.capacity ? `\n> Capacity: ${form.capacity}` : ''}${form.revenue ? `  ·  Expected Revenue: ₹${form.revenue}` : ''}`);
+    notify('training', `${T_CAT_ICONS[form.category] || '📚'}  **Training Planned**\n> **${form.title}**\n> Category: \`${form.category}\`${form.category === 'Paid Program' ? `  ·  Type: \`${form.type}\`` : ''}${form.batch ? `  ·  Batch: ${form.batch}` : ''}${form.date ? `  ·  Date: ${fmtDate(form.date)}` : ''}${form.capacity ? `\n> Capacity: ${form.capacity}${form.enrolled ? ` enrolled: ${form.enrolled}` : ''}` : ''}${form.revenue ? `  ·  Expected Revenue: ₹${form.revenue}` : ''}${form.duration ? `  ·  Duration: ${form.duration}` : ''}`);
     setForm({ ...T_EMPTY });
     setAdding(false);
     setSaving(false);
@@ -1416,7 +1560,7 @@ function TrainingsTab() {
     if (!editForm.title.trim()) return;
     setUpdating(true);
     await db.collection('trainings').doc(editId).update({ ...editForm });
-    notify('training', `✏️  **Training Updated**\n> **${editForm.title}**\n> ${editForm.type}${editForm.date ? `  ·  ${fmtDate(editForm.date)}` : ''}`);
+    notify('training', `✏️  **Training Updated**\n> **${editForm.title}**\n> Category: \`${editForm.category}\`${editForm.batch ? `  ·  Batch: ${editForm.batch}` : ''}${editForm.date ? `  ·  ${fmtDate(editForm.date)}` : ''}${editForm.duration ? `  ·  Duration: ${editForm.duration}` : ''}`);
     setEditId(null);
     setUpdating(false);
   };
@@ -1427,70 +1571,117 @@ function TrainingsTab() {
   const completed = items.filter(i => i.status === 'Completed' || i.status === 'Cancelled');
   const totalRev  = items.filter(i => i.status === 'Completed').reduce((s, i) => s + (parseFloat(i.revenue) || 0), 0);
 
-  const FormBlock = ({ f, onChange, onSave, onCancel, btnLabel, loading }) => (
-    <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${GOLD}30` }}>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-        <input className="input" placeholder="Training title *" value={f.title} onChange={e => onChange({ ...f, title: e.target.value })} style={{ flex: 2 }} autoFocus />
-        <select className="select" value={f.type} onChange={e => onChange({ ...f, type: e.target.value })} style={{ flex: 1 }}>
-          {T_TYPES.map(t => <option key={t}>{t}</option>)}
-        </select>
+  const FormBlock = ({ f, onChange, onSave, onCancel, btnLabel, loading }) => {
+    const catCol = T_CAT_COLORS[f.category] || GOLD;
+    return (
+      <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${catCol}30` }}>
+        {/* Category selector */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>Session Type</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {T_CATEGORIES.map(cat => (
+              <button key={cat} onClick={() => onChange({ ...f, category: cat })} style={{
+                padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: f.category === cat ? 700 : 400,
+                background: f.category === cat ? `${T_CAT_COLORS[cat]}22` : 'transparent',
+                color: f.category === cat ? T_CAT_COLORS[cat] : '#666',
+                border: `1px solid ${f.category === cat ? T_CAT_COLORS[cat] : '#222'}`,
+              }}>{T_CAT_ICONS[cat]} {cat}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+          <input className="input" placeholder="Title *" value={f.title} onChange={e => onChange({ ...f, title: e.target.value })} style={{ flex: 2 }} autoFocus />
+          {f.category === 'Paid Program' && (
+            <select className="select" value={f.type} onChange={e => onChange({ ...f, type: e.target.value })} style={{ flex: 1 }}>
+              {T_PROG_TYPES.map(t => <option key={t}>{t}</option>)}
+            </select>
+          )}
+          {(f.category === 'Live Session' || f.category === 'Recording') && (
+            <input className="input" placeholder="Batch / Program name" value={f.batch} onChange={e => onChange({ ...f, batch: e.target.value })} style={{ flex: 1 }} />
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Date</div>
+            <input className="input" type="date" value={f.date} onChange={e => onChange({ ...f, date: e.target.value })} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Time</div>
+            <input className="input" type="time" value={f.time} onChange={e => onChange({ ...f, time: e.target.value })} />
+          </div>
+          {f.category === 'Paid Program' && (<>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Capacity</div>
+              <input className="input" type="number" placeholder="e.g. 50" value={f.capacity} onChange={e => onChange({ ...f, capacity: e.target.value })} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Enrolled</div>
+              <input className="input" type="number" placeholder="0" value={f.enrolled} onChange={e => onChange({ ...f, enrolled: e.target.value })} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Revenue (₹)</div>
+              <input className="input" placeholder="0" value={f.revenue} onChange={e => onChange({ ...f, revenue: e.target.value })} />
+            </div>
+          </>)}
+          {f.category === 'Recording' && (
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Duration</div>
+              <input className="input" placeholder="e.g. 1h 30m" value={f.duration} onChange={e => onChange({ ...f, duration: e.target.value })} />
+            </div>
+          )}
+        </div>
+
+        <textarea className="input" placeholder="Notes / agenda / description..." rows={2} value={f.notes} onChange={e => onChange({ ...f, notes: e.target.value })} style={{ marginBottom: 12, resize: 'vertical' }} />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-gold" onClick={onSave} disabled={loading} style={{ fontSize: 13 }}>{loading ? 'Saving...' : btnLabel}</button>
+          <button className="btn-ghost" onClick={onCancel} style={{ fontSize: 13 }}>Cancel</button>
+        </div>
       </div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Date</div>
-          <input className="input" type="date" value={f.date} onChange={e => onChange({ ...f, date: e.target.value })} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Time</div>
-          <input className="input" type="time" value={f.time} onChange={e => onChange({ ...f, time: e.target.value })} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Capacity</div>
-          <input className="input" type="number" placeholder="e.g. 50" value={f.capacity} onChange={e => onChange({ ...f, capacity: e.target.value })} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Enrolled</div>
-          <input className="input" type="number" placeholder="0" value={f.enrolled} onChange={e => onChange({ ...f, enrolled: e.target.value })} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Revenue (₹)</div>
-          <input className="input" placeholder="0" value={f.revenue} onChange={e => onChange({ ...f, revenue: e.target.value })} />
-        </div>
-      </div>
-      <textarea className="input" placeholder="Notes / description..." rows={2} value={f.notes} onChange={e => onChange({ ...f, notes: e.target.value })} style={{ marginBottom: 12, resize: 'vertical' }} />
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn-gold" onClick={onSave} disabled={loading} style={{ fontSize: 13 }}>{loading ? 'Saving...' : btnLabel}</button>
-        <button className="btn-ghost" onClick={onCancel} style={{ fontSize: 13 }}>Cancel</button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const Card = ({ item }) => {
-    const sc = T_COLORS[item.status] || '#888';
+    const sc  = T_COLORS[item.status] || '#888';
+    const cat = item.category || 'Paid Program';
+    const catCol = T_CAT_COLORS[cat] || GOLD;
     const isEditing = editId === item.id;
-    const fillPct = item.capacity && item.enrolled ? Math.min(100, Math.round((item.enrolled / item.capacity) * 100)) : null;
+    const isPaid   = cat === 'Paid Program';
+    const isLive   = cat === 'Live Session';
+    const isRec    = cat === 'Recording';
+    const fillPct  = isPaid && item.capacity && item.enrolled
+      ? Math.min(100, Math.round((item.enrolled / item.capacity) * 100))
+      : null;
     if (isEditing) return (
       <FormBlock f={editForm} onChange={setEditForm} onSave={saveEdit} onCancel={() => setEditId(null)} btnLabel="Save Changes" loading={updating} />
     );
     return (
-      <div className="card" style={{ padding: '14px 16px', marginBottom: 10 }}>
+      <div className="card" style={{ padding: '14px 16px', marginBottom: 10, borderLeft: `3px solid ${catCol}40` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Title row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{item.title}</span>
               <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11, fontWeight: 600 }}>{item.status}</span>
-              <span className="tag" style={{ background: '#1e1e1e', color: '#666', fontSize: 11 }}>{item.type}</span>
+              <span className="tag" style={{ background: `${catCol}18`, color: catCol, fontSize: 11, fontWeight: 600 }}>{T_CAT_ICONS[cat]} {cat}</span>
+              {isPaid && item.type && <span className="tag" style={{ background: '#1e1e1e', color: '#666', fontSize: 11 }}>{item.type}</span>}
             </div>
+            {/* Meta row */}
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: '#888', marginBottom: 6 }}>
               {item.date && <span>📅 {fmtDate(item.date)}{item.time ? ` · ${item.time}` : ''}</span>}
-              {item.capacity && <span>👥 {item.enrolled || 0}/{item.capacity} enrolled</span>}
-              {item.revenue && <span style={{ color: '#4ade80' }}>₹{item.revenue}</span>}
+              {(isLive || isRec) && item.batch && <span>🏷️ {item.batch}</span>}
+              {isRec && item.duration && <span>⏱️ {item.duration}</span>}
+              {isPaid && item.capacity && <span>👥 {item.enrolled || 0}/{item.capacity} enrolled</span>}
+              {isPaid && item.revenue && <span style={{ color: '#4ade80' }}>₹{parseFloat(item.revenue).toLocaleString('en-IN')}</span>}
             </div>
+            {/* Enrollment bar — Paid Program only */}
             {fillPct !== null && (
               <div style={{ marginBottom: 6 }}>
                 <div style={{ background: '#1a1a1a', borderRadius: 4, height: 4, overflow: 'hidden', maxWidth: 200 }}>
                   <div style={{ width: `${fillPct}%`, height: '100%', background: fillPct >= 90 ? '#4ade80' : fillPct >= 60 ? GOLD : '#38bdf8', borderRadius: 4, transition: 'width 0.3s' }} />
                 </div>
+                <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>{fillPct}% full</div>
               </div>
             )}
             {item.notes && <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{item.notes}</div>}
@@ -1499,7 +1690,7 @@ function TrainingsTab() {
             <select className="select" value={item.status} onChange={e => updateStatus(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
               {T_STATUS.map(s => <option key={s}>{s}</option>)}
             </select>
-            <button onClick={() => { setEditId(item.id); setEditForm({ title: item.title || '', type: item.type || 'Workshop', date: item.date || '', time: item.time || '', capacity: item.capacity || '', enrolled: item.enrolled || '', revenue: item.revenue || '', notes: item.notes || '' }); }}
+            <button onClick={() => { setEditId(item.id); setEditForm({ title: item.title || '', category: item.category || 'Paid Program', type: item.type || 'Workshop', date: item.date || '', time: item.time || '', capacity: item.capacity || '', enrolled: item.enrolled || '', revenue: item.revenue || '', batch: item.batch || '', duration: item.duration || '', notes: item.notes || '' }); }}
               style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: 16, padding: '2px 4px' }} title="Edit">✎</button>
             <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
           </div>
@@ -1518,8 +1709,8 @@ function TrainingsTab() {
         <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Plan Training</button>
       </div>
 
-      {/* Stat strip */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+      {/* Stat strip — status */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
         {T_STATUS.map(s => {
           const cnt = items.filter(i => i.status === s).length;
           const col = T_COLORS[s];
@@ -1527,6 +1718,21 @@ function TrainingsTab() {
             <div key={s} className="card" style={{ flex: 1, padding: '12px 14px' }}>
               <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>{s}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: col }}>{cnt}</div>
+            </div>
+          );
+        })}
+      </div>
+      {/* Category breakdown */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+        {T_CATEGORIES.map(cat => {
+          const cnt = items.filter(i => (i.category || 'Paid Program') === cat).length;
+          const col = T_CAT_COLORS[cat];
+          const rev = cat === 'Paid Program' ? items.filter(i => (i.category || 'Paid Program') === cat && i.status === 'Completed').reduce((s, i) => s + (parseFloat(i.revenue) || 0), 0) : 0;
+          return (
+            <div key={cat} className="card" style={{ flex: 1, padding: '12px 14px', borderLeft: `3px solid ${col}50` }}>
+              <div style={{ fontSize: 10, color: '#888', letterSpacing: 0.8, marginBottom: 4 }}>{T_CAT_ICONS[cat]} {cat}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: col }}>{cnt}</div>
+              {rev > 0 && <div style={{ fontSize: 11, color: '#4ade80', marginTop: 2 }}>₹{rev.toLocaleString('en-IN')}</div>}
             </div>
           );
         })}
