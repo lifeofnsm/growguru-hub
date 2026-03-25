@@ -29,17 +29,17 @@
       --a22: #F5C51822; --a28: #F5C51828; --a40: #F5C51840; --a44: #F5C51844; --a80: #F5C51880;
     }
     html.light {
-      --bg: #f0f4ff; --bg-card: #ffffff; --bg-sub: #f5f7fa; --bg-deep: #edf2ff;
-      --bg-input: #ffffff; --bg-login: #ffffff; --bg-shell: #f0f4ff;
-      --border: #d1d9e6; --border-soft: #e2e8f0; --border-hover: #b0bcd4; --border-input: #c4cfe0;
-      --text: #1a202c; --t-muted: #4a5568; --t-soft: #64748b; --t-faint: #94a3b8;
-      --t-bright: #1e293b; --t-strong: #334155; --t-label: #475569; --t-heading: #0f172a;
-      --ph: #94a3b8; --sb-track: #e8edf5; --sb-thumb: #c0ccda; --row-hover: rgba(0,0,0,0.031);
-      --sidebar-bg: #ffffff; --sidebar-border: #d1d9e6; --mob-bg: #ffffff; --mob-border: #e2e8f0;
+      --bg: #f0f3f9; --bg-card: #ffffff; --bg-sub: #e8edf6; --bg-deep: #dde4f0;
+      --bg-input: #ffffff; --bg-login: #ffffff; --bg-shell: #f0f3f9;
+      --border: #c8d3e4; --border-soft: #d8e0ee; --border-hover: #8fa3c4; --border-input: #b0bdd4;
+      --text: #111827; --t-muted: #374151; --t-soft: #4b5563; --t-faint: #6b7280;
+      --t-bright: #0f172a; --t-strong: #1f2937; --t-label: #374151; --t-heading: #030712;
+      --ph: #9ca3af; --sb-track: #e2e8f3; --sb-thumb: #b8c4d6; --row-hover: rgba(0,0,0,0.04);
+      --sidebar-bg: #ffffff; --sidebar-border: #c8d3e4; --mob-bg: #ffffff; --mob-border: #d8e0ee;
       --sel-opt: #ffffff; --bg-today: #fffbeb;
-      --accent: #2563eb; --accent-text: #ffffff;
-      --a08: #2563eb08; --a12: #2563eb12; --a18: #2563eb18; --a20: #2563eb20;
-      --a22: #2563eb22; --a28: #2563eb28; --a40: #2563eb40; --a44: #2563eb44; --a80: #2563eb80;
+      --accent: #1d4ed8; --accent-text: #ffffff;
+      --a08: #1d4ed80d; --a12: #1d4ed818; --a18: #1d4ed820; --a20: #1d4ed824;
+      --a22: #1d4ed828; --a28: #1d4ed832; --a40: #1d4ed848; --a44: #1d4ed850; --a80: #1d4ed880;
     }
 
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
@@ -74,6 +74,11 @@
     .btn-ghost:hover { border-color: var(--t-soft); color: var(--t-bright); }
     .tag { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
     .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    /* Light theme polish */
+    html.light .card { box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.03); }
+    html.light .app-sidebar { box-shadow: 1px 0 8px rgba(0,0,0,0.06); }
+    html.light .mobile-nav { box-shadow: 0 -1px 8px rgba(0,0,0,0.08); }
+    html.light .mob-sheet { box-shadow: 0 -4px 24px rgba(0,0,0,0.12); }
 
     /* ── Layout ── */
     .app-shell   { display: flex; height: 100vh; overflow: hidden; background: var(--bg-shell); }
@@ -126,7 +131,7 @@
         gap: 6px; cursor: pointer; font-size: 11px; color: var(--t-muted);
         transition: all 0.15s;
       }
-      .mob-sheet-btn.active { background: var(--a12); border-color: var(--a44); color: var(--accent); font-weight: 600; }
+      .mob-sheet-btn.active { background: var(--a18); border-color: var(--a44); color: var(--accent); font-weight: 600; }
       .mob-sheet-btn .sh-icon { font-size: 22px; }
       .mob-stack { flex-direction: column !important; }
       .mob-full  { width: 100% !important; }
@@ -252,7 +257,7 @@ function App() {
 function Splash() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-      <div style={{ fontSize: 26, fontWeight: 800, color: GOLD, letterSpacing: '-0.5px' }}>GrowGuru Hub</div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.5px' }}>GrowGuru Hub</div>
       <div style={{ width: 32, height: 2, background: 'var(--border-input)', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{ height: '100%', background: GOLD, animation: 'slideIn 1s ease infinite', width: '60%' }} />
       </div>
@@ -278,7 +283,7 @@ function Login() {
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div className="fade" style={{ width: '100%', maxWidth: 360, padding: '40px 32px', background: 'var(--bg-login)', border: '1px solid var(--border)', borderRadius: 16 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{ fontSize: 28, fontWeight: 800, color: GOLD, letterSpacing: '-0.5px' }}>GrowGuru Hub</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.5px' }}>GrowGuru Hub</div>
           <div style={{ color: 'var(--t-muted)', fontSize: 12, marginTop: 6, letterSpacing: 0.5 }}>ACTIVITY MANAGEMENT SYSTEM</div>
           <div style={{ color: 'var(--t-soft)', fontSize: 11, marginTop: 8, fontStyle: 'italic', letterSpacing: 0.3 }}>Guided by Krishna, Instrumented by GrowGuru</div>
         </div>
@@ -337,7 +342,7 @@ function Dashboard({ user, profile }) {
       <aside className="app-sidebar">
         {/* Brand */}
         <div style={{ padding: '22px 18px 18px', borderBottom: '1px solid var(--border-soft)' }}>
-          <div style={{ fontWeight: 800, fontSize: 16, color: GOLD, letterSpacing: '-0.3px', lineHeight: 1.2 }}>GrowGuru</div>
+          <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--accent)', letterSpacing: '-0.3px', lineHeight: 1.2 }}>GrowGuru</div>
           <div style={{ fontSize: 10, color: 'var(--t-faint)', fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 3 }}>Hub</div>
         </div>
 
@@ -348,9 +353,9 @@ function Dashboard({ user, profile }) {
               display: 'flex', alignItems: 'center', gap: 10, width: '100%',
               padding: '9px 12px', marginBottom: 2,
               background: tab === t.id ? 'var(--a12)' : 'transparent',
-              border: tab === t.id ? '1px solid var(--a28)' : '1px solid transparent',
+              border: tab === t.id ? '1px solid var(--a44)' : '1px solid transparent',
               borderRadius: 8, cursor: 'pointer', fontSize: 13,
-              color: tab === t.id ? GOLD : 'var(--t-faint)',
+              color: tab === t.id ? 'var(--accent)' : 'var(--t-faint)',
               fontWeight: tab === t.id ? 600 : 400,
               textAlign: 'left', transition: 'all 0.15s',
             }}>
@@ -384,7 +389,7 @@ function Dashboard({ user, profile }) {
             padding: '7px 10px', background: privacy ? 'var(--a12)' : 'var(--bg-sub)',
             border: privacy ? '1px solid var(--a44)' : '1px solid var(--border)',
             borderRadius: 8, cursor: 'pointer',
-            color: privacy ? GOLD : 'var(--t-muted)', fontSize: 12, transition: 'all 0.2s',
+            color: privacy ? 'var(--accent)' : 'var(--t-muted)', fontSize: 12, transition: 'all 0.2s',
           }}>
             <span style={{ fontSize: 15 }}>{privacy ? '🔒' : '👁️'}</span>
             <span>{privacy ? 'Privacy On' : 'Privacy Mode'}</span>
@@ -459,6 +464,19 @@ function Dashboard({ user, profile }) {
                       </button>
                     ))}
                   </div>
+                  {/* Privacy toggle */}
+                  <button onClick={() => setPrivacy(p => !p)} style={{
+                    marginTop: 14, width: '100%', padding: '12px 16px',
+                    background: privacy ? 'var(--a12)' : 'var(--bg-sub)',
+                    border: privacy ? '1px solid var(--a44)' : '1px solid var(--border)',
+                    borderRadius: 12, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    color: privacy ? 'var(--accent)' : 'var(--t-muted)', fontSize: 13, fontWeight: privacy ? 600 : 400,
+                    transition: 'all 0.2s',
+                  }}>
+                    <span style={{ fontSize: 18 }}>{privacy ? '🔒' : '👁️'}</span>
+                    <span>{privacy ? 'Privacy On — tap to reveal' : 'Privacy Mode — hide amounts'}</span>
+                  </button>
                 </div>
               </>
             )}
