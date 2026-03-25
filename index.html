@@ -2395,6 +2395,8 @@ function InvoicesTab() {
   const [filterYear, setFilterYear]     = useState('All');
   const [filterBrand, setFilterBrand]   = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [dateFrom, setDateFrom]         = useState('');
+  const [dateTo, setDateTo]             = useState('');
 
   useEffect(() => {
     // Auto-mark overdue: any Pending invoice past its due date
@@ -2423,15 +2425,29 @@ function InvoicesTab() {
   const years = [...new Set(collabs.map(c => c.invoiceDate?.slice(0, 4)).filter(Boolean))].sort((a, b) => b - a);
   const brands = [...new Set(collabs.map(c => c.brand).filter(Boolean))].sort();
 
+  const hasDateRange = dateFrom || dateTo;
+
   const filtered = collabs.filter(c => {
-    if (filterYear   !== 'All' && c.invoiceDate?.slice(0, 4) !== filterYear)     return false;
-    if (filterBrand  !== 'All' && c.brand !== filterBrand)                        return false;
-    if (filterStatus !== 'All' && c.status !== filterStatus)                      return false;
+    // Date range overrides year pill
+    if (hasDateRange) {
+      if (dateFrom && (!c.invoiceDate || c.invoiceDate < dateFrom)) return false;
+      if (dateTo   && (!c.invoiceDate || c.invoiceDate > dateTo))   return false;
+    } else {
+      if (filterYear !== 'All' && c.invoiceDate?.slice(0, 4) !== filterYear) return false;
+    }
+    if (filterBrand  !== 'All' && c.brand !== filterBrand)   return false;
+    if (filterStatus !== 'All' && c.status !== filterStatus) return false;
     return true;
   }).sort((a, b) => (b.invoiceDate || b.createdAt || '').localeCompare(a.invoiceDate || a.createdAt || ''));
 
-  // ── Analytics computed values ──
-  const allForYear = filterYear === 'All' ? collabs : collabs.filter(c => c.invoiceDate?.slice(0, 4) === filterYear);
+  // ── Analytics — respect active date filter ──
+  const allForYear = hasDateRange
+    ? collabs.filter(c => {
+        if (dateFrom && (!c.invoiceDate || c.invoiceDate < dateFrom)) return false;
+        if (dateTo   && (!c.invoiceDate || c.invoiceDate > dateTo))   return false;
+        return true;
+      })
+    : filterYear === 'All' ? collabs : collabs.filter(c => c.invoiceDate?.slice(0, 4) === filterYear);
   const totalInvoiced = allForYear.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
   const totalPaid     = allForYear.filter(c => c.status === 'Paid').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
   const totalPending  = allForYear.filter(c => c.status !== 'Paid').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
@@ -2666,15 +2682,36 @@ td:last-child{text-align:right;font-weight:600}
       {adding && <CollabForm f={form} onChange={setForm} onSave={add} onCancel={() => setAdding(false)} btnLabel="Save Invoice" loading={saving} accentColor={GOLD} />}
 
       {/* ── Year filter ── */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontSize: 11, color: 'var(--t-soft)', marginRight: 4, textTransform: 'uppercase', letterSpacing: 0.8 }}>Year:</span>
         {['All', ...years].map(y => (
-          <button key={y} onClick={() => setFilterYear(y)} style={{
-            padding: '4px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: filterYear === y ? 700 : 400,
-            background: filterYear === y ? 'var(--a20)' : 'transparent', color: filterYear === y ? GOLD : 'var(--t-soft)',
-            border: `1px solid ${filterYear === y ? GOLD : '#222'}`, transition: 'all 0.15s',
+          <button key={y} onClick={() => { setFilterYear(y); setDateFrom(''); setDateTo(''); }} style={{
+            padding: '4px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: filterYear === y && !hasDateRange ? 700 : 400,
+            background: filterYear === y && !hasDateRange ? 'var(--a20)' : 'transparent',
+            color: hasDateRange ? '#444' : filterYear === y ? GOLD : 'var(--t-soft)',
+            border: `1px solid ${filterYear === y && !hasDateRange ? GOLD : '#222'}`, transition: 'all 0.15s',
+            opacity: hasDateRange ? 0.45 : 1,
           }}>{y}</button>
         ))}
+      </div>
+
+      {/* ── Date range filter ── */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: 'var(--t-soft)', textTransform: 'uppercase', letterSpacing: 0.8 }}>Date:</span>
+        <input className="input" type="date" value={dateFrom}
+          onChange={e => { setDateFrom(e.target.value); if (e.target.value) setFilterYear('All'); }}
+          style={{ fontSize: 12, padding: '4px 8px', width: 136, colorScheme: 'dark' }} />
+        <span style={{ fontSize: 11, color: 'var(--t-faint)' }}>→</span>
+        <input className="input" type="date" value={dateTo}
+          onChange={e => { setDateTo(e.target.value); if (e.target.value) setFilterYear('All'); }}
+          style={{ fontSize: 12, padding: '4px 8px', width: 136, colorScheme: 'dark' }} />
+        {hasDateRange && (
+          <button onClick={() => { setDateFrom(''); setDateTo(''); }}
+            style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#ff6b6b18', color: '#ff6b6b',
+              border: '1px solid #ff6b6b55', cursor: 'pointer', transition: 'all 0.15s' }}>
+            ✕ Clear
+          </button>
+        )}
       </div>
 
       {/* ── Stat strip ── */}
