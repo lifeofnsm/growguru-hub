@@ -1914,6 +1914,7 @@ function DealsTab() {
       const invNo = await autoInvoiceNo();
       await db.collection('collabs').add({
         brand: deal.brand || '',
+        vendorId: vendorId || '',
         billingEntity: vd.legalName || deal.brand || '',
         vendorGstin: vd.gstin || '',
         vendorAddress: vd.address || '',
@@ -2383,18 +2384,41 @@ const INV_STATUSES   = ['Pending', 'Paid', 'Overdue'];
 
 const INV_ST_COLORS  = { Pending: '#f97316', Paid: '#4ade80', Overdue: '#ff6b6b' };
 const INV_DELIVERABLES = ['Integration', 'Dedicated Video', 'Live', 'Short', 'Reel', 'Webinar', 'Sponsorship', 'Other'];
-const INV_EMPTY      = { brand: '', billingEntity: '', vendorGstin: '', vendorAddress: '', invoiceNo: '', description: '', amount: '', gstRate: '', gstType: 'CGST+SGST', channel: '', poc: '', deliverable: 'Integration', invoiceDate: '', dueDate: '', status: 'Pending', paidDate: '', notes: '', linkedDealId: '' };
+const INV_EMPTY      = { brand: '', billingEntity: '', vendorGstin: '', vendorAddress: '', vendorId: '', invoiceNo: '', description: '', amount: '', gstRate: '', gstType: 'CGST+SGST', channel: '', poc: '', deliverable: 'Integration', invoiceDate: '', dueDate: '', status: 'Pending', paidDate: '', notes: '', linkedDealId: '' };
 const GST_RATES      = ['', '0', '5', '12', '18', '28'];
 const BRAND_PALETTE  = ['#38bdf8','#a78bfa','#f97316','#4ade80','#f43f5e','#F5C518','#06b6d4','#84cc16','#e879f9','#fb923c'];
 
-function CollabForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor }) {
+function CollabForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor, vendors = [] }) {
   const gstAmt = f.gstRate && f.amount ? Math.round(parseFloat(f.amount) * parseFloat(f.gstRate) / 100) : 0;
   const total  = (parseFloat(f.amount) || 0) + gstAmt;
+  const pickVendor = id => {
+    const v = vendors.find(x => x.id === id);
+    if (v) onChange({ ...f, vendorId: v.id, brand: v.name, billingEntity: v.legalName || v.name, vendorGstin: v.gstin || '', vendorAddress: v.address || '', poc: v.contactPerson || f.poc });
+    else   onChange({ ...f, vendorId: '', brand: '', billingEntity: '', vendorGstin: '', vendorAddress: '' });
+  };
   return (
     <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${accentColor}44` }}>
+      {/* Vendor picker — auto-fills all billing fields */}
+      {vendors.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>🏢 Select Vendor (auto-fills billing details)</div>
+          <select className="select" value={f.vendorId || ''} onChange={e => pickVendor(e.target.value)} style={{ width: '100%' }}>
+            <option value=''>— Pick a vendor or fill manually below —</option>
+            <optgroup label="Brands">{vendors.filter(v => v.type === 'Brand').map(v => <option key={v.id} value={v.id}>{v.name}{v.legalName && v.legalName !== v.name ? ` (${v.legalName})` : ''}</option>)}</optgroup>
+            <optgroup label="Agencies">{vendors.filter(v => v.type === 'Agency').map(v => <option key={v.id} value={v.id}>{v.name}{v.legalName && v.legalName !== v.name ? ` (${v.legalName})` : ''}</option>)}</optgroup>
+          </select>
+          {f.vendorId && (() => { const sv = vendors.find(x => x.id === f.vendorId); return sv ? (
+            <div style={{ marginTop: 5, padding: '6px 10px', background: '#4ade8010', border: '1px solid #4ade8025', borderRadius: 6, fontSize: 11, color: 'var(--t-muted)', lineHeight: 1.8 }}>
+              {sv.legalName && <span style={{ color: 'var(--t-label)', fontWeight: 600 }}>{sv.legalName}</span>}
+              {sv.gstin && <span style={{ marginLeft: 10 }}>GSTIN: {sv.gstin}</span>}
+              {sv.address && <span style={{ marginLeft: 10 }}>📍 {sv.address.length > 50 ? sv.address.slice(0, 50) + '…' : sv.address}</span>}
+            </div>
+          ) : null; })()}
+        </div>
+      )}
       {/* Brand + Legal name */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-        <input className="input" placeholder="Brand name *" value={f.brand} onChange={e => onChange({ ...f, brand: e.target.value })} style={{ flex: 2, minWidth: 140 }} autoFocus />
+        <input className="input" placeholder="Brand name *" value={f.brand} onChange={e => onChange({ ...f, brand: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
         <input className="input" placeholder="Legal / Invoiceable Company Name" value={f.billingEntity} onChange={e => onChange({ ...f, billingEntity: e.target.value })} style={{ flex: 2, minWidth: 160 }} />
       </div>
       {/* Invoice no + Amount + GST + Status */}
@@ -2464,6 +2488,7 @@ function CollabForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentCo
 
 function InvoicesTab() {
   const [collabs, setCollabs]   = useState([]);
+  const [vendors, setVendors]   = useState([]);
   const [form, setForm]         = useState({ ...INV_EMPTY });
   const [adding, setAdding]     = useState(false);
   const [saving, setSaving]     = useState(false);
@@ -2478,6 +2503,7 @@ function InvoicesTab() {
   const [sortBy, setSortBy]             = useState('newest');
 
   useEffect(() => {
+    db.collection('vendors').orderBy('name').get().then(snap => setVendors(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     // Auto-mark overdue: any Pending invoice past its due date
     const today = todayStr();
     db.collection('collabs').where('status', '==', 'Pending').get().then(snap => {
@@ -2587,7 +2613,7 @@ function InvoicesTab() {
 
   const startEdit = (c) => {
     setEditId(c.id);
-    setEditForm({ brand: c.brand || '', billingEntity: c.billingEntity || '', vendorGstin: c.vendorGstin || '', vendorAddress: c.vendorAddress || '', invoiceNo: c.invoiceNo || '', description: c.description || '', amount: c.amount || '', gstRate: c.gstRate || '', gstType: c.gstType || 'CGST+SGST', channel: c.channel || '', poc: c.poc || '', deliverable: c.deliverable || 'Integration', invoiceDate: c.invoiceDate || '', dueDate: c.dueDate || '', status: c.status || 'Pending', paidDate: c.paidDate || '', notes: c.notes || '', linkedDealId: c.linkedDealId || '' });
+    setEditForm({ brand: c.brand || '', billingEntity: c.billingEntity || '', vendorGstin: c.vendorGstin || '', vendorAddress: c.vendorAddress || '', vendorId: c.vendorId || '', invoiceNo: c.invoiceNo || '', description: c.description || '', amount: c.amount || '', gstRate: c.gstRate || '', gstType: c.gstType || 'CGST+SGST', channel: c.channel || '', poc: c.poc || '', deliverable: c.deliverable || 'Integration', invoiceDate: c.invoiceDate || '', dueDate: c.dueDate || '', status: c.status || 'Pending', paidDate: c.paidDate || '', notes: c.notes || '', linkedDealId: c.linkedDealId || '' });
     setAdding(false);
   };
 
@@ -2771,7 +2797,7 @@ td:last-child{text-align:right;font-weight:600}
         <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ New Invoice</button>
       </div>
 
-      {adding && <CollabForm f={form} onChange={setForm} onSave={add} onCancel={() => setAdding(false)} btnLabel="Save Invoice" loading={saving} accentColor={GOLD} />}
+      {adding && <CollabForm f={form} onChange={setForm} onSave={add} onCancel={() => setAdding(false)} btnLabel="Save Invoice" loading={saving} accentColor={GOLD} vendors={vendors} />}
 
       {/* ── Year filter ── */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -2910,7 +2936,7 @@ td:last-child{text-align:right;font-weight:600}
           const sc = INV_ST_COLORS[c.status] || '#888';
           const isEditing = editId === c.id;
           if (isEditing) return (
-            <CollabForm key={c.id} f={editForm} onChange={setEditForm} onSave={saveEdit} onCancel={() => setEditId(null)} btnLabel="Save Changes" loading={updating} accentColor="#38bdf8" />
+            <CollabForm key={c.id} f={editForm} onChange={setEditForm} onSave={saveEdit} onCancel={() => setEditId(null)} btnLabel="Save Changes" loading={updating} accentColor="#38bdf8" vendors={vendors} />
           );
           const today = todayStr();
           const dueDays = c.dueDate && c.status !== 'Paid' ? Math.ceil((new Date(c.dueDate + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
