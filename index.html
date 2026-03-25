@@ -1188,6 +1188,7 @@ function PipelineTab() {
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [updating, setUpdating] = useState(false);
   const [filterCh, setFilterCh] = useState('All');
+  const [filterStage, setFilterStage] = useState('All');
   const [filterBrand, setFilterBrand] = useState(false);
 
   useEffect(() => {
@@ -1308,8 +1309,9 @@ function PipelineTab() {
   };
 
   const chFiltered = filterCh === 'All' ? items : items.filter(i => i.channel === filterCh);
-  const visibleItems = filterBrand ? chFiltered.filter(i => i.brandDeal) : chFiltered;
-  const stageCount = s => visibleItems.filter(i => i.stage === s).length;
+  const brandFiltered = filterBrand ? chFiltered.filter(i => i.brandDeal) : chFiltered;
+  const visibleItems = filterStage === 'All' ? brandFiltered : brandFiltered.filter(i => i.stage === filterStage);
+  const stageCount = s => brandFiltered.filter(i => i.stage === s).length;
 
   return (
     <div>
@@ -1329,7 +1331,7 @@ function PipelineTab() {
           const chObj = channels.find(c => c.name === ch);
           const col = chObj ? (PLATFORM_COLORS[chObj.platform] || GOLD) : GOLD;
           return (
-            <button key={ch} onClick={() => setFilterCh(ch)} style={{
+            <button key={ch} onClick={() => { setFilterCh(ch); setFilterStage('All'); }} style={{
               padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: active ? 700 : 400,
               background: active ? `${col}20` : 'transparent',
               color: active ? col : 'var(--t-soft)',
@@ -1348,13 +1350,25 @@ function PipelineTab() {
         }}>💼 Brand Deals</button>
       </div>
 
-      {/* Stage counts */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        {P_STAGES.map(s => (
-          <div key={s} className="tag" style={{ background: 'var(--bg-login)', border: '1px solid var(--border)', color: stageCount(s) > 0 ? '#ccc' : '#444', padding: '4px 12px', borderRadius: 20, fontSize: 12 }}>
-            {s} {stageCount(s) > 0 && <span style={{ color: GOLD, marginLeft: 4, fontWeight: 700 }}>{stageCount(s)}</span>}
-          </div>
-        ))}
+      {/* Stage filter */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: 'var(--t-soft)', marginRight: 4, textTransform: 'uppercase', letterSpacing: 0.8 }}>Stage:</span>
+        {['All', ...P_STAGES].map(s => {
+          const active = filterStage === s;
+          const cnt = s === 'All' ? brandFiltered.length : stageCount(s);
+          return (
+            <button key={s} onClick={() => setFilterStage(s)} style={{
+              padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
+              fontWeight: active ? 700 : 400,
+              background: active ? 'var(--a20)' : 'transparent',
+              color: active ? GOLD : cnt > 0 ? 'var(--t-soft)' : 'var(--t-faint)',
+              border: `1px solid ${active ? GOLD : 'var(--border)'}`,
+              transition: 'all 0.15s',
+            }}>
+              {s}{s !== 'All' && cnt > 0 && <span style={{ color: active ? GOLD : 'var(--t-muted)', marginLeft: 5, fontWeight: 700 }}>{cnt}</span>}
+            </button>
+          );
+        })}
       </div>
 
       {adding && (
