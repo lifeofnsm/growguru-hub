@@ -1300,6 +1300,7 @@ const csvBtn = (onClick, count) => (
 );
 
 function PipelineTab() {
+  const privacy = React.useContext(PrivacyContext);
   const [items, setItems] = useState([]);
   const [channels, setChannels] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -1797,7 +1798,7 @@ function PipelineTab() {
                         ? <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8' }}>🔁 {item.frequency || 'Recurring'}</span>
                         : <span className="tag" style={{ background: 'var(--bg-sub)', color: 'var(--t-muted)' }}>1️⃣ One-time</span>}
                       {item.brandDeal && <span className="tag" style={{ background: 'var(--a18)', color: GOLD }}>💼 {item.brandName || 'Brand Deal'}</span>}
-                      {item.brandDeal && item.agreedRate && <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 600 }}>₹{item.agreedRate}</span>}
+                      {item.brandDeal && item.agreedRate && <span className="pv" style={{ fontSize: 11, color: '#4ade80', fontWeight: 600 }}>₹{item.agreedRate}</span>}
                     </div>
                     {/* Stage dates row */}
                     {(item.recordDate || item.editDate || item.publishDate) && (
@@ -1831,6 +1832,7 @@ function PipelineTab() {
 const D_EMPTY = { brand: '', brandId: '', stage: 'Lead', contact: '', contactedVia: 'Direct', platform: '', agencyId: '', commission: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', paymentDue: '', notes: '' };
 
 function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor, vendors = [] }) {
+  const privacy = React.useContext(PrivacyContext);
   const brandVendors  = vendors.filter(v => v.type === 'Brand');
   const agencyVendors = vendors.filter(v => v.type === 'Agency');
   const gross = parseFloat(f.agreedRate) || 0;
@@ -1890,11 +1892,11 @@ function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColo
           </div>
           {net !== null && (
             <div style={{ fontSize: 12, color: 'var(--t-muted)' }}>
-              Gross <span style={{ color: 'var(--t-strong)' }}>₹{gross.toLocaleString('en-IN')}</span>
+              Gross <span className="pv" style={{ color: 'var(--t-strong)' }}>₹{gross.toLocaleString('en-IN')}</span>
               <span style={{ color: 'var(--t-faint)' }}> − agency cut </span>
-              <span style={{ color: '#f97316' }}>₹{Math.round(gross * comm / 100).toLocaleString('en-IN')}</span>
+              <span className="pv" style={{ color: '#f97316' }}>₹{Math.round(gross * comm / 100).toLocaleString('en-IN')}</span>
               <span style={{ color: 'var(--t-faint)' }}> = </span>
-              <span style={{ color: '#4ade80', fontWeight: 700 }}>Net ₹{net.toLocaleString('en-IN')}</span>
+              <span className="pv" style={{ color: '#4ade80', fontWeight: 700 }}>Net ₹{net.toLocaleString('en-IN')}</span>
             </div>
           )}
         </div>
@@ -1916,7 +1918,7 @@ function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColo
         <input className="input" placeholder="Agreed Rate ₹ (Gross)" value={f.agreedRate} onChange={e => onChange({ ...f, agreedRate: e.target.value })} style={{ flex: 1, minWidth: 130 }} />
         {net !== null && (
           <div style={{ flex: 1, minWidth: 130, padding: '9px 13px', background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: 8, fontSize: 12, color: 'var(--t-muted)' }}>
-            Net to you: <strong style={{ color: '#4ade80' }}>₹{net.toLocaleString('en-IN')}</strong>
+            Net to you: <strong className="pv" style={{ color: '#4ade80' }}>₹{net.toLocaleString('en-IN')}</strong>
           </div>
         )}
       </div>
@@ -2440,6 +2442,7 @@ function IdeaCard({ idea, onStar, onStatus, onPushPipeline, onPushTraining, onDe
 
 // --- SEARCH ---------------------------------------------------
 function SearchTab({ onNavigate }) {
+  const privacy = React.useContext(PrivacyContext);
   const [query, setQuery]     = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -2606,8 +2609,8 @@ function CollabForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentCo
             <option value="IGST">IGST (Inter-state)</option>
           </select>
           <span style={{ fontSize: 12, color: 'var(--t-muted)' }}>
-            GST: <strong style={{ color: GOLD }}>₹{gstAmt.toLocaleString('en-IN')}</strong>
-            &nbsp;→ Total: <strong style={{ color: '#4ade80' }}>₹{total.toLocaleString('en-IN')}</strong>
+            GST: <strong className="pv" style={{ color: GOLD }}>₹{gstAmt.toLocaleString('en-IN')}</strong>
+            &nbsp;→ Total: <strong className="pv" style={{ color: '#4ade80' }}>₹{total.toLocaleString('en-IN')}</strong>
           </span>
         </div>
       )}
