@@ -10,40 +10,71 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
+    <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
-    body { background: #0d0d0d; color: #e8e8e8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
+
+    /* ── Design tokens ── */
+    :root {
+      --bg: #0d0d0d; --bg-card: #161616; --bg-sub: #1e1e1e; --bg-deep: #0a0a0a;
+      --bg-input: #0f0f0f; --bg-login: #141414; --bg-shell: #0d0d0d;
+      --border: #222222; --border-soft: #1a1a1a; --border-hover: #2e2e2e; --border-input: #2a2a2a;
+      --text: #e8e8e8; --t-muted: #888888; --t-soft: #666666; --t-faint: #555555;
+      --t-bright: #dddddd; --t-strong: #cccccc; --t-label: #aaaaaa; --t-heading: #eeeeee;
+      --ph: #444444; --sb-track: #111111; --sb-thumb: #2a2a2a; --row-hover: rgba(255,255,255,0.031);
+      --sidebar-bg: #0a0a0a; --sidebar-border: #1a1a1a; --mob-bg: #0a0a0a; --mob-border: #1e1e1e;
+      --sel-opt: #1a1a1a;
+      --accent: #F5C518; --accent-text: #000000;
+      --a08: #F5C51808; --a12: #F5C51812; --a18: #F5C51818; --a20: #F5C51820;
+      --a22: #F5C51822; --a28: #F5C51828; --a40: #F5C51840; --a44: #F5C51844; --a80: #F5C51880;
+    }
+    html.light {
+      --bg: #f0f4ff; --bg-card: #ffffff; --bg-sub: #f8fafc; --bg-deep: #edf2ff;
+      --bg-input: #ffffff; --bg-login: #ffffff; --bg-shell: #f0f4ff;
+      --border: #e2e8f0; --border-soft: #edf2f7; --border-hover: #c4d0e4; --border-input: #cbd5e0;
+      --text: #1a202c; --t-muted: #64748b; --t-soft: #94a3b8; --t-faint: #94a3b8;
+      --t-bright: #334155; --t-strong: #475569; --t-label: #64748b; --t-heading: #1e293b;
+      --ph: #94a3b8; --sb-track: #e8edf5; --sb-thumb: #c0ccda; --row-hover: rgba(0,0,0,0.031);
+      --sidebar-bg: #ffffff; --sidebar-border: #e2e8f0; --mob-bg: #ffffff; --mob-border: #e2e8f0;
+      --sel-opt: #ffffff;
+      --accent: #2563eb; --accent-text: #ffffff;
+      --a08: #2563eb08; --a12: #2563eb12; --a18: #2563eb18; --a20: #2563eb20;
+      --a22: #2563eb22; --a28: #2563eb28; --a40: #2563eb40; --a44: #2563eb44; --a80: #2563eb80;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
     ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: #111; }
-    ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: var(--sb-track); }
+    ::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 4px; }
     input, select, textarea, button { font-family: inherit; font-size: inherit; }
-    input::placeholder { color: #444; }
-    select option { background: #1a1a1a; }
+    input::placeholder { color: var(--ph); }
+    select option { background: var(--sel-opt); }
     .fade { animation: fadeIn 0.2s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-    .card { background: #161616; border: 1px solid #222; border-radius: 10px; }
-    .card:hover { border-color: #2e2e2e; }
-    .input { width: 100%; padding: 9px 13px; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 8px; color: #e8e8e8; outline: none; transition: border-color 0.15s; }
-    .input:focus { border-color: #F5C518; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; }
+    .card:hover { border-color: var(--border-hover); }
+    .input { width: 100%; padding: 9px 13px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 8px; color: var(--text); outline: none; transition: border-color 0.15s; }
+    .input:focus { border-color: var(--accent); }
     .input[type="date"]::-webkit-calendar-picker-indicator,
     .input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; opacity: 0.7; }
+    html.light .input[type="date"]::-webkit-calendar-picker-indicator,
+    html.light .input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
     .input[type="date"]::-webkit-calendar-picker-indicator:hover,
     .input[type="time"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
-    .select { padding: 9px 13px; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 8px; color: #e8e8e8; outline: none; cursor: pointer; }
-    .select:focus { border-color: #F5C518; }
-    .btn-gold { background: #F5C518; color: #000; border: none; padding: 9px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .select { padding: 9px 13px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 8px; color: var(--text); outline: none; cursor: pointer; }
+    .select:focus { border-color: var(--accent); }
+    .btn-gold { background: var(--accent); color: var(--accent-text); border: none; padding: 9px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
     .btn-gold:hover { opacity: 0.88; }
     .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-ghost { background: transparent; border: 1px solid #2a2a2a; color: #888; padding: 9px 16px; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
-    .btn-ghost:hover { border-color: #444; color: #ccc; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border-input); color: var(--t-muted); padding: 9px 16px; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+    .btn-ghost:hover { border-color: var(--t-soft); color: var(--t-bright); }
     .tag { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
     .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
 
-    /* ── Mobile layout ── */
-    .app-shell   { display: flex; height: 100vh; overflow: hidden; background: #0d0d0d; }
-    .app-sidebar { width: 220px; background: #0a0a0a; border-right: 1px solid #1a1a1a; display: flex; flex-direction: column; flex-shrink: 0; }
-    .app-main    { flex: 1; overflow-y: auto; padding: 28px 32px; -webkit-overflow-scrolling: touch; }
+    /* ── Layout ── */
+    .app-shell   { display: flex; height: 100vh; overflow: hidden; background: var(--bg-shell); }
+    .app-sidebar { width: 220px; background: var(--sidebar-bg); border-right: 1px solid var(--sidebar-border); display: flex; flex-direction: column; flex-shrink: 0; }
+    .app-main    { flex: 1; overflow-y: auto; padding: 28px 32px; -webkit-overflow-scrolling: touch; background: var(--bg-shell); }
     .mobile-nav  { display: none; }
 
     @media (max-width: 767px) {
@@ -53,20 +84,19 @@
         display: flex;
         position: fixed; bottom: 0; left: 0; right: 0;
         height: 56px;
-        background: #0a0a0a;
-        border-top: 1px solid #1e1e1e;
+        background: var(--mob-bg);
+        border-top: 1px solid var(--mob-border);
         z-index: 200;
         align-items: stretch;
       }
       .mob-btn {
         flex: 1; background: none; border: none; cursor: pointer;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
-        gap: 2px; color: #444; font-size: 9px; letter-spacing: 0.2px;
+        gap: 2px; color: var(--t-faint); font-size: 9px; letter-spacing: 0.2px;
         transition: color 0.15s; padding: 4px 2px;
       }
-      .mob-btn.mob-active { color: #F5C518; }
+      .mob-btn.mob-active { color: var(--accent); }
       .mob-btn .mob-icon  { font-size: 18px; line-height: 1; }
-      /* Tighten up form rows on mobile */
       .mob-stack { flex-direction: column !important; }
       .mob-full  { width: 100% !important; }
     }
@@ -74,6 +104,11 @@
 </head>
 <body>
 <div id="root"></div>
+<script>
+  // Apply saved theme before React mounts to avoid flash
+  const _t = localStorage.getItem('gg-theme') || 'dark';
+  document.documentElement.className = _t;
+</script>
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef } = React;
 
@@ -91,7 +126,8 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // --- CONSTANTS ------------------------------------------------
-const GOLD = '#F5C518';
+const GOLD = 'var(--accent)';
+const GOLD_SOLID = '#F5C518'; // used where CSS var doesn't work (e.g. non-CSS contexts)
 const PILLARS = ['Content', 'Business Ops', 'Training', 'Daily Publishing'];
 const PLATFORMS = ['YouTube', 'Instagram', 'Blog', 'Other'];
 const PLATFORM_COLORS = { YouTube: '#ff4444', Instagram: '#e1306c', Blog: '#4ade80', Other: '#888888' };
@@ -208,11 +244,11 @@ function Login() {
 
   return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div className="fade" style={{ width: '100%', maxWidth: 360, padding: '40px 32px', background: '#141414', border: '1px solid #222', borderRadius: 16 }}>
+      <div className="fade" style={{ width: '100%', maxWidth: 360, padding: '40px 32px', background: 'var(--bg-login)', border: '1px solid var(--border)', borderRadius: 16 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <div style={{ fontSize: 28, fontWeight: 800, color: GOLD, letterSpacing: '-0.5px' }}>GrowGuru Hub</div>
-          <div style={{ color: '#888', fontSize: 12, marginTop: 6, letterSpacing: 0.5 }}>ACTIVITY MANAGEMENT SYSTEM</div>
-          <div style={{ color: '#666', fontSize: 11, marginTop: 8, fontStyle: 'italic', letterSpacing: 0.3 }}>Guided by Krishna, Instrumented by GrowGuru</div>
+          <div style={{ color: 'var(--t-muted)', fontSize: 12, marginTop: 6, letterSpacing: 0.5 }}>ACTIVITY MANAGEMENT SYSTEM</div>
+          <div style={{ color: 'var(--t-soft)', fontSize: 11, marginTop: 8, fontStyle: 'italic', letterSpacing: 0.3 }}>Guided by Krishna, Instrumented by GrowGuru</div>
         </div>
         <form onSubmit={submit}>
           <div style={{ marginBottom: 12 }}>
@@ -234,9 +270,17 @@ function Login() {
 // --- DASHBOARD ------------------------------------------------
 function Dashboard({ user, profile }) {
   const [tab, setTab] = useState('overview');
+  const [theme, setTheme] = useState(() => localStorage.getItem('gg-theme') || 'dark');
   const isAdmin = profile?.role === 'admin';
   const isPartner = profile?.role === 'partner';
   const canSeeSettings = isAdmin || isPartner;
+
+  useEffect(() => {
+    document.documentElement.className = theme;
+    localStorage.setItem('gg-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
   const tabs = [
     { id: 'overview',   label: '📊', full: 'Overview' },
     { id: 'today',      label: '✅', full: 'Today' },
@@ -257,9 +301,9 @@ function Dashboard({ user, profile }) {
       {/* ── Sidebar (desktop only) ── */}
       <aside className="app-sidebar">
         {/* Brand */}
-        <div style={{ padding: '22px 18px 18px', borderBottom: '1px solid #161616' }}>
+        <div style={{ padding: '22px 18px 18px', borderBottom: '1px solid var(--border-soft)' }}>
           <div style={{ fontWeight: 800, fontSize: 16, color: GOLD, letterSpacing: '-0.3px', lineHeight: 1.2 }}>GrowGuru</div>
-          <div style={{ fontSize: 10, color: '#555', fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 3 }}>Hub</div>
+          <div style={{ fontSize: 10, color: 'var(--t-faint)', fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 3 }}>Hub</div>
         </div>
 
         {/* Nav items */}
@@ -268,10 +312,10 @@ function Dashboard({ user, profile }) {
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               display: 'flex', alignItems: 'center', gap: 10, width: '100%',
               padding: '9px 12px', marginBottom: 2,
-              background: tab === t.id ? `${GOLD}12` : 'transparent',
-              border: tab === t.id ? `1px solid ${GOLD}28` : '1px solid transparent',
+              background: tab === t.id ? 'var(--a12)' : 'transparent',
+              border: tab === t.id ? '1px solid var(--a28)' : '1px solid transparent',
               borderRadius: 8, cursor: 'pointer', fontSize: 13,
-              color: tab === t.id ? GOLD : '#555',
+              color: tab === t.id ? GOLD : 'var(--t-faint)',
               fontWeight: tab === t.id ? 600 : 400,
               textAlign: 'left', transition: 'all 0.15s',
             }}>
@@ -281,13 +325,30 @@ function Dashboard({ user, profile }) {
           ))}
         </nav>
 
+        {/* Theme toggle */}
+        <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border-soft)', borderBottom: '1px solid var(--border-soft)' }}>
+          <button onClick={toggleTheme} style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            padding: '7px 10px', background: 'var(--bg-sub)', border: '1px solid var(--border)',
+            borderRadius: 8, cursor: 'pointer', color: 'var(--t-muted)', fontSize: 12,
+            transition: 'all 0.2s',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--t-muted)'; }}
+          >
+            <span style={{ fontSize: 15 }}>{theme === 'dark' ? '☀️' : '🌙'}</span>
+            <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.5 }}>{theme === 'dark' ? 'ON' : 'ON'}</span>
+          </button>
+        </div>
+
         {/* User info + sign out */}
-        <div style={{ padding: '14px 14px', borderTop: '1px solid #161616' }}>
-          <div style={{ fontSize: 12, color: '#666', marginBottom: 6, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ padding: '14px 14px', borderTop: '1px solid var(--border-soft)' }}>
+          <div style={{ fontSize: 12, color: 'var(--t-soft)', marginBottom: 6, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {profile?.name || user.email}
           </div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-            {isAdmin && <span className="tag" style={{ background: `${GOLD}22`, color: GOLD, fontSize: 10, letterSpacing: 0.5 }}>ADMIN</span>}
+            {isAdmin && <span className="tag" style={{ background: 'var(--a22)', color: GOLD, fontSize: 10, letterSpacing: 0.5 }}>ADMIN</span>}
             {isPartner && <span className="tag" style={{ background: '#38bdf822', color: '#38bdf8', fontSize: 10, letterSpacing: 0.5 }}>PARTNER</span>}
           </div>
           <button className="btn-ghost" onClick={() => auth.signOut()} style={{ padding: '6px 12px', fontSize: 12, width: '100%' }}>Sign out</button>
@@ -333,9 +394,9 @@ function StatCard({ label, value, sub, color, onClick }) {
       onMouseEnter={e => { if (onClick) e.currentTarget.style.borderColor = '#383838'; }}
       onMouseLeave={e => { if (onClick) e.currentTarget.style.borderColor = ''; }}
     >
-      <div style={{ fontSize: 11, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</div>
+      <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</div>
       <div style={{ fontSize: 30, fontWeight: 800, color, letterSpacing: '-1px', lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>{sub}</div>
+      <div style={{ fontSize: 11, color: 'var(--t-muted)', marginTop: 6 }}>{sub}</div>
       {onClick && <div style={{ fontSize: 10, color: '#444', marginTop: 8, letterSpacing: 0.5 }}>VIEW →</div>}
     </div>
   );
@@ -379,13 +440,13 @@ function OverviewTab({ onNavigate }) {
   const trainingRevenue   = data.trainings.filter(t => t.status === 'Completed' && t.category === 'Paid Program').reduce((s, t) => s + (parseFloat(t.revenue) || 0), 0);
   const totalOverdue      = overdueTasks.length + overduePipeline.length + overdueDeals.length + paymentDueDeals.length;
 
-  if (loading) return <div style={{ color: '#666', textAlign: 'center', padding: 60 }}>Loading...</div>;
+  if (loading) return <div style={{ color: 'var(--t-soft)', textAlign: 'center', padding: 60 }}>Loading...</div>;
 
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Overview</h1>
-        <div style={{ color: '#888', fontSize: 13 }}>{fmtDateFull()}</div>
+        <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{fmtDateFull()}</div>
       </div>
 
       {/* Stat cards — row 1 */}
@@ -405,17 +466,17 @@ function OverviewTab({ onNavigate }) {
         <div className="card" onClick={() => onNavigate('pipeline')} style={{ padding: 18, cursor: 'pointer' }}
           onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
           onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>🎬 Pipeline by Stage <span style={{ fontSize: 10, color: '#444', marginLeft: 4 }}>VIEW →</span></div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-label)', marginBottom: 16 }}>🎬 Pipeline by Stage <span style={{ fontSize: 10, color: '#444', marginLeft: 4 }}>VIEW →</span></div>
           {P_STAGES.map(s => {
             const cnt = data.pipeline.filter(p => p.stage === s).length;
             const pct = data.pipeline.length ? (cnt / data.pipeline.length) * 100 : 0;
             return (
               <div key={s} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                  <span style={{ color: '#888' }}>{s}</span>
+                  <span style={{ color: 'var(--t-muted)' }}>{s}</span>
                   <span style={{ color: cnt > 0 ? '#ddd' : '#444', fontWeight: 600 }}>{cnt}</span>
                 </div>
-                <div style={{ height: 4, background: '#1e1e1e', borderRadius: 4 }}>
+                <div style={{ height: 4, background: 'var(--bg-sub)', borderRadius: 4 }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: s === 'Published' ? '#4ade80' : GOLD, borderRadius: 4, transition: 'width 0.5s ease' }} />
                 </div>
               </div>
@@ -427,17 +488,17 @@ function OverviewTab({ onNavigate }) {
         <div className="card" onClick={() => onNavigate('deals')} style={{ padding: 18, cursor: 'pointer' }}
           onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
           onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>💼 Deals by Stage <span style={{ fontSize: 10, color: '#444', marginLeft: 4 }}>VIEW →</span></div>
-          {activeDeals.length === 0 && <div style={{ color: '#666', fontSize: 12 }}>No active deals</div>}
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-label)', marginBottom: 16 }}>💼 Deals by Stage <span style={{ fontSize: 10, color: '#444', marginLeft: 4 }}>VIEW →</span></div>
+          {activeDeals.length === 0 && <div style={{ color: 'var(--t-soft)', fontSize: 12 }}>No active deals</div>}
           {D_STAGES.map(s => {
             const grp = data.deals.filter(d => d.stage === s);
             if (!grp.length) return null;
             const sc = D_COLORS[s] || '#888';
             const val = grp.reduce((sum, d) => sum + (parseFloat(d.agreedRate) || 0), 0);
             return (
-              <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #1a1a1a', fontSize: 12, gap: 8 }}>
+              <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border-soft)', fontSize: 12, gap: 8 }}>
                 <span className="tag" style={{ background: `${sc}18`, color: sc, flexShrink: 0 }}>{s}</span>
-                <span style={{ color: '#888', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{grp.map(d => d.brand).join(', ')}</span>
+                <span style={{ color: 'var(--t-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{grp.map(d => d.brand).join(', ')}</span>
                 {val > 0 && <span style={{ color: '#4ade80', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>₹{val.toLocaleString('en-IN')}</span>}
               </div>
             );
@@ -447,8 +508,8 @@ function OverviewTab({ onNavigate }) {
         <div className="card" onClick={() => onNavigate('trainings')} style={{ padding: 18, cursor: 'pointer' }}
           onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
           onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>📚 Trainings <span style={{ fontSize: 10, color: '#666', marginLeft: 4 }}>VIEW →</span></div>
-          {data.trainings.length === 0 && <div style={{ color: '#666', fontSize: 12 }}>No trainings yet</div>}
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-label)', marginBottom: 16 }}>📚 Trainings <span style={{ fontSize: 10, color: 'var(--t-soft)', marginLeft: 4 }}>VIEW →</span></div>
+          {data.trainings.length === 0 && <div style={{ color: 'var(--t-soft)', fontSize: 12 }}>No trainings yet</div>}
           {['Paid Program', 'Live Session', 'Recording'].map(cat => {
             const grp = data.trainings.filter(t => t.category === cat);
             if (!grp.length) return null;
@@ -456,9 +517,9 @@ function OverviewTab({ onNavigate }) {
             const upcoming = grp.filter(t => t.status === 'Upcoming' || t.status === 'Live').length;
             const rev = grp.filter(t => t.status === 'Completed').reduce((s, t) => s + (parseFloat(t.revenue)||0), 0);
             return (
-              <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #1a1a1a', fontSize: 12, gap: 8 }}>
+              <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border-soft)', fontSize: 12, gap: 8 }}>
                 <span className="tag" style={{ background: `${catCol}18`, color: catCol, flexShrink: 0, fontSize: 11 }}>{cat}</span>
-                <span style={{ color: '#888', flex: 1 }}>{upcoming} upcoming · {grp.length} total</span>
+                <span style={{ color: 'var(--t-muted)', flex: 1 }}>{upcoming} upcoming · {grp.length} total</span>
                 {rev > 0 && <span style={{ color: '#4ade80', fontWeight: 600, fontSize: 11 }}>₹{rev.toLocaleString('en-IN')}</span>}
               </div>
             );
@@ -471,28 +532,28 @@ function OverviewTab({ onNavigate }) {
         <div className="card" style={{ padding: 18, borderColor: '#ff6b6b33' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#ff6b6b', marginBottom: 12 }}>⚠️ Needs Attention ({totalOverdue})</div>
           {overdueTasks.map(t => (
-            <div key={t.id} onClick={() => onNavigate('today')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
+            <div key={t.id} onClick={() => onNavigate('today')} style={{ fontSize: 12, color: 'var(--t-muted)', padding: '7px 0', borderBottom: '1px solid var(--border-soft)', display: 'flex', gap: 8, cursor: 'pointer' }}
               onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
               onMouseLeave={e => e.currentTarget.style.background = ''}>
-              <span>⬜</span><span style={{ color: '#ccc', flex: 1 }}>{t.title}</span><span style={{ color: '#666' }}>{fmtDate(t.date)}</span>
+              <span>⬜</span><span style={{ color: 'var(--t-strong)', flex: 1 }}>{t.title}</span><span style={{ color: 'var(--t-soft)' }}>{fmtDate(t.date)}</span>
             </div>
           ))}
           {overduePipeline.map(p => (
-            <div key={p.id} onClick={() => onNavigate('pipeline')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
+            <div key={p.id} onClick={() => onNavigate('pipeline')} style={{ fontSize: 12, color: 'var(--t-muted)', padding: '7px 0', borderBottom: '1px solid var(--border-soft)', display: 'flex', gap: 8, cursor: 'pointer' }}
               onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
               onMouseLeave={e => e.currentTarget.style.background = ''}>
-              <span>🎬</span><span style={{ color: '#ccc', flex: 1 }}>{p.title}</span><span style={{ color: '#666' }}>due {fmtDate(p.publishDate)}</span>
+              <span>🎬</span><span style={{ color: 'var(--t-strong)', flex: 1 }}>{p.title}</span><span style={{ color: 'var(--t-soft)' }}>due {fmtDate(p.publishDate)}</span>
             </div>
           ))}
           {overdueDeals.map(d => (
-            <div key={d.id} onClick={() => onNavigate('deals')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
+            <div key={d.id} onClick={() => onNavigate('deals')} style={{ fontSize: 12, color: 'var(--t-muted)', padding: '7px 0', borderBottom: '1px solid var(--border-soft)', display: 'flex', gap: 8, cursor: 'pointer' }}
               onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
               onMouseLeave={e => e.currentTarget.style.background = ''}>
-              <span>💼</span><span style={{ color: '#ccc', flex: 1 }}>{d.brand}</span><span style={{ color: '#666' }}>deadline {fmtDate(d.deadline)}</span>
+              <span>💼</span><span style={{ color: 'var(--t-strong)', flex: 1 }}>{d.brand}</span><span style={{ color: 'var(--t-soft)' }}>deadline {fmtDate(d.deadline)}</span>
             </div>
           ))}
           {paymentDueDeals.map(d => (
-            <div key={`pay-${d.id}`} onClick={() => onNavigate('deals')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
+            <div key={`pay-${d.id}`} onClick={() => onNavigate('deals')} style={{ fontSize: 12, color: 'var(--t-muted)', padding: '7px 0', borderBottom: '1px solid var(--border-soft)', display: 'flex', gap: 8, cursor: 'pointer' }}
               onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
               onMouseLeave={e => e.currentTarget.style.background = ''}>
               <span>💳</span><span style={{ color: '#f97316', flex: 1, fontWeight: 600 }}>{d.brand}</span><span style={{ color: '#f97316' }}>payment due {fmtDate(d.paymentDue)}</span>
@@ -511,17 +572,17 @@ function OverviewTab({ onNavigate }) {
 
           {invoicedPending.length > 0 && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Invoice Raised — Awaiting Payment</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Invoice Raised — Awaiting Payment</div>
               {invoicedPending.map(d => {
                 const amt = d.agreedRate ? `₹${parseFloat(d.agreedRate).toLocaleString('en-IN')}` : null;
                 const comm = d.commission && d.contactedVia === 'Agency' ? Math.round(parseFloat(d.agreedRate || 0) * (1 - parseFloat(d.commission) / 100)) : null;
                 return (
-                  <div key={d.id} onClick={() => onNavigate('invoices')} style={{ fontSize: 12, padding: '8px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                  <div key={d.id} onClick={() => onNavigate('invoices')} style={{ fontSize: 12, padding: '8px 0', borderBottom: '1px solid var(--border-soft)', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
                     onMouseLeave={e => e.currentTarget.style.background = ''}>
                     <span>🧾</span>
-                    <span style={{ color: '#ddd', fontWeight: 600, flex: 1 }}>{d.brand}</span>
-                    {d.invoiceNo && <span style={{ color: '#888', fontSize: 11 }}>{d.invoiceNo}</span>}
+                    <span style={{ color: 'var(--t-bright)', fontWeight: 600, flex: 1 }}>{d.brand}</span>
+                    {d.invoiceNo && <span style={{ color: 'var(--t-muted)', fontSize: 11 }}>{d.invoiceNo}</span>}
                     {d.paymentDue && <span style={{ color: d.paymentDue < today ? '#ff6b6b' : '#f97316', fontSize: 11 }}>due {fmtDate(d.paymentDue)}</span>}
                     {comm ? <span style={{ color: '#4ade80', fontWeight: 600 }}>Net ₹{comm.toLocaleString('en-IN')}</span> : amt ? <span style={{ color: '#4ade80', fontWeight: 600 }}>{amt}</span> : null}
                   </div>
@@ -532,18 +593,18 @@ function OverviewTab({ onNavigate }) {
 
           {liveNeedInvoice.length > 0 && (
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Live — Raise Invoice</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Live — Raise Invoice</div>
               {liveNeedInvoice.map(d => {
                 const amt = d.agreedRate ? `₹${parseFloat(d.agreedRate).toLocaleString('en-IN')}` : null;
                 return (
-                  <div key={d.id} onClick={() => onNavigate('deals')} style={{ fontSize: 12, padding: '8px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                  <div key={d.id} onClick={() => onNavigate('deals')} style={{ fontSize: 12, padding: '8px 0', borderBottom: '1px solid var(--border-soft)', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
                     onMouseLeave={e => e.currentTarget.style.background = ''}>
                     <span>📤</span>
-                    <span style={{ color: '#ddd', fontWeight: 600, flex: 1 }}>{d.brand}</span>
+                    <span style={{ color: 'var(--t-bright)', fontWeight: 600, flex: 1 }}>{d.brand}</span>
                     <span style={{ color: '#4ade80', fontSize: 11, fontWeight: 600 }}>LIVE</span>
                     {amt && <span style={{ color: '#F5C518', fontWeight: 600 }}>{amt}</span>}
-                    <span style={{ color: '#888', fontSize: 11 }}>→ generate invoice</span>
+                    <span style={{ color: 'var(--t-muted)', fontSize: 11 }}>→ generate invoice</span>
                   </div>
                 );
               })}
@@ -649,7 +710,7 @@ function WeeklyTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Weekly Planner</h1>
-          <div style={{ color: '#888', fontSize: 13 }}>{weekLabel()}</div>
+          <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{weekLabel()}</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button className="btn-ghost" onClick={() => setWeekOffset(v => v - 1)} style={{ fontSize: 13, padding: '6px 14px' }}>← Prev</button>
@@ -673,15 +734,15 @@ function WeeklyTab() {
           return (
             <div key={day} className="card" style={{
               padding: 0,
-              borderColor: isToday ? GOLD + '99' : isPast && !hasContent ? '#1c1c1c' : '#252525',
-              background: isToday ? '#1a1800' : isPast ? '#141414' : '#161616',
+              borderColor: isToday ? GOLD + '99' : isPast && !hasContent ? '#1c1c1c' : 'var(--border)',
+              background: isToday ? '#1a1800' : isPast ? 'var(--bg-login)' : 'var(--bg-card)',
               overflow: 'hidden',
             }}>
               {/* ── Day header row ── */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '10px 16px',
-                borderBottom: hasContent || addingDay === day ? `1px solid ${isToday ? GOLD + '33' : '#1e1e1e'}` : 'none',
+                borderBottom: hasContent || addingDay === day ? `1px solid ${isToday ? GOLD + '33' : 'var(--bg-sub)'}` : 'none',
                 background: isToday ? '#1f1c00' : 'transparent',
               }}>
                 {/* Day name + date */}
@@ -689,7 +750,7 @@ function WeeklyTab() {
                   <span style={{ fontSize: 13, fontWeight: 800, color: isToday ? GOLD : isPast ? '#555' : '#bbb', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     {DAY_NAMES[idx]}
                   </span>
-                  <span style={{ fontSize: 12, color: isToday ? GOLD + 'cc' : '#555' }}>{dateLabel}</span>
+                  <span style={{ fontSize: 12, color: isToday ? GOLD + 'cc' : 'var(--t-faint)' }}>{dateLabel}</span>
                   {isToday && <span style={{ fontSize: 10, background: GOLD, color: '#000', fontWeight: 700, borderRadius: 4, padding: '1px 6px', letterSpacing: 0.5 }}>TODAY</span>}
                 </div>
 
@@ -699,7 +760,7 @@ function WeeklyTab() {
                     <span style={{
                       fontSize: 11, borderRadius: 4, padding: '2px 8px', fontWeight: 600,
                       background: done === dayTasks.length ? '#4ade8022' : '#ffffff0a',
-                      color: done === dayTasks.length ? '#4ade80' : '#888',
+                      color: done === dayTasks.length ? '#4ade80' : 'var(--t-muted)',
                     }}>
                       {done === dayTasks.length ? '✓' : `${done}/`}{done !== dayTasks.length ? `${dayTasks.length}` : ''} tasks{done === dayTasks.length ? ' done' : ''}
                     </span>
@@ -720,12 +781,12 @@ function WeeklyTab() {
                 {addingDay !== day && (
                   <button onClick={() => setAddingDay(day)} style={{
                     background: 'none', border: `1px dashed ${isToday ? GOLD + '66' : '#333'}`,
-                    borderRadius: 5, color: isToday ? GOLD + 'aa' : '#666',
+                    borderRadius: 5, color: isToday ? GOLD + 'aa' : 'var(--t-soft)',
                     cursor: 'pointer', fontSize: 12, padding: '3px 12px', flexShrink: 0,
                     transition: 'all 0.15s',
                   }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD + '99'; e.currentTarget.style.color = GOLD; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = isToday ? GOLD + '66' : '#333'; e.currentTarget.style.color = isToday ? GOLD + 'aa' : '#666'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = isToday ? GOLD + '66' : '#333'; e.currentTarget.style.color = isToday ? GOLD + 'aa' : 'var(--t-soft)'; }}
                   >+ Task</button>
                 )}
               </div>
@@ -775,7 +836,7 @@ function WeeklyTab() {
                       </span>
                       <span onClick={() => toggle(t.id, t.done)} style={{
                         flex: 1, cursor: 'pointer',
-                        color: t.done ? '#555' : '#ccc',
+                        color: t.done ? '#555' : 'var(--t-strong)',
                         textDecoration: t.done ? 'line-through' : 'none',
                         lineHeight: 1.4,
                       }}>
@@ -796,7 +857,7 @@ function WeeklyTab() {
 
                   {/* Add task inline form */}
                   {addingDay === day && (
-                    <div style={{ marginTop: 4, background: '#1e1e1e', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ marginTop: 4, background: 'var(--bg-sub)', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <input className="input" placeholder="Task name..." autoFocus value={newTask.title}
                         onChange={e => setNewTask(v => ({ ...v, title: e.target.value }))}
                         onKeyDown={e => { if (e.key === 'Enter') addTask(day); if (e.key === 'Escape') setAddingDay(null); }}
@@ -809,7 +870,7 @@ function WeeklyTab() {
                           {['Content', 'Brand', 'Learning', 'Admin', 'Personal'].map(p => <option key={p}>{p}</option>)}
                         </select>
                         <button onClick={() => addTask(day)} disabled={saving} style={{ background: GOLD, border: 'none', borderRadius: 6, padding: '6px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#000', flexShrink: 0 }}>Add</button>
-                        <button onClick={() => setAddingDay(null)} style={{ background: 'transparent', border: '1px solid #333', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#888', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                        <button onClick={() => setAddingDay(null)} style={{ background: 'transparent', border: '1px solid var(--border-input)', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: 'var(--t-muted)', cursor: 'pointer', flexShrink: 0 }}>✕</button>
                       </div>
                     </div>
                   )}
@@ -959,7 +1020,7 @@ function TodayTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Today's Focus</h1>
-          <div style={{ color: '#888', fontSize: 13 }}>
+          <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>
             {fmtDateFull()}
             {tasks.length > 0 && <span style={{ marginLeft: 10, color: done === tasks.length && tasks.length > 0 ? '#4ade80' : GOLD }}>{done}/{tasks.length} done</span>}
           </div>
@@ -973,7 +1034,7 @@ function TodayTab() {
       </div>
 
       {/* Priority legend */}
-      <div style={{ display: 'flex', gap: 20, padding: '8px 14px', background: '#111', borderRadius: 8, marginBottom: 20, fontSize: 12, color: '#666' }}>
+      <div style={{ display: 'flex', gap: 20, padding: '8px 14px', background: '#111', borderRadius: 8, marginBottom: 20, fontSize: 12, color: 'var(--t-soft)' }}>
         <span><span className="dot" style={{ background: '#ff6b6b' }} />P1 - Must Do</span>
         <span><span className="dot" style={{ background: GOLD }} />P2 - Should Do</span>
         <span><span className="dot" style={{ background: '#4ade80' }} />P3 - If Time</span>
@@ -995,13 +1056,13 @@ function TodayTab() {
 
           {/* Recurring toggle */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>Schedule</div>
+            <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 6 }}>Schedule</div>
             <div style={{ display: 'flex', gap: 6 }}>
               {[false, true].map(v => (
                 <button key={String(v)} onClick={() => setForm({ ...form, recurring: v })} style={{
                   padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: form.recurring === v ? 700 : 400,
                   background: form.recurring === v ? GOLD : 'transparent',
-                  color: form.recurring === v ? '#000' : '#888',
+                  color: form.recurring === v ? '#000' : 'var(--t-muted)',
                   border: `1px solid ${form.recurring === v ? GOLD : '#2a2a2a'}`,
                 }}>{v ? '🔁 Recurring' : '1️⃣ One-time'}</button>
               ))}
@@ -1010,26 +1071,26 @@ function TodayTab() {
 
           {form.recurring && (
             <div style={{ marginBottom: 12, padding: '12px 14px', background: '#111', borderRadius: 8 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>Repeat frequency</div>
+              <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 8 }}>Repeat frequency</div>
               <div style={{ display: 'flex', gap: 6, marginBottom: form.frequency === 'Weekly' || form.frequency === 'Monthly' ? 10 : 0, flexWrap: 'wrap' }}>
                 {TASK_FREQS.map(f => (
                   <button key={f} onClick={() => setForm({ ...form, frequency: f })} style={{
                     padding: '4px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: form.frequency === f ? 700 : 400,
                     background: form.frequency === f ? '#38bdf822' : 'transparent',
-                    color: form.frequency === f ? '#38bdf8' : '#666',
+                    color: form.frequency === f ? '#38bdf8' : 'var(--t-soft)',
                     border: `1px solid ${form.frequency === f ? '#38bdf8' : '#222'}`,
                   }}>{f}</button>
                 ))}
               </div>
               {form.frequency === 'Weekly' && (
                 <div>
-                  <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>Repeats on</div>
+                  <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 6 }}>Repeats on</div>
                   <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                     {WEEK_DAYS.map((d, i) => (
                       <button key={d} onClick={() => setForm({ ...form, weekDay: i })} style={{
                         padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
                         background: form.weekDay === i ? GOLD : 'transparent',
-                        color: form.weekDay === i ? '#000' : '#666',
+                        color: form.weekDay === i ? '#000' : 'var(--t-soft)',
                         border: `1px solid ${form.weekDay === i ? GOLD : '#222'}`,
                       }}>{d}</button>
                     ))}
@@ -1038,11 +1099,11 @@ function TodayTab() {
               )}
               {form.frequency === 'Monthly' && (
                 <div>
-                  <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>Repeats on day</div>
+                  <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 6 }}>Repeats on day</div>
                   <input className="input" type="number" min="1" max="28" value={form.monthDay}
                     onChange={e => setForm({ ...form, monthDay: parseInt(e.target.value) || 1 })}
                     style={{ width: 80 }} />
-                  <span style={{ fontSize: 11, color: '#666', marginLeft: 8 }}>of each month</span>
+                  <span style={{ fontSize: 11, color: 'var(--t-soft)', marginLeft: 8 }}>of each month</span>
                 </div>
               )}
             </div>
@@ -1072,14 +1133,14 @@ function TodayTab() {
                 {t.done && <svg width="9" height="7" viewBox="0 0 9 7"><polyline points="1,3.5 3.5,6 8,1" fill="none" stroke="#000" strokeWidth="1.8" strokeLinecap="round" /></svg>}
               </button>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, color: t.done ? '#555' : '#ddd', textDecoration: t.done ? 'line-through' : 'none', marginBottom: 3 }}>{t.title}</div>
+                <div style={{ fontSize: 14, color: t.done ? '#555' : 'var(--t-bright)', textDecoration: t.done ? 'line-through' : 'none', marginBottom: 3 }}>{t.title}</div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span className="tag" style={{ background: '#1e1e1e', color: '#666' }}>{t.pillar}</span>
+                  <span className="tag" style={{ background: 'var(--bg-sub)', color: 'var(--t-soft)' }}>{t.pillar}</span>
                   {t.recurring && <span className="tag" style={{ background: '#38bdf810', color: '#38bdf8', fontSize: 10 }}>↻ {t.frequency}</span>}
-                  {t.notes && <span style={{ fontSize: 12, color: '#888' }}>{t.notes}</span>}
+                  {t.notes && <span style={{ fontSize: 12, color: 'var(--t-muted)' }}>{t.notes}</span>}
                 </div>
               </div>
-              <button onClick={() => del(t.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}
+              <button onClick={() => del(t.id)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}
                 onMouseEnter={e => e.target.style.color = '#ff6b6b'} onMouseLeave={e => e.target.style.color = '#555'}>×</button>
             </div>
           ))}
@@ -1088,9 +1149,9 @@ function TodayTab() {
 
       {/* Recurring Templates Manager */}
       {templates.length > 0 && (
-        <div style={{ marginTop: 32, borderTop: '1px solid #1e1e1e', paddingTop: 20 }}>
+        <div style={{ marginTop: 32, borderTop: '1px solid var(--border-soft)', paddingTop: 20 }}>
           <button onClick={() => setShowRec(v => !v)} style={{
-            background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 13,
+            background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t-soft)', fontSize: 13,
             display: 'flex', alignItems: 'center', gap: 6, marginBottom: showRec ? 14 : 0,
           }}>
             <span style={{ fontSize: 14 }}>🔁</span>
@@ -1100,9 +1161,9 @@ function TodayTab() {
           {showRec && templates.map(tmpl => (
             <div key={tmpl.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#111', borderRadius: 7, marginBottom: 5 }}>
               <span className="dot" style={{ background: P_COLORS[tmpl.priority], flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 13, color: '#ccc' }}>{tmpl.title}</span>
+              <span style={{ flex: 1, fontSize: 13, color: 'var(--t-strong)' }}>{tmpl.title}</span>
               <span className="tag" style={{ background: '#38bdf810', color: '#38bdf8', fontSize: 10 }}>{freqLabel(tmpl)}</span>
-              <span className="tag" style={{ background: '#1e1e1e', color: '#666', fontSize: 10 }}>{tmpl.pillar}</span>
+              <span className="tag" style={{ background: 'var(--bg-sub)', color: 'var(--t-soft)', fontSize: 10 }}>{tmpl.pillar}</span>
               <button onClick={() => delTmpl(tmpl.id)} title="Stop recurring" style={{
                 background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: 13,
               }} onMouseEnter={e => e.target.style.color = '#ff6b6b'} onMouseLeave={e => e.target.style.color = '#444'}>×</button>
@@ -1250,14 +1311,14 @@ function PipelineTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Content Pipeline</h1>
-          <div style={{ color: '#888', fontSize: 13 }}>{visibleItems.length} of {items.length} items</div>
+          <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{visibleItems.length} of {items.length} items</div>
         </div>
         <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditItem(null); }} style={{ fontSize: 13 }}>+ Add Content</button>
       </div>
 
       {/* Channel filter */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: '#666', marginRight: 4, textTransform: 'uppercase', letterSpacing: 0.8 }}>Channel:</span>
+        <span style={{ fontSize: 11, color: 'var(--t-soft)', marginRight: 4, textTransform: 'uppercase', letterSpacing: 0.8 }}>Channel:</span>
         {['All', ...channels.map(c => c.name)].map(ch => {
           const active = filterCh === ch;
           const chObj = channels.find(c => c.name === ch);
@@ -1266,7 +1327,7 @@ function PipelineTab() {
             <button key={ch} onClick={() => setFilterCh(ch)} style={{
               padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: active ? 700 : 400,
               background: active ? `${col}20` : 'transparent',
-              color: active ? col : '#666',
+              color: active ? col : 'var(--t-soft)',
               border: `1px solid ${active ? col : '#222'}`,
               transition: 'all 0.15s',
             }}>{ch}</button>
@@ -1275,8 +1336,8 @@ function PipelineTab() {
         <div style={{ width: 1, background: '#222', height: 20, alignSelf: 'center', margin: '0 4px' }} />
         <button onClick={() => setFilterBrand(v => !v)} style={{
           padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: filterBrand ? 700 : 400,
-          background: filterBrand ? `${GOLD}20` : 'transparent',
-          color: filterBrand ? GOLD : '#666',
+          background: filterBrand ? 'var(--a20)' : 'transparent',
+          color: filterBrand ? GOLD : 'var(--t-soft)',
           border: `1px solid ${filterBrand ? GOLD : '#222'}`,
           transition: 'all 0.15s',
         }}>💼 Brand Deals</button>
@@ -1285,7 +1346,7 @@ function PipelineTab() {
       {/* Stage counts */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {P_STAGES.map(s => (
-          <div key={s} className="tag" style={{ background: '#141414', border: '1px solid #222', color: stageCount(s) > 0 ? '#ccc' : '#444', padding: '4px 12px', borderRadius: 20, fontSize: 12 }}>
+          <div key={s} className="tag" style={{ background: 'var(--bg-login)', border: '1px solid var(--border)', color: stageCount(s) > 0 ? '#ccc' : '#444', padding: '4px 12px', borderRadius: 20, fontSize: 12 }}>
             {s} {stageCount(s) > 0 && <span style={{ color: GOLD, marginLeft: 4, fontWeight: 700 }}>{stageCount(s)}</span>}
           </div>
         ))}
@@ -1311,10 +1372,10 @@ function PipelineTab() {
           </div>
           {/* Recurring toggle */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
-            <span style={{ fontSize: 12, color: '#666', marginRight: 4 }}>Type:</span>
+            <span style={{ fontSize: 12, color: 'var(--t-soft)', marginRight: 4 }}>Type:</span>
             {['One-time', 'Recurring'].map(opt => (
               <button key={opt} type="button" onClick={() => setForm({ ...form, recurring: opt === 'Recurring' })}
-                style={{ padding: '5px 14px', borderRadius: 6, border: `1px solid ${form.recurring === (opt === 'Recurring') ? GOLD : '#2a2a2a'}`, background: form.recurring === (opt === 'Recurring') ? `${GOLD}18` : 'transparent', color: form.recurring === (opt === 'Recurring') ? GOLD : '#666', fontSize: 12, cursor: 'pointer', fontWeight: form.recurring === (opt === 'Recurring') ? 600 : 400 }}>
+                style={{ padding: '5px 14px', borderRadius: 6, border: `1px solid ${form.recurring === (opt === 'Recurring') ? GOLD : '#2a2a2a'}`, background: form.recurring === (opt === 'Recurring') ? 'var(--a18)' : 'transparent', color: form.recurring === (opt === 'Recurring') ? GOLD : 'var(--t-soft)', fontSize: 12, cursor: 'pointer', fontWeight: form.recurring === (opt === 'Recurring') ? 600 : 400 }}>
                 {opt === 'Recurring' ? '🔁 Recurring' : '1️⃣ One-time'}
               </button>
             ))}
@@ -1322,7 +1383,7 @@ function PipelineTab() {
               <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
                 {['Daily', 'Weekly', 'Monthly'].map(f => (
                   <button key={f} type="button" onClick={() => setForm({ ...form, frequency: f })}
-                    style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${form.frequency === f ? '#38bdf8' : '#2a2a2a'}`, background: form.frequency === f ? '#38bdf818' : 'transparent', color: form.frequency === f ? '#38bdf8' : '#555', fontSize: 12, cursor: 'pointer', fontWeight: form.frequency === f ? 600 : 400 }}>
+                    style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${form.frequency === f ? '#38bdf8' : '#2a2a2a'}`, background: form.frequency === f ? '#38bdf818' : 'transparent', color: form.frequency === f ? '#38bdf8' : 'var(--t-faint)', fontSize: 12, cursor: 'pointer', fontWeight: form.frequency === f ? 600 : 400 }}>
                     {f}
                   </button>
                 ))}
@@ -1332,37 +1393,37 @@ function PipelineTab() {
           {/* Stage dates */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 120 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>🎙️ Record by</div>
+              <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>🎙️ Record by</div>
               <input className="input" type="date" value={form.recordDate} onChange={e => setForm({ ...form, recordDate: e.target.value })} />
             </div>
             <div style={{ flex: 1, minWidth: 120 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>✂️ Edit by</div>
+              <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>✂️ Edit by</div>
               <input className="input" type="date" value={form.editDate} onChange={e => setForm({ ...form, editDate: e.target.value })} />
             </div>
             <div style={{ flex: 1, minWidth: 120 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>📅 {form.recurring ? 'Next Publish' : 'Publish'}</div>
+              <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>📅 {form.recurring ? 'Next Publish' : 'Publish'}</div>
               <input className="input" type="date" value={form.publishDate} onChange={e => setForm({ ...form, publishDate: e.target.value })} />
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#888', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--t-muted)', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={form.brandDeal} onChange={e => setForm({ ...form, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
               Brand Deal
             </label>
             {form.brandDeal && <input className="input" placeholder="Brand name *" value={form.brandName} onChange={e => setForm({ ...form, brandName: e.target.value })} style={{ flex: 1 }} />}
           </div>
           {form.brandDeal && (
-            <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: `${GOLD}08`, border: `1px solid ${GOLD}22`, borderRadius: 8 }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: 'var(--a08)', border: '1px solid var(--a22)', borderRadius: 8 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>POC Name</div>
+                <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>POC Name</div>
                 <input className="input" placeholder="e.g. Rahul Sharma" value={form.pocName} onChange={e => setForm({ ...form, pocName: e.target.value })} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>POC Phone / Email</div>
+                <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>POC Phone / Email</div>
                 <input className="input" placeholder="e.g. 9876543210" value={form.pocContact} onChange={e => setForm({ ...form, pocContact: e.target.value })} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>Agreed Rate (₹)</div>
+                <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>Agreed Rate (₹)</div>
                 <input className="input" placeholder="e.g. 25000" value={form.agreedRate} onChange={e => setForm({ ...form, agreedRate: e.target.value })} />
               </div>
             </div>
@@ -1397,10 +1458,10 @@ function PipelineTab() {
           </div>
           {/* Recurring toggle (edit) */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
-            <span style={{ fontSize: 12, color: '#666', marginRight: 4 }}>Type:</span>
+            <span style={{ fontSize: 12, color: 'var(--t-soft)', marginRight: 4 }}>Type:</span>
             {['One-time', 'Recurring'].map(opt => (
               <button key={opt} type="button" onClick={() => setEditForm({ ...editForm, recurring: opt === 'Recurring' })}
-                style={{ padding: '5px 14px', borderRadius: 6, border: `1px solid ${editForm.recurring === (opt === 'Recurring') ? GOLD : '#2a2a2a'}`, background: editForm.recurring === (opt === 'Recurring') ? `${GOLD}18` : 'transparent', color: editForm.recurring === (opt === 'Recurring') ? GOLD : '#666', fontSize: 12, cursor: 'pointer', fontWeight: editForm.recurring === (opt === 'Recurring') ? 600 : 400 }}>
+                style={{ padding: '5px 14px', borderRadius: 6, border: `1px solid ${editForm.recurring === (opt === 'Recurring') ? GOLD : '#2a2a2a'}`, background: editForm.recurring === (opt === 'Recurring') ? 'var(--a18)' : 'transparent', color: editForm.recurring === (opt === 'Recurring') ? GOLD : 'var(--t-soft)', fontSize: 12, cursor: 'pointer', fontWeight: editForm.recurring === (opt === 'Recurring') ? 600 : 400 }}>
                 {opt === 'Recurring' ? '🔁 Recurring' : '1️⃣ One-time'}
               </button>
             ))}
@@ -1408,7 +1469,7 @@ function PipelineTab() {
               <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
                 {['Daily', 'Weekly', 'Monthly'].map(f => (
                   <button key={f} type="button" onClick={() => setEditForm({ ...editForm, frequency: f })}
-                    style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${editForm.frequency === f ? '#38bdf8' : '#2a2a2a'}`, background: editForm.frequency === f ? '#38bdf818' : 'transparent', color: editForm.frequency === f ? '#38bdf8' : '#555', fontSize: 12, cursor: 'pointer', fontWeight: editForm.frequency === f ? 600 : 400 }}>
+                    style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${editForm.frequency === f ? '#38bdf8' : '#2a2a2a'}`, background: editForm.frequency === f ? '#38bdf818' : 'transparent', color: editForm.frequency === f ? '#38bdf8' : 'var(--t-faint)', fontSize: 12, cursor: 'pointer', fontWeight: editForm.frequency === f ? 600 : 400 }}>
                     {f}
                   </button>
                 ))}
@@ -1418,37 +1479,37 @@ function PipelineTab() {
           {/* Stage dates */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 120 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>🎙️ Record by</div>
+              <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>🎙️ Record by</div>
               <input className="input" type="date" value={editForm.recordDate} onChange={e => setEditForm({ ...editForm, recordDate: e.target.value })} />
             </div>
             <div style={{ flex: 1, minWidth: 120 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>✂️ Edit by</div>
+              <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>✂️ Edit by</div>
               <input className="input" type="date" value={editForm.editDate} onChange={e => setEditForm({ ...editForm, editDate: e.target.value })} />
             </div>
             <div style={{ flex: 1, minWidth: 120 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>📅 {editForm.recurring ? 'Next Publish' : 'Publish'}</div>
+              <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>📅 {editForm.recurring ? 'Next Publish' : 'Publish'}</div>
               <input className="input" type="date" value={editForm.publishDate} onChange={e => setEditForm({ ...editForm, publishDate: e.target.value })} />
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#888', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--t-muted)', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={editForm.brandDeal} onChange={e => setEditForm({ ...editForm, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
               Brand Deal
             </label>
             {editForm.brandDeal && <input className="input" placeholder="Brand name" value={editForm.brandName} onChange={e => setEditForm({ ...editForm, brandName: e.target.value })} style={{ flex: 1 }} />}
           </div>
           {editForm.brandDeal && (
-            <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: `${GOLD}08`, border: `1px solid ${GOLD}22`, borderRadius: 8 }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: 'var(--a08)', border: '1px solid var(--a22)', borderRadius: 8 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>POC Name</div>
+                <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>POC Name</div>
                 <input className="input" placeholder="e.g. Rahul Sharma" value={editForm.pocName} onChange={e => setEditForm({ ...editForm, pocName: e.target.value })} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>POC Phone / Email</div>
+                <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>POC Phone / Email</div>
                 <input className="input" placeholder="e.g. 9876543210" value={editForm.pocContact} onChange={e => setEditForm({ ...editForm, pocContact: e.target.value })} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>Agreed Rate (₹)</div>
+                <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>Agreed Rate (₹)</div>
                 <input className="input" placeholder="e.g. 25000" value={editForm.agreedRate} onChange={e => setEditForm({ ...editForm, agreedRate: e.target.value })} />
               </div>
             </div>
@@ -1462,14 +1523,14 @@ function PipelineTab() {
       )}
 
       {items.length === 0 && !adding && <Empty icon="" text="Pipeline is empty. Add your first content." />}
-      {items.length > 0 && visibleItems.length === 0 && <div style={{ color: '#666', fontSize: 13, marginBottom: 20 }}>No content for <strong style={{ color: '#aaa' }}>{filterBrand ? 'Brand Deals' : filterCh}</strong> yet.</div>}
+      {items.length > 0 && visibleItems.length === 0 && <div style={{ color: 'var(--t-soft)', fontSize: 13, marginBottom: 20 }}>No content for <strong style={{ color: 'var(--t-label)' }}>{filterBrand ? 'Brand Deals' : filterCh}</strong> yet.</div>}
 
       {P_STAGES.map(stage => {
         const grp = visibleItems.filter(i => i.stage === stage);
         if (!grp.length) return null;
         return (
           <div key={stage} style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#666', marginBottom: 9, textTransform: 'uppercase', letterSpacing: 1.2 }}>{stage} - {grp.length}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--t-soft)', marginBottom: 9, textTransform: 'uppercase', letterSpacing: 1.2 }}>{stage} - {grp.length}</div>
             {grp.map(item => {
               const today = todayStr();
               const msDay = 86400000;
@@ -1487,7 +1548,7 @@ function PipelineTab() {
               const urgentColor = isOverdue ? '#ff6b6b' : GOLD;
 
               // Per-date colour helper
-              const dateCol = d => d === null ? '#666' : d < 0 ? '#ff6b6b' : d <= 3 ? GOLD : '#666';
+              const dateCol = d => d === null ? '#666' : d < 0 ? '#ff6b6b' : d <= 3 ? GOLD : 'var(--t-soft)';
               const dateLabel = d => d === null ? '' : d < 0 ? ` (${Math.abs(d)}d overdue)` : d === 0 ? ' (today!)' : d <= 3 ? ` (${d}d)` : '';
 
               return (
@@ -1498,17 +1559,17 @@ function PipelineTab() {
                 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 14, fontWeight: 500, color: '#ddd' }}>{item.title}</span>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--t-bright)' }}>{item.title}</span>
                       {isOverdue && notPublished  && <span className="tag" style={{ background: '#ff6b6b18', color: '#ff6b6b', fontSize: 10, fontWeight: 700 }}>⚠ OVERDUE</span>}
-                      {isDueSoon && !isOverdue && notPublished && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD, fontSize: 10, fontWeight: 700 }}>⏰ {nearest === 0 ? 'DUE TODAY' : `${nearest}d`}</span>}
+                      {isDueSoon && !isOverdue && notPublished && <span className="tag" style={{ background: 'var(--a18)', color: GOLD, fontSize: 10, fontWeight: 700 }}>⏰ {nearest === 0 ? 'DUE TODAY' : `${nearest}d`}</span>}
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <span className="tag" style={{ background: '#1e1e1e', color: '#ccc' }}>{item.channel}</span>
+                      <span className="tag" style={{ background: 'var(--bg-sub)', color: 'var(--t-strong)' }}>{item.channel}</span>
                       {item.platform && <span className="tag" style={{ background: `${PLATFORM_COLORS[item.platform] || '#888'}18`, color: PLATFORM_COLORS[item.platform] || '#888', fontSize: 10 }}>{item.platform}</span>}
                       {item.recurring
                         ? <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8' }}>🔁 {item.frequency || 'Recurring'}</span>
-                        : <span className="tag" style={{ background: '#1e1e1e', color: '#888' }}>1️⃣ One-time</span>}
-                      {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>💼 {item.brandName || 'Brand Deal'}</span>}
+                        : <span className="tag" style={{ background: 'var(--bg-sub)', color: 'var(--t-muted)' }}>1️⃣ One-time</span>}
+                      {item.brandDeal && <span className="tag" style={{ background: 'var(--a18)', color: GOLD }}>💼 {item.brandName || 'Brand Deal'}</span>}
                       {item.brandDeal && item.agreedRate && <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 600 }}>₹{item.agreedRate}</span>}
                     </div>
                     {/* Stage dates row */}
@@ -1519,15 +1580,15 @@ function PipelineTab() {
                         {item.publishDate && <span style={{ color: dateCol(pd) }}>📅 {item.recurring ? 'Next: ' : ''}{fmtDate(item.publishDate)}<span style={{ fontWeight: pd !== null && pd <= 3 ? 700 : 400 }}>{dateLabel(pd)}</span></span>}
                       </div>
                     )}
-                    {item.brandDeal && item.pocName && <div style={{ fontSize: 11, color: '#666', marginTop: 5 }}>POC: {item.pocName}{item.pocContact ? ` · ${item.pocContact}` : ''}</div>}
-                    {item.notes && <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{item.notes}</div>}
+                    {item.brandDeal && item.pocName && <div style={{ fontSize: 11, color: 'var(--t-soft)', marginTop: 5 }}>POC: {item.pocName}{item.pocContact ? ` · ${item.pocContact}` : ''}</div>}
+                    {item.notes && <div style={{ fontSize: 12, color: 'var(--t-muted)', marginTop: 4 }}>{item.notes}</div>}
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                     <select className="select" value={item.stage} onChange={e => updateStage(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
                       {P_STAGES.map(s => <option key={s}>{s}</option>)}
                     </select>
-                    <button onClick={() => { startEdit(item); setAdding(false); }} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
-                    <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+                    <button onClick={() => { startEdit(item); setAdding(false); }} title="Edit" style={{ background: 'none', border: '1px solid var(--border-input)', borderRadius: 6, color: 'var(--t-muted)', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
+                    <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
                   </div>
                 </div>
               );
@@ -1557,7 +1618,7 @@ function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColo
 
       {/* Brand row */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: '#888', marginBottom: 5 }}>🏷️ Brand</div>
+        <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 5 }}>🏷️ Brand</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {brandVendors.length > 0 && (
             <select className="select" value={f.brandId || ''} onChange={e => pickBrand(e.target.value)} style={{ minWidth: 150 }}>
@@ -1571,14 +1632,14 @@ function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColo
 
       {/* Contacted via */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>📞 Contacted via</div>
+        <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 6 }}>📞 Contacted via</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {['Direct', 'Agency'].map(opt => (
             <button key={opt} type="button"
               onClick={() => onChange({ ...f, contactedVia: opt, ...(opt === 'Direct' ? { agencyId: '', platform: '', commission: '' } : {}) })}
               style={{ padding: '6px 16px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: f.contactedVia === opt ? 700 : 400,
-                background: f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf820' : `${GOLD}20`) : 'transparent',
-                color: f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf8' : GOLD) : '#555',
+                background: f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf820' : 'var(--a20)') : 'transparent',
+                color: f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf8' : GOLD) : 'var(--t-faint)',
                 border: `1px solid ${f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf8' : GOLD) : '#222'}`, transition: 'all 0.15s' }}>
               {opt === 'Direct' ? '🤝 Direct' : '🏢 Via Agency'}
             </button>
@@ -1588,8 +1649,8 @@ function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColo
 
       {/* Agency box */}
       {f.contactedVia === 'Agency' && (
-        <div style={{ marginBottom: 10, padding: '12px 14px', background: `${GOLD}08`, border: `1px solid ${GOLD}22`, borderRadius: 8 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>🏢 Agency</div>
+        <div style={{ marginBottom: 10, padding: '12px 14px', background: 'var(--a08)', border: '1px solid var(--a22)', borderRadius: 8 }}>
+          <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 8 }}>🏢 Agency</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
             {agencyVendors.length > 0 && (
               <select className="select" value={f.agencyId || ''} onChange={e => pickAgency(e.target.value)} style={{ minWidth: 150 }}>
@@ -1601,11 +1662,11 @@ function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColo
             <input className="input" placeholder="Commission %" type="number" value={f.commission} onChange={e => onChange({ ...f, commission: e.target.value })} style={{ width: 100 }} />
           </div>
           {net !== null && (
-            <div style={{ fontSize: 12, color: '#888' }}>
-              Gross <span style={{ color: '#ccc' }}>₹{gross.toLocaleString('en-IN')}</span>
-              <span style={{ color: '#555' }}> − agency cut </span>
+            <div style={{ fontSize: 12, color: 'var(--t-muted)' }}>
+              Gross <span style={{ color: 'var(--t-strong)' }}>₹{gross.toLocaleString('en-IN')}</span>
+              <span style={{ color: 'var(--t-faint)' }}> − agency cut </span>
               <span style={{ color: '#f97316' }}>₹{Math.round(gross * comm / 100).toLocaleString('en-IN')}</span>
-              <span style={{ color: '#555' }}> = </span>
+              <span style={{ color: 'var(--t-faint)' }}> = </span>
               <span style={{ color: '#4ade80', fontWeight: 700 }}>Net ₹{net.toLocaleString('en-IN')}</span>
             </div>
           )}
@@ -1627,7 +1688,7 @@ function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColo
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <input className="input" placeholder="Agreed Rate ₹ (Gross)" value={f.agreedRate} onChange={e => onChange({ ...f, agreedRate: e.target.value })} style={{ flex: 1, minWidth: 130 }} />
         {net !== null && (
-          <div style={{ flex: 1, minWidth: 130, padding: '9px 13px', background: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: 8, fontSize: 12, color: '#888' }}>
+          <div style={{ flex: 1, minWidth: 130, padding: '9px 13px', background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: 8, fontSize: 12, color: 'var(--t-muted)' }}>
             Net to you: <strong style={{ color: '#4ade80' }}>₹{net.toLocaleString('en-IN')}</strong>
           </div>
         )}
@@ -1636,11 +1697,11 @@ function DealForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColo
       {/* Dates */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 130 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>📅 Deadline</div>
+          <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>📅 Deadline</div>
           <input className="input" type="date" value={f.deadline} onChange={e => onChange({ ...f, deadline: e.target.value })} />
         </div>
         <div style={{ flex: 1, minWidth: 130 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>💳 Payment Due</div>
+          <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>💳 Payment Due</div>
           <input className="input" type="date" value={f.paymentDue} onChange={e => onChange({ ...f, paymentDue: e.target.value })} />
         </div>
       </div>
@@ -1763,7 +1824,7 @@ function DealsTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Brand Deals</h1>
-          <div style={{ color: '#888', fontSize: 13 }}>{deals.length} deals tracked</div>
+          <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{deals.length} deals tracked</div>
         </div>
         <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Add Deal</button>
       </div>
@@ -1781,23 +1842,23 @@ function DealsTab() {
           );
           const today = todayStr();
           const daysLeft = deal.deadline ? Math.ceil((new Date(deal.deadline + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
-          const deadlineCol = daysLeft === null ? '#666' : daysLeft < 0 ? '#ff6b6b' : daysLeft <= 3 ? GOLD : '#666';
+          const deadlineCol = daysLeft === null ? '#666' : daysLeft < 0 ? '#ff6b6b' : daysLeft <= 3 ? GOLD : 'var(--t-soft)';
           const payDaysLeft = deal.paymentDue && deal.paymentStatus !== 'Paid' ? Math.ceil((new Date(deal.paymentDue + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
-          const payDueCol = payDaysLeft === null ? '#666' : payDaysLeft < 0 ? '#ff6b6b' : payDaysLeft <= 7 ? '#f97316' : '#666';
+          const payDueCol = payDaysLeft === null ? '#666' : payDaysLeft < 0 ? '#ff6b6b' : payDaysLeft <= 7 ? '#f97316' : 'var(--t-soft)';
           const borderOverride = payDaysLeft !== null && payDaysLeft <= 7 ? `3px solid ${payDueCol}` : (daysLeft !== null && daysLeft <= 3 && deal.stage !== 'Paid' ? `3px solid ${deadlineCol}` : undefined);
           return (
             <div key={deal.id} className="card" style={{ padding: '14px 16px', borderLeft: borderOverride }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{deal.brand}</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--t-heading)' }}>{deal.brand}</span>
                     <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11, fontWeight: 600 }}>{deal.stage}</span>
                     {deal.agreedRate && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 600 }}>₹{deal.agreedRate}</span>}
                     {deal.paymentStatus === 'Paid'    && <span className="tag" style={{ background: '#4ade8018', color: '#4ade80', fontSize: 10, fontWeight: 700 }}>✓ PAID</span>}
-                    {deal.paymentStatus === 'Partial' && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD, fontSize: 10 }}>PARTIAL</span>}
+                    {deal.paymentStatus === 'Partial' && <span className="tag" style={{ background: 'var(--a18)', color: GOLD, fontSize: 10 }}>PARTIAL</span>}
                     {deal.invoiceNo && <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8', fontSize: 10 }}>🧾 {deal.invoiceNo}</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#888' }}>
+                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--t-muted)' }}>
                     {deal.contact     && <span>👤 {deal.contact}</span>}
                     {deal.contactedVia === 'Agency' && deal.platform && <span>🏢 via {deal.platform}{deal.commission ? ` (${deal.commission}% cut)` : ''}</span>}
                     {deal.contactedVia !== 'Agency' && deal.platform && <span>🏢 {deal.platform}</span>}
@@ -1808,17 +1869,17 @@ function DealsTab() {
                     {deal.deadline    && <span style={{ color: deadlineCol, fontWeight: daysLeft !== null && daysLeft <= 3 ? 700 : 400 }}>📅 {fmtDate(deal.deadline)}{daysLeft !== null && daysLeft <= 3 && deal.stage !== 'Paid' ? ` (${daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'today!' : `${daysLeft}d`})` : ''}</span>}
                     {deal.paymentDue && deal.paymentStatus !== 'Paid' && <span style={{ color: payDueCol, fontWeight: payDaysLeft !== null && payDaysLeft <= 7 ? 700 : 400 }}>💳 due {fmtDate(deal.paymentDue)}{payDaysLeft !== null && payDaysLeft <= 7 ? ` (${payDaysLeft < 0 ? `${Math.abs(payDaysLeft)}d overdue` : payDaysLeft === 0 ? 'today!' : `${payDaysLeft}d`})` : ''}</span>}
                   </div>
-                  {deal.notes && <div style={{ fontSize: 12, color: '#888', marginTop: 5 }}>{deal.notes}</div>}
+                  {deal.notes && <div style={{ fontSize: 12, color: 'var(--t-muted)', marginTop: 5 }}>{deal.notes}</div>}
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <select className="select" value={deal.stage} onChange={e => updateStage(deal.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
                     {D_STAGES.map(s => <option key={s}>{s}</option>)}
                   </select>
                   {!deal.invoiceNo && deal.brand && (
-                    <button onClick={() => generateInvoice(deal)} title="Generate Invoice" style={{ background: `${GOLD}12`, border: `1px solid ${GOLD}44`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 11, padding: '4px 8px', fontWeight: 700, whiteSpace: 'nowrap' }}>🧾 Invoice</button>
+                    <button onClick={() => generateInvoice(deal)} title="Generate Invoice" style={{ background: 'var(--a12)', border: '1px solid var(--a44)', borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 11, padding: '4px 8px', fontWeight: 700, whiteSpace: 'nowrap' }}>🧾 Invoice</button>
                   )}
-                  <button onClick={() => startEdit(deal)} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
-                  <button onClick={() => del(deal.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+                  <button onClick={() => startEdit(deal)} title="Edit" style={{ background: 'none', border: '1px solid var(--border-input)', borderRadius: 6, color: 'var(--t-muted)', cursor: 'pointer', fontSize: 13, padding: '3px 8px', lineHeight: 1 }}>✎</button>
+                  <button onClick={() => del(deal.id)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
                 </div>
               </div>
             </div>
@@ -1831,10 +1892,10 @@ function DealsTab() {
 
 // --- IDEAS ----------------------------------------------------
 const IDEA_CATS         = ['Content', 'Training', 'Other'];
-const IDEA_CAT_COLORS   = { Content: '#38bdf8', Training: '#a78bfa', Other: '#888' };
+const IDEA_CAT_COLORS   = { Content: '#38bdf8', Training: '#a78bfa', Other: 'var(--t-muted)' };
 const IDEA_CAT_ICONS    = { Content: '🎬', Training: '📚', Other: '💡' };
 const IDEA_STATUSES     = ['Captured', 'Shortlisted', 'In Pipeline', 'In Trainings', 'Archived'];
-const IDEA_STATUS_COLORS = { Captured: '#888', Shortlisted: '#F5C518', 'In Pipeline': '#38bdf8', 'In Trainings': '#a78bfa', Archived: '#333' };
+const IDEA_STATUS_COLORS = { Captured: 'var(--t-muted)', Shortlisted: '#F5C518', 'In Pipeline': '#38bdf8', 'In Trainings': '#a78bfa', Archived: '#333' };
 const IDEA_ARCHIVE_DAYS = 30;
 
 function IdeasTab() {
@@ -1920,14 +1981,14 @@ function IdeasTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Idea Bank</h1>
-          <div style={{ color: '#888', fontSize: 13 }}>
+          <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>
             {active.length} active · {active.filter(i => i.status === 'Shortlisted').length} shortlisted · {active.filter(i => i.status === 'In Pipeline').length} in pipeline · {active.filter(i => i.status === 'In Trainings').length} in trainings
           </div>
         </div>
       </div>
 
       {/* Quick capture */}
-      <div className="capture-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16, padding: '14px', background: '#111', borderRadius: 10, border: '1px solid #222' }}>
+      <div className="capture-box" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16, padding: '14px', background: '#111', borderRadius: 10, border: '1px solid var(--border)' }}>
         <input className="input" placeholder="Type your idea here..." value={text}
           onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && add()}
           style={{ fontSize: 15, padding: '12px 14px' }} autoFocus />
@@ -1937,7 +1998,7 @@ function IdeasTab() {
               <button key={c} onClick={() => setCat(c)} style={{
                 flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: cat === c ? 700 : 400,
                 background: cat === c ? `${IDEA_CAT_COLORS[c]}22` : 'transparent',
-                color: cat === c ? IDEA_CAT_COLORS[c] : '#555',
+                color: cat === c ? IDEA_CAT_COLORS[c] : 'var(--t-faint)',
                 border: `1px solid ${cat === c ? IDEA_CAT_COLORS[c] : '#222'}`,
                 textAlign: 'center',
               }}>{IDEA_CAT_ICONS[c]}<br/><span style={{ fontSize: 10 }}>{c}</span></button>
@@ -1960,7 +2021,7 @@ function IdeasTab() {
             <button key={c} onClick={() => setFilterCat(c)} style={{
               padding: '4px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: active_c ? 700 : 400,
               background: active_c ? `${col}20` : 'transparent',
-              color: active_c ? col : '#666',
+              color: active_c ? col : 'var(--t-soft)',
               border: `1px solid ${active_c ? col : '#222'}`,
             }}>{c === 'All' ? 'All' : IDEA_CAT_ICONS[c] + ' ' + c} ({count})</button>
           );
@@ -1972,7 +2033,7 @@ function IdeasTab() {
       {/* Shortlisted first */}
       {starred.length > 0 && (
         <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 8 }}>⭐ Shortlisted</div>
+          <div style={{ fontSize: 11, color: 'var(--t-soft)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 8 }}>⭐ Shortlisted</div>
           {starred.map(idea => (
             <IdeaCard key={idea.id} idea={idea} onStar={toggleStar} onStatus={setStatus}
               onPushPipeline={pushToPipeline} onPushTraining={pushToTrainings} onDel={del} pushing={pushing[idea.id]} />
@@ -1982,7 +2043,7 @@ function IdeasTab() {
 
       {unstarred.length > 0 && (
         <div style={{ marginBottom: 18 }}>
-          {starred.length > 0 && <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 8 }}>All Ideas</div>}
+          {starred.length > 0 && <div style={{ fontSize: 11, color: 'var(--t-soft)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 8 }}>All Ideas</div>}
           {unstarred.map(idea => (
             <IdeaCard key={idea.id} idea={idea} onStar={toggleStar} onStatus={setStatus}
               onPushPipeline={pushToPipeline} onPushTraining={pushToTrainings} onDel={del} pushing={pushing[idea.id]} />
@@ -1993,7 +2054,7 @@ function IdeasTab() {
       {/* Archived section */}
       {archived.length > 0 && (
         <div>
-          <button onClick={() => setShowArchived(v => !v)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 12, padding: '4px 0', marginBottom: 8 }}>
+          <button onClick={() => setShowArchived(v => !v)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 12, padding: '4px 0', marginBottom: 8 }}>
             {showArchived ? '▾' : '▸'} Archived ({archived.length}) — auto-archived after {IDEA_ARCHIVE_DAYS} days
           </button>
           {showArchived && archived.map(idea => (
@@ -2018,17 +2079,17 @@ function IdeaCard({ idea, onStar, onStatus, onPushPipeline, onPushTraining, onDe
       <button onClick={() => onStar(idea.id, idea.starred)}
         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: idea.starred ? '#F5C518' : '#333', padding: 0, marginTop: 2, flexShrink: 0 }}>★</button>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, color: '#ddd', marginBottom: 6, lineHeight: 1.4 }}>{idea.text}</div>
+        <div style={{ fontSize: 14, color: 'var(--t-bright)', marginBottom: 6, lineHeight: 1.4 }}>{idea.text}</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <span className="tag" style={{ background: `${catCol}18`, color: catCol, fontSize: 11 }}>{IDEA_CAT_ICONS[idea.category]} {idea.category}</span>
           <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11 }}>{idea.status}</span>
-          <span style={{ fontSize: 11, color: '#555' }}>{new Date(idea.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+          <span style={{ fontSize: 11, color: 'var(--t-faint)' }}>{new Date(idea.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 260 }}>
         {!promoted && (
           <select value={idea.status} onChange={e => onStatus(idea.id, e.target.value)}
-            style={{ fontSize: 11, background: '#141414', border: '1px solid #2a2a2a', color: '#888', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}>
+            style={{ fontSize: 11, background: 'var(--bg-login)', border: '1px solid var(--border-input)', color: 'var(--t-muted)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer' }}>
             {IDEA_STATUSES.filter(s => s !== 'In Pipeline' && s !== 'In Trainings').map(s => <option key={s}>{s}</option>)}
           </select>
         )}
@@ -2046,7 +2107,7 @@ function IdeaCard({ idea, onStar, onStatus, onPushPipeline, onPushTraining, onDe
         )}
         {idea.status === 'In Pipeline'  && <span style={{ fontSize: 11, color: '#38bdf8' }}>✓ In Pipeline</span>}
         {idea.status === 'In Trainings' && <span style={{ fontSize: 11, color: '#a78bfa' }}>✓ In Trainings</span>}
-        <button onClick={() => onDel(idea.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
+        <button onClick={() => onDel(idea.id)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
       </div>
     </div>
   );
@@ -2085,7 +2146,7 @@ function SearchTab({ onNavigate }) {
     if (!text || !q) return text;
     const idx = text.toLowerCase().indexOf(q.toLowerCase());
     if (idx === -1) return text;
-    return <span>{text.slice(0, idx)}<mark style={{ background: `${GOLD}40`, color: '#fff', borderRadius: 2, padding: '0 1px' }}>{text.slice(idx, idx + q.length)}</mark>{text.slice(idx + q.length)}</span>;
+    return <span>{text.slice(0, idx)}<mark style={{ background: 'var(--a40)', color: '#fff', borderRadius: 2, padding: '0 1px' }}>{text.slice(idx, idx + q.length)}</mark>{text.slice(idx + q.length)}</span>;
   };
 
   const getTitle = (doc) => {
@@ -2108,38 +2169,38 @@ function SearchTab({ onNavigate }) {
     <div>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Search</h1>
-        <div style={{ color: '#888', fontSize: 13 }}>Search across pipeline, deals, ideas and trainings</div>
+        <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>Search across pipeline, deals, ideas and trainings</div>
       </div>
 
       <div style={{ position: 'relative', marginBottom: 20 }}>
-        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#555', pointerEvents: 'none' }}>🔍</span>
+        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: 'var(--t-faint)', pointerEvents: 'none' }}>🔍</span>
         <input className="input" placeholder="Type at least 2 characters..." value={query}
           onChange={e => setQuery(e.target.value)} autoFocus
           style={{ paddingLeft: 40, fontSize: 15 }} />
-        {query && <button onClick={() => setQuery('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>}
+        {query && <button onClick={() => setQuery('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>}
       </div>
 
-      {loading && <div style={{ color: '#666', fontSize: 13 }}>Searching...</div>}
+      {loading && <div style={{ color: 'var(--t-soft)', fontSize: 13 }}>Searching...</div>}
 
       {!loading && query.length >= 2 && results.length === 0 && (
-        <div style={{ color: '#666', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>No results for "<span style={{ color: '#aaa' }}>{query}</span>"</div>
+        <div style={{ color: 'var(--t-soft)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>No results for "<span style={{ color: 'var(--t-label)' }}>{query}</span>"</div>
       )}
 
       {results.length > 0 && (
         <div>
-          <div style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>{results.length} result{results.length > 1 ? 's' : ''}</div>
+          <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 12 }}>{results.length} result{results.length > 1 ? 's' : ''}</div>
           {results.map(doc => (
             <div key={`${doc._source.key}-${doc.id}`} className="card" onClick={() => onNavigate(doc._source.tab)}
               style={{ padding: '12px 14px', marginBottom: 8, cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'flex-start' }}
               onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
               onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, color: '#ddd', marginBottom: 4, fontWeight: 500 }}>
+                <div style={{ fontSize: 14, color: 'var(--t-bright)', marginBottom: 4, fontWeight: 500 }}>
                   {highlight(getTitle(doc), query)}
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span className="tag" style={{ background: `${GOLD}18`, color: GOLD, fontSize: 10, fontWeight: 700 }}>{doc._source.label}</span>
-                  <span style={{ fontSize: 11, color: '#666' }}>{getSub(doc)}</span>
+                  <span className="tag" style={{ background: 'var(--a18)', color: GOLD, fontSize: 10, fontWeight: 700 }}>{doc._source.label}</span>
+                  <span style={{ fontSize: 11, color: 'var(--t-soft)' }}>{getSub(doc)}</span>
                 </div>
               </div>
               <span style={{ fontSize: 11, color: '#444', flexShrink: 0, marginTop: 2 }}>VIEW →</span>
@@ -2189,16 +2250,16 @@ function CollabForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentCo
       <input className="input" placeholder="Description / deliverable details" value={f.description} onChange={e => onChange({ ...f, description: e.target.value })} style={{ marginBottom: 10 }} />
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 130 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>📄 Invoice Date</div>
+          <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>📄 Invoice Date</div>
           <input className="input" type="date" value={f.invoiceDate} onChange={e => onChange({ ...f, invoiceDate: e.target.value })} />
         </div>
         <div style={{ flex: 1, minWidth: 130 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>💳 Payment Due</div>
+          <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>💳 Payment Due</div>
           <input className="input" type="date" value={f.dueDate} onChange={e => onChange({ ...f, dueDate: e.target.value })} />
         </div>
         {f.status === 'Paid' && (
           <div style={{ flex: 1, minWidth: 130 }}>
-            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>✅ Paid On</div>
+            <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>✅ Paid On</div>
             <input className="input" type="date" value={f.paidDate} onChange={e => onChange({ ...f, paidDate: e.target.value })} />
           </div>
         )}
@@ -2354,7 +2415,7 @@ function InvoicesTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>🧾 Invoices & Collabs</h1>
-          <div style={{ color: '#888', fontSize: 13 }}>{collabs.length} total records · ₹{totalPaid.toLocaleString('en-IN')} received</div>
+          <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{collabs.length} total records · ₹{totalPaid.toLocaleString('en-IN')} received</div>
         </div>
         <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ New Invoice</button>
       </div>
@@ -2363,11 +2424,11 @@ function InvoicesTab() {
 
       {/* ── Year filter ── */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: '#666', marginRight: 4, textTransform: 'uppercase', letterSpacing: 0.8 }}>Year:</span>
+        <span style={{ fontSize: 11, color: 'var(--t-soft)', marginRight: 4, textTransform: 'uppercase', letterSpacing: 0.8 }}>Year:</span>
         {['All', ...years].map(y => (
           <button key={y} onClick={() => setFilterYear(y)} style={{
             padding: '4px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: filterYear === y ? 700 : 400,
-            background: filterYear === y ? `${GOLD}20` : 'transparent', color: filterYear === y ? GOLD : '#666',
+            background: filterYear === y ? 'var(--a20)' : 'transparent', color: filterYear === y ? GOLD : 'var(--t-soft)',
             border: `1px solid ${filterYear === y ? GOLD : '#222'}`, transition: 'all 0.15s',
           }}>{y}</button>
         ))}
@@ -2382,7 +2443,7 @@ function InvoicesTab() {
           { label: 'This Month', value: fmt(thisMonth), color: '#38bdf8' },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '14px 16px' }}>
-            <div style={{ fontSize: 10, color: '#666', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>{s.label}</div>
+            <div style={{ fontSize: 10, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>{s.label}</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
           </div>
         ))}
@@ -2393,7 +2454,7 @@ function InvoicesTab() {
 
         {/* Monthly bar chart */}
         <div className="card" style={{ padding: 18 }}>
-          <div style={{ fontSize: 11, color: '#666', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 }}>Monthly Revenue (last 12 months)</div>
+          <div style={{ fontSize: 11, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 }}>Monthly Revenue (last 12 months)</div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 100, paddingBottom: 20, position: 'relative' }}>
             {monthlyData.map((m, i) => {
               const invH = m.invoiced ? Math.max(4, (m.invoiced / maxBar) * 92) : 0;
@@ -2401,7 +2462,7 @@ function InvoicesTab() {
               return (
                 <div key={m.ym} style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 1, position: 'relative' }}
                   title={`${m.label}: Invoiced ₹${m.invoiced.toLocaleString('en-IN')} / Received ₹${m.received.toLocaleString('en-IN')}`}>
-                  {invH > 0 && <div style={{ flex: 1, height: invH, background: `${GOLD}80`, borderRadius: '2px 2px 0 0' }} />}
+                  {invH > 0 && <div style={{ flex: 1, height: invH, background: 'var(--a80)', borderRadius: '2px 2px 0 0' }} />}
                   {recH > 0 && <div style={{ flex: 1, height: recH, background: '#4ade8099', borderRadius: '2px 2px 0 0' }} />}
                   {invH === 0 && recH === 0 && <div style={{ flex: 1, height: 2, background: '#222', borderRadius: 1 }} />}
                   <div style={{ position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)', fontSize: 8, color: '#444', whiteSpace: 'nowrap' }}>{m.label}</div>
@@ -2410,10 +2471,10 @@ function InvoicesTab() {
             })}
           </div>
           <div style={{ display: 'flex', gap: 14, marginTop: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#666' }}>
-              <div style={{ width: 8, height: 8, borderRadius: 2, background: `${GOLD}80` }} />Invoiced
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--t-soft)' }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--a80)' }} />Invoiced
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#666' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--t-soft)' }}>
               <div style={{ width: 8, height: 8, borderRadius: 2, background: '#4ade8099' }} />Received
             </div>
           </div>
@@ -2421,16 +2482,16 @@ function InvoicesTab() {
 
         {/* Brand breakdown */}
         <div className="card" style={{ padding: 18 }}>
-          <div style={{ fontSize: 11, color: '#666', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 }}>Revenue by Brand</div>
+          <div style={{ fontSize: 11, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 }}>Revenue by Brand</div>
           {brandTotals.length === 0 && <div style={{ color: '#444', fontSize: 12 }}>No data yet</div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, maxHeight: 180, overflowY: 'auto' }}>
             {brandTotals.map(b => (
               <div key={b.brand}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3, fontSize: 11 }}>
                   <span style={{ color: b.color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{b.brand}</span>
-                  <span style={{ color: '#ccc', fontWeight: 600, marginLeft: 8, whiteSpace: 'nowrap' }}>{fmt(b.total)}</span>
+                  <span style={{ color: 'var(--t-strong)', fontWeight: 600, marginLeft: 8, whiteSpace: 'nowrap' }}>{fmt(b.total)}</span>
                 </div>
-                <div style={{ height: 4, background: '#1a1a1a', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ height: 4, background: 'var(--border-soft)', borderRadius: 2, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${(b.total / maxBrand) * 100}%`, background: b.color, borderRadius: 2, transition: 'width 0.4s ease' }} />
                 </div>
               </div>
@@ -2441,7 +2502,7 @@ function InvoicesTab() {
 
       {/* ── Filters ── */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 0.8 }}>Filter:</span>
+        <span style={{ fontSize: 11, color: 'var(--t-soft)', textTransform: 'uppercase', letterSpacing: 0.8 }}>Filter:</span>
         <select className="select" value={filterBrand} onChange={e => setFilterBrand(e.target.value)} style={{ fontSize: 12, padding: '5px 10px' }}>
           <option value="All">All Brands</option>
           {brands.map(b => <option key={b}>{b}</option>)}
@@ -2450,12 +2511,12 @@ function InvoicesTab() {
           <option value="All">All Status</option>
           {INV_STATUSES.map(s => <option key={s}>{s}</option>)}
         </select>
-        <span style={{ marginLeft: 'auto', fontSize: 12, color: '#555' }}>{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--t-faint)' }}>{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
       {/* ── Collab records ── */}
       {collabs.length === 0 && !adding && <Empty icon="🧾" text="No invoices yet. Generate one from a Deal or add manually." />}
-      {collabs.length > 0 && filtered.length === 0 && <div style={{ color: '#666', fontSize: 13, padding: '20px 0' }}>No records match the current filters.</div>}
+      {collabs.length > 0 && filtered.length === 0 && <div style={{ color: 'var(--t-soft)', fontSize: 13, padding: '20px 0' }}>No records match the current filters.</div>}
 
       <div style={{ display: 'grid', gap: 10 }}>
         {filtered.map(c => {
@@ -2466,19 +2527,19 @@ function InvoicesTab() {
           );
           const today = todayStr();
           const dueDays = c.dueDate && c.status !== 'Paid' ? Math.ceil((new Date(c.dueDate + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
-          const dueCol = dueDays === null ? '#666' : dueDays < 0 ? '#ff6b6b' : dueDays <= 7 ? '#f97316' : '#666';
+          const dueCol = dueDays === null ? '#666' : dueDays < 0 ? '#ff6b6b' : dueDays <= 7 ? '#f97316' : 'var(--t-soft)';
           return (
             <div key={c.id} className="card" style={{ padding: '14px 16px', borderLeft: dueDays !== null && dueDays <= 7 && c.status !== 'Paid' ? `3px solid ${dueCol}` : undefined }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{c.brand}</span>
-                    <span style={{ fontSize: 11, color: '#555', fontFamily: 'monospace' }}>{c.invoiceNo}</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--t-heading)' }}>{c.brand}</span>
+                    <span style={{ fontSize: 11, color: 'var(--t-faint)', fontFamily: 'monospace' }}>{c.invoiceNo}</span>
                     {c.amount && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 700 }}>₹{parseFloat(c.amount).toLocaleString('en-IN')}</span>}
                     <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 10, fontWeight: 700 }}>{c.status}</span>
                     {c.linkedDealId && <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8', fontSize: 10 }}>🔗 Deal</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#888' }}>
+                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--t-muted)' }}>
                     {c.channel     && <span>📺 {c.channel}</span>}
                     {c.deliverable && <span>📋 {c.deliverable}</span>}
                     {c.poc         && <span>👤 {c.poc}</span>}
@@ -2486,8 +2547,8 @@ function InvoicesTab() {
                     {c.dueDate && c.status !== 'Paid' && <span style={{ color: dueCol, fontWeight: dueDays !== null && dueDays <= 7 ? 700 : 400 }}>💳 due {fmtDate(c.dueDate)}{dueDays !== null && dueDays <= 7 ? ` (${dueDays < 0 ? `${Math.abs(dueDays)}d overdue` : dueDays === 0 ? 'today!' : `${dueDays}d`})` : ''}</span>}
                     {c.paidDate    && <span style={{ color: '#4ade80' }}>✅ paid {fmtDate(c.paidDate)}</span>}
                   </div>
-                  {c.description && <div style={{ fontSize: 12, color: '#666', marginTop: 5 }}>{c.description}</div>}
-                  {c.notes       && <div style={{ fontSize: 12, color: '#555', marginTop: 3 }}>{c.notes}</div>}
+                  {c.description && <div style={{ fontSize: 12, color: 'var(--t-soft)', marginTop: 5 }}>{c.description}</div>}
+                  {c.notes       && <div style={{ fontSize: 12, color: 'var(--t-faint)', marginTop: 3 }}>{c.notes}</div>}
                 </div>
                 <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {c.status !== 'Paid' && (
@@ -2496,8 +2557,8 @@ function InvoicesTab() {
                   {c.status === 'Pending' && c.dueDate && c.dueDate < today && (
                     <button onClick={() => markOverdue(c)} style={{ background: '#ff6b6b12', border: '1px solid #ff6b6b44', borderRadius: 6, color: '#ff6b6b', cursor: 'pointer', fontSize: 11, padding: '4px 10px' }}>! Overdue</button>
                   )}
-                  <button onClick={() => startEdit(c)} title="Edit" style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px' }}>✎</button>
-                  <button onClick={() => del(c.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+                  <button onClick={() => startEdit(c)} title="Edit" style={{ background: 'none', border: '1px solid var(--border-input)', borderRadius: 6, color: 'var(--t-muted)', cursor: 'pointer', fontSize: 13, padding: '3px 8px' }}>✎</button>
+                  <button onClick={() => del(c.id)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
                 </div>
               </div>
             </div>
@@ -2601,12 +2662,12 @@ function VendorsTab() {
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{v.name}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--t-heading)' }}>{v.name}</span>
               <span className="tag" style={{ background: `${col}18`, color: col, fontSize: 10, fontWeight: 700 }}>{v.type}</span>
               {v.type === 'Agency' && v.commission && <span style={{ fontSize: 11, color: '#f97316', fontWeight: 600 }}>{v.commission}% commission</span>}
               {s.active > 0 && <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8', fontSize: 10 }}>{s.active} active deal{s.active > 1 ? 's' : ''}</span>}
             </div>
-            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#888', marginBottom: s.count > 0 ? 8 : 0 }}>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--t-muted)', marginBottom: s.count > 0 ? 8 : 0 }}>
               {v.contactPerson && <span>👤 {v.contactPerson}</span>}
               {v.email         && <span>✉️ {v.email}</span>}
               {v.phone         && <span>📱 {v.phone}</span>}
@@ -2615,17 +2676,17 @@ function VendorsTab() {
             </div>
             {s.count > 0 && (
               <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
-                <span style={{ color: '#555' }}>{s.count} deal{s.count > 1 ? 's' : ''} total</span>
+                <span style={{ color: 'var(--t-faint)' }}>{s.count} deal{s.count > 1 ? 's' : ''} total</span>
                 <span style={{ color: '#4ade80', fontWeight: 600 }}>₹{s.total.toLocaleString('en-IN')} invoiced</span>
-                {s.paid > 0 && <span style={{ color: '#888' }}>₹{s.paid.toLocaleString('en-IN')} paid</span>}
+                {s.paid > 0 && <span style={{ color: 'var(--t-muted)' }}>₹{s.paid.toLocaleString('en-IN')} paid</span>}
                 {s.total - s.paid > 0 && <span style={{ color: '#f97316' }}>₹{(s.total - s.paid).toLocaleString('en-IN')} pending</span>}
               </div>
             )}
-            {v.notes && <div style={{ fontSize: 12, color: '#555', marginTop: 5 }}>{v.notes}</div>}
+            {v.notes && <div style={{ fontSize: 12, color: 'var(--t-faint)', marginTop: 5 }}>{v.notes}</div>}
           </div>
           <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-            <button onClick={() => startEdit(v)} style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px' }}>✎</button>
-            <button onClick={() => del(v.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+            <button onClick={() => startEdit(v)} style={{ background: 'none', border: '1px solid var(--border-input)', borderRadius: 6, color: 'var(--t-muted)', cursor: 'pointer', fontSize: 13, padding: '3px 8px' }}>✎</button>
+            <button onClick={() => del(v.id)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
           </div>
         </div>
       </div>
@@ -2640,7 +2701,7 @@ function VendorsTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>🏢 Vendors</h1>
-          <div style={{ color: '#888', fontSize: 13 }}>{agencies.length} agencies · {brands.length} direct brands</div>
+          <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{agencies.length} agencies · {brands.length} direct brands</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn-ghost" onClick={() => { setAddType('Brand'); setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Brand</button>
@@ -2682,7 +2743,7 @@ function VendorsTab() {
 const T_CATEGORIES  = ['Paid Program', 'Live Session', 'Recording'];
 const T_PROG_TYPES  = ['Workshop', 'Webinar', 'Mentoring Batch', 'ETF Program', 'Options Program', 'Other'];
 const T_STATUS      = ['Upcoming', 'Live', 'Completed', 'Cancelled'];
-const T_COLORS      = { Upcoming: '#38bdf8', Live: '#4ade80', Completed: '#666', Cancelled: '#ff6b6b' };
+const T_COLORS      = { Upcoming: '#38bdf8', Live: '#4ade80', Completed: 'var(--t-soft)', Cancelled: '#ff6b6b' };
 const T_CAT_COLORS  = { 'Paid Program': '#F5C518', 'Live Session': '#4ade80', 'Recording': '#a78bfa' };
 const T_CAT_ICONS   = { 'Paid Program': '💰', 'Live Session': '🔴', 'Recording': '🎙️' };
 const T_EMPTY       = { title: '', category: 'Paid Program', type: 'Workshop', date: '', time: '', capacity: '', enrolled: '', revenue: '', batch: '', duration: '', notes: '' };
@@ -2692,13 +2753,13 @@ function FormBlock({ f, onChange, onSave, onCancel, btnLabel, loading }) {
   return (
     <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${catCol}30` }}>
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>Session Type</div>
+        <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 6 }}>Session Type</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {T_CATEGORIES.map(cat => (
             <button key={cat} onClick={() => onChange({ ...f, category: cat })} style={{
               padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: f.category === cat ? 700 : 400,
               background: f.category === cat ? `${T_CAT_COLORS[cat]}22` : 'transparent',
-              color: f.category === cat ? T_CAT_COLORS[cat] : '#666',
+              color: f.category === cat ? T_CAT_COLORS[cat] : 'var(--t-soft)',
               border: `1px solid ${f.category === cat ? T_CAT_COLORS[cat] : '#222'}`,
             }}>{T_CAT_ICONS[cat]} {cat}</button>
           ))}
@@ -2717,30 +2778,30 @@ function FormBlock({ f, onChange, onSave, onCancel, btnLabel, loading }) {
       </div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Date</div>
+          <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>Date</div>
           <input className="input" type="date" value={f.date} onChange={e => onChange({ ...f, date: e.target.value })} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Time</div>
+          <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>Time</div>
           <input className="input" type="time" value={f.time} onChange={e => onChange({ ...f, time: e.target.value })} />
         </div>
         {f.category === 'Paid Program' && (<>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Capacity</div>
+            <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>Capacity</div>
             <input className="input" type="number" placeholder="e.g. 50" value={f.capacity} onChange={e => onChange({ ...f, capacity: e.target.value })} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Enrolled</div>
+            <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>Enrolled</div>
             <input className="input" type="number" placeholder="0" value={f.enrolled} onChange={e => onChange({ ...f, enrolled: e.target.value })} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Revenue (₹)</div>
+            <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>Revenue (₹)</div>
             <input className="input" placeholder="0" value={f.revenue} onChange={e => onChange({ ...f, revenue: e.target.value })} />
           </div>
         </>)}
         {f.category === 'Recording' && (
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Duration</div>
+            <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>Duration</div>
             <input className="input" placeholder="e.g. 1h 30m" value={f.duration} onChange={e => onChange({ ...f, duration: e.target.value })} />
           </div>
         )}
@@ -2821,13 +2882,13 @@ function TrainingsTab() {
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* Title row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{item.title}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--t-heading)' }}>{item.title}</span>
               <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11, fontWeight: 600 }}>{item.status}</span>
               <span className="tag" style={{ background: `${catCol}18`, color: catCol, fontSize: 11, fontWeight: 600 }}>{T_CAT_ICONS[cat]} {cat}</span>
-              {isPaid && item.type && <span className="tag" style={{ background: '#1e1e1e', color: '#666', fontSize: 11 }}>{item.type}</span>}
+              {isPaid && item.type && <span className="tag" style={{ background: 'var(--bg-sub)', color: 'var(--t-soft)', fontSize: 11 }}>{item.type}</span>}
             </div>
             {/* Meta row */}
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: '#888', marginBottom: 6 }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: 'var(--t-muted)', marginBottom: 6 }}>
               {item.date && <span>📅 {fmtDate(item.date)}{item.time ? ` · ${item.time}` : ''}</span>}
               {(isLive || isRec) && item.batch && <span>🏷️ {item.batch}</span>}
               {isRec && item.duration && <span>⏱️ {item.duration}</span>}
@@ -2837,21 +2898,21 @@ function TrainingsTab() {
             {/* Enrollment bar — Paid Program only */}
             {fillPct !== null && (
               <div style={{ marginBottom: 6 }}>
-                <div style={{ background: '#1a1a1a', borderRadius: 4, height: 4, overflow: 'hidden', maxWidth: 200 }}>
+                <div style={{ background: 'var(--border-soft)', borderRadius: 4, height: 4, overflow: 'hidden', maxWidth: 200 }}>
                   <div style={{ width: `${fillPct}%`, height: '100%', background: fillPct >= 90 ? '#4ade80' : fillPct >= 60 ? GOLD : '#38bdf8', borderRadius: 4, transition: 'width 0.3s' }} />
                 </div>
-                <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>{fillPct}% full</div>
+                <div style={{ fontSize: 10, color: 'var(--t-soft)', marginTop: 2 }}>{fillPct}% full</div>
               </div>
             )}
-            {item.notes && <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{item.notes}</div>}
+            {item.notes && <div style={{ fontSize: 12, color: 'var(--t-soft)', marginTop: 4 }}>{item.notes}</div>}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
             <select className="select" value={item.status} onChange={e => updateStatus(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
               {T_STATUS.map(s => <option key={s}>{s}</option>)}
             </select>
             <button onClick={() => { setEditId(item.id); setEditForm({ title: item.title || '', category: item.category || 'Paid Program', type: item.type || 'Workshop', date: item.date || '', time: item.time || '', capacity: item.capacity || '', enrolled: item.enrolled || '', revenue: item.revenue || '', batch: item.batch || '', duration: item.duration || '', notes: item.notes || '' }); }}
-              style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: 16, padding: '2px 4px' }} title="Edit">✎</button>
-            <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+              style={{ background: 'none', border: 'none', color: 'var(--t-soft)', cursor: 'pointer', fontSize: 16, padding: '2px 4px' }} title="Edit">✎</button>
+            <button onClick={() => del(item.id)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
           </div>
         </div>
       </div>
@@ -2863,7 +2924,7 @@ function TrainingsTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Trainings</h1>
-          <div style={{ color: '#888', fontSize: 13 }}>{upcoming.length} upcoming · {completed.filter(i => i.status === 'Completed').length} completed{totalRev > 0 ? ` · ₹${totalRev.toLocaleString('en-IN')} revenue` : ''}</div>
+          <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{upcoming.length} upcoming · {completed.filter(i => i.status === 'Completed').length} completed{totalRev > 0 ? ` · ₹${totalRev.toLocaleString('en-IN')} revenue` : ''}</div>
         </div>
         <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Plan Training</button>
       </div>
@@ -2875,7 +2936,7 @@ function TrainingsTab() {
           const col = T_COLORS[s];
           return (
             <div key={s} className="card" style={{ flex: 1, padding: '12px 14px' }}>
-              <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>{s}</div>
+              <div style={{ fontSize: 10, color: 'var(--t-muted)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>{s}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: col }}>{cnt}</div>
             </div>
           );
@@ -2889,7 +2950,7 @@ function TrainingsTab() {
           const rev = cat === 'Paid Program' ? items.filter(i => (i.category || 'Paid Program') === cat && i.status === 'Completed').reduce((s, i) => s + (parseFloat(i.revenue) || 0), 0) : 0;
           return (
             <div key={cat} className="card" style={{ flex: 1, padding: '12px 14px', borderLeft: `3px solid ${col}50` }}>
-              <div style={{ fontSize: 10, color: '#888', letterSpacing: 0.8, marginBottom: 4 }}>{T_CAT_ICONS[cat]} {cat}</div>
+              <div style={{ fontSize: 10, color: 'var(--t-muted)', letterSpacing: 0.8, marginBottom: 4 }}>{T_CAT_ICONS[cat]} {cat}</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: col }}>{cnt}</div>
               {rev > 0 && <div style={{ fontSize: 11, color: '#4ade80', marginTop: 2 }}>₹{rev.toLocaleString('en-IN')}</div>}
             </div>
@@ -2905,14 +2966,14 @@ function TrainingsTab() {
 
       {upcoming.length > 0 && (
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 12 }}>Upcoming & Live</div>
+          <div style={{ fontSize: 11, color: 'var(--t-soft)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 12 }}>Upcoming & Live</div>
           {upcoming.map(item => <Card key={item.id} item={item} />)}
         </div>
       )}
 
       {completed.length > 0 && (
         <div>
-          <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 12 }}>Completed & Cancelled</div>
+          <div style={{ fontSize: 11, color: 'var(--t-soft)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 12 }}>Completed & Cancelled</div>
           {completed.map(item => <Card key={item.id} item={item} />)}
         </div>
       )}
@@ -3151,8 +3212,8 @@ function SettingsTab({ isAdmin, currentUid }) {
 
       {/* Discord */}
       <div className="card" style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>Discord Webhooks</h2>
-        <p style={{ fontSize: 12, color: '#888', marginBottom: 18 }}>Paste webhook URLs for each pillar channel. Notifications will route automatically.</p>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: 'var(--t-bright)' }}>Discord Webhooks</h2>
+        <p style={{ fontSize: 12, color: 'var(--t-muted)', marginBottom: 18 }}>Paste webhook URLs for each pillar channel. Notifications will route automatically.</p>
         {[
           ['pipeline', '🎬 Content Pipeline', 'New content added, pipeline edits, task updates'],
           ['ideas',    '💡 Ideas Channel',    'Every idea captured — separate from pipeline for cleaner tracking'],
@@ -3161,8 +3222,8 @@ function SettingsTab({ isAdmin, currentUid }) {
           ['alerts',   '⚙️ Alerts & Summary', 'New members, daily summary digest'],
         ].map(([key, label, hint]) => (
           <div key={key} style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#888', marginBottom: 3 }}>{label}</label>
-            <div style={{ fontSize: 11, color: '#666', marginBottom: 5 }}>{hint}</div>
+            <label style={{ display: 'block', fontSize: 12, color: 'var(--t-muted)', marginBottom: 3 }}>{label}</label>
+            <div style={{ fontSize: 11, color: 'var(--t-soft)', marginBottom: 5 }}>{hint}</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input className="input" type="url" placeholder="https://discord.com/api/webhooks/..." value={webhooks[key] || ''}
                 onChange={e => setWebhooks({ ...webhooks, [key]: e.target.value })} style={{ flex: 1 }} />
@@ -3176,9 +3237,9 @@ function SettingsTab({ isAdmin, currentUid }) {
 
       {/* Daily Summary */}
       <div className="card" style={{ padding: 20, borderColor: '#F5C51830' }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>📊 Daily Summary</h2>
-        <p style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Posts a full digest to your Discord Alerts channel — tasks done/pending, pipeline status, active deals, overdue items, and ideas captured today.</p>
-        <div style={{ background: '#111', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 12, color: '#666', lineHeight: 1.8 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: 'var(--t-bright)' }}>📊 Daily Summary</h2>
+        <p style={{ fontSize: 12, color: 'var(--t-muted)', marginBottom: 16 }}>Posts a full digest to your Discord Alerts channel — tasks done/pending, pipeline status, active deals, overdue items, and ideas captured today.</p>
+        <div style={{ background: '#111', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 12, color: 'var(--t-soft)', lineHeight: 1.8 }}>
           <div>✅ Today's tasks — done vs pending, by priority</div>
           <div>🎬 Pipeline — active videos per stage, what's due today</div>
           <div>💼 Brand deals — active deals per stage with amounts</div>
@@ -3191,13 +3252,13 @@ function SettingsTab({ isAdmin, currentUid }) {
           </button>
           {summaryMsg && <span style={{ fontSize: 12, color: summaryMsg.startsWith('✅') ? '#4ade80' : summaryMsg.startsWith('⚠️') ? GOLD : '#ff6b6b' }}>{summaryMsg}</span>}
         </div>
-        <div style={{ fontSize: 11, color: '#666', marginTop: 10 }}>Requires Alerts webhook to be saved above. Click any time — morning check-in, end of day, whenever you need a snapshot.</div>
+        <div style={{ fontSize: 11, color: 'var(--t-soft)', marginTop: 10 }}>Requires Alerts webhook to be saved above. Click any time — morning check-in, end of day, whenever you need a snapshot.</div>
       </div>
 
       {/* Channels */}
       <div className="card" style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>📡 Channels</h2>
-        <p style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Manage your publishing channels. These appear in the Pipeline dropdown.</p>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: 'var(--t-bright)' }}>📡 Channels</h2>
+        <p style={{ fontSize: 12, color: 'var(--t-muted)', marginBottom: 16 }}>Manage your publishing channels. These appear in the Pipeline dropdown.</p>
 
         {/* Grouped by platform */}
         {PLATFORMS.map(plat => {
@@ -3209,15 +3270,15 @@ function SettingsTab({ isAdmin, currentUid }) {
               <div style={{ fontSize: 11, fontWeight: 700, color: col, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7 }}>{plat}</div>
               {grp.map(ch => (
                 <div key={ch.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: '#111', borderRadius: 7, marginBottom: 5 }}>
-                  <span style={{ fontSize: 13, color: '#ddd' }}>{ch.name}</span>
-                  <button onClick={() => deleteChannel(ch.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' }} title="Remove channel">✕</button>
+                  <span style={{ fontSize: 13, color: 'var(--t-bright)' }}>{ch.name}</span>
+                  <button onClick={() => deleteChannel(ch.id)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' }} title="Remove channel">✕</button>
                 </div>
               ))}
             </div>
           );
         })}
 
-        {chList.length === 0 && <div style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>No channels yet.</div>}
+        {chList.length === 0 && <div style={{ fontSize: 13, color: 'var(--t-soft)', marginBottom: 14 }}>No channels yet.</div>}
 
         {/* Add new channel */}
         <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
@@ -3236,10 +3297,10 @@ function SettingsTab({ isAdmin, currentUid }) {
 
       {/* Users */}
       <div className="card" style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: '#ddd' }}>Team Members</h2>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: 'var(--t-bright)' }}>Team Members</h2>
         {users.map(u => {
-          const roleColor = u.role === 'admin' ? GOLD : u.role === 'partner' ? '#38bdf8' : '#666';
-          const roleBg = u.role === 'admin' ? `${GOLD}18` : u.role === 'partner' ? '#38bdf818' : '#1e1e1e';
+          const roleColor = u.role === 'admin' ? GOLD : u.role === 'partner' ? '#38bdf8' : 'var(--t-soft)';
+          const roleBg = u.role === 'admin' ? 'var(--a18)' : u.role === 'partner' ? '#38bdf818' : 'var(--bg-sub)';
           const canEditThisName = isAdmin || u.id === currentUid;
           const isEditingThis = editingName.hasOwnProperty(u.id);
           return (
@@ -3262,21 +3323,21 @@ function SettingsTab({ isAdmin, currentUid }) {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ fontSize: 14, color: '#ddd' }}>{u.name}</span>
-                    {u.id === currentUid && <span style={{ fontSize: 10, color: '#666' }}>(you)</span>}
+                    <span style={{ fontSize: 14, color: 'var(--t-bright)' }}>{u.name}</span>
+                    {u.id === currentUid && <span style={{ fontSize: 10, color: 'var(--t-soft)' }}>(you)</span>}
                     {canEditThisName && (
-                      <button onClick={() => startEditName(u.id, u.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 12, padding: '2px 4px', lineHeight: 1 }} title="Edit name">✎</button>
+                      <button onClick={() => startEditName(u.id, u.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t-soft)', fontSize: 12, padding: '2px 4px', lineHeight: 1 }} title="Edit name">✎</button>
                     )}
                   </div>
                 )}
-                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{u.email}</div>
+                <div style={{ fontSize: 12, color: 'var(--t-muted)', marginTop: 2 }}>{u.email}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 <span className="tag" style={{ background: roleBg, color: roleColor, fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' }}>{u.role}</span>
                 {isAdmin && u.role !== 'admin' && (
                   <select className="select" value={u.role} disabled={changingRole[u.id]}
                     onChange={e => changeRole(u.id, e.target.value)}
-                    style={{ fontSize: 11, padding: '3px 8px', color: '#888' }}>
+                    style={{ fontSize: 11, padding: '3px 8px', color: 'var(--t-muted)' }}>
                     <option value="member">Member</option>
                     <option value="partner">Partner</option>
                   </select>
@@ -3286,7 +3347,7 @@ function SettingsTab({ isAdmin, currentUid }) {
           );
         })}
 
-        <h3 style={{ fontSize: 13, fontWeight: 600, color: '#666', margin: '20px 0 12px' }}>Add New Member</h3>
+        <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--t-soft)', margin: '20px 0 12px' }}>Add New Member</h3>
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr 1fr 1fr', marginBottom: 10 }}>
           <input className="input" placeholder="Name" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
           <input className="input" placeholder="Email" type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
@@ -3306,7 +3367,7 @@ function SettingsTab({ isAdmin, currentUid }) {
 // --- SHARED COMPONENTS ----------------------------------------
 function Empty({ icon, text }) {
   return (
-    <div style={{ textAlign: 'center', padding: '64px 20px', color: '#666' }}>
+    <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--t-soft)' }}>
       <div style={{ fontSize: 36, marginBottom: 12 }}>{icon}</div>
       <div style={{ fontSize: 14 }}>{text}</div>
     </div>
