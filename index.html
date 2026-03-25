@@ -993,7 +993,7 @@ function TodayTab() {
 function PipelineTab() {
   const [items, setItems] = useState([]);
   const [channels, setChannels] = useState([]);
-  const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', recurring: false, frequency: 'Weekly', brandDeal: false, brandName: '', pocName: '', pocContact: '', agreedRate: '', publishDate: '', notes: '' };
+  const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', recurring: false, frequency: 'Weekly', brandDeal: false, brandName: '', pocName: '', pocContact: '', agreedRate: '', recordDate: '', editDate: '', publishDate: '', notes: '' };
   const [form, setForm] = useState(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1078,7 +1078,7 @@ function PipelineTab() {
 
   const startEdit = (item) => {
     setEditItem(item.id);
-    setEditForm({ title: item.title || '', stage: item.stage || 'Idea', channel: item.channel || '', platform: item.platform || '', recurring: item.recurring || false, frequency: item.frequency || 'Weekly', brandDeal: item.brandDeal || false, brandName: item.brandName || '', pocName: item.pocName || '', pocContact: item.pocContact || '', agreedRate: item.agreedRate || '', publishDate: item.publishDate || '', notes: item.notes || '' });
+    setEditForm({ title: item.title || '', stage: item.stage || 'Idea', channel: item.channel || '', platform: item.platform || '', recurring: item.recurring || false, frequency: item.frequency || 'Weekly', brandDeal: item.brandDeal || false, brandName: item.brandName || '', pocName: item.pocName || '', pocContact: item.pocContact || '', agreedRate: item.agreedRate || '', recordDate: item.recordDate || '', editDate: item.editDate || '', publishDate: item.publishDate || '', notes: item.notes || '' });
   };
 
   const saveEdit = async () => {
@@ -1194,13 +1194,27 @@ function PipelineTab() {
               </div>
             )}
           </div>
+          {/* Stage dates */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 120 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>🎙️ Record by</div>
+              <input className="input" type="date" value={form.recordDate} onChange={e => setForm({ ...form, recordDate: e.target.value })} />
+            </div>
+            <div style={{ flex: 1, minWidth: 120 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>✂️ Edit by</div>
+              <input className="input" type="date" value={form.editDate} onChange={e => setForm({ ...form, editDate: e.target.value })} />
+            </div>
+            <div style={{ flex: 1, minWidth: 120 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>📅 {form.recurring ? 'Next Publish' : 'Publish'}</div>
+              <input className="input" type="date" value={form.publishDate} onChange={e => setForm({ ...form, publishDate: e.target.value })} />
+            </div>
+          </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#888', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={form.brandDeal} onChange={e => setForm({ ...form, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
               Brand Deal
             </label>
             {form.brandDeal && <input className="input" placeholder="Brand name *" value={form.brandName} onChange={e => setForm({ ...form, brandName: e.target.value })} style={{ flex: 1 }} />}
-            <input className="input" type="date" value={form.publishDate} onChange={e => setForm({ ...form, publishDate: e.target.value })} style={{ flex: 1 }} placeholder={form.recurring ? 'Next publish date' : 'Publish date'} />
           </div>
           {form.brandDeal && (
             <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: `${GOLD}08`, border: `1px solid ${GOLD}22`, borderRadius: 8 }}>
@@ -1266,13 +1280,27 @@ function PipelineTab() {
               </div>
             )}
           </div>
+          {/* Stage dates */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 120 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>🎙️ Record by</div>
+              <input className="input" type="date" value={editForm.recordDate} onChange={e => setEditForm({ ...editForm, recordDate: e.target.value })} />
+            </div>
+            <div style={{ flex: 1, minWidth: 120 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>✂️ Edit by</div>
+              <input className="input" type="date" value={editForm.editDate} onChange={e => setEditForm({ ...editForm, editDate: e.target.value })} />
+            </div>
+            <div style={{ flex: 1, minWidth: 120 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>📅 {editForm.recurring ? 'Next Publish' : 'Publish'}</div>
+              <input className="input" type="date" value={editForm.publishDate} onChange={e => setEditForm({ ...editForm, publishDate: e.target.value })} />
+            </div>
+          </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#888', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={editForm.brandDeal} onChange={e => setEditForm({ ...editForm, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
               Brand Deal
             </label>
             {editForm.brandDeal && <input className="input" placeholder="Brand name" value={editForm.brandName} onChange={e => setEditForm({ ...editForm, brandName: e.target.value })} style={{ flex: 1 }} />}
-            <input className="input" type="date" value={editForm.publishDate} onChange={e => setEditForm({ ...editForm, publishDate: e.target.value })} style={{ flex: 1 }} placeholder={editForm.recurring ? 'Next publish date' : 'Publish date'} />
           </div>
           {editForm.brandDeal && (
             <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: `${GOLD}08`, border: `1px solid ${GOLD}22`, borderRadius: 8 }}>
@@ -1309,10 +1337,24 @@ function PipelineTab() {
             <div style={{ fontSize: 11, fontWeight: 700, color: '#666', marginBottom: 9, textTransform: 'uppercase', letterSpacing: 1.2 }}>{stage} - {grp.length}</div>
             {grp.map(item => {
               const today = todayStr();
-              const daysUntil = item.publishDate ? Math.ceil((new Date(item.publishDate + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000) : null;
-              const isDueSoon  = daysUntil !== null && daysUntil >= 0 && daysUntil <= 3 && item.stage !== 'Published';
-              const isOverdue  = daysUntil !== null && daysUntil < 0  && item.stage !== 'Published';
-              const urgentColor = isOverdue ? '#ff6b6b' : '#F5C518';
+              const msDay = 86400000;
+              const daysDiff = d => d ? Math.ceil((new Date(d + 'T00:00:00') - new Date(today + 'T00:00:00')) / msDay) : null;
+              const rd = daysDiff(item.recordDate);
+              const ed = daysDiff(item.editDate);
+              const pd = daysDiff(item.publishDate);
+              const notPublished = item.stage !== 'Published';
+
+              // Pick the nearest active deadline for card-level urgency
+              const activeDiffs = [rd, ed, pd].filter(d => d !== null && notPublished);
+              const nearest = activeDiffs.length ? Math.min(...activeDiffs) : null;
+              const isOverdue  = nearest !== null && nearest < 0;
+              const isDueSoon  = nearest !== null && nearest >= 0 && nearest <= 3;
+              const urgentColor = isOverdue ? '#ff6b6b' : GOLD;
+
+              // Per-date colour helper
+              const dateCol = d => d === null ? '#666' : d < 0 ? '#ff6b6b' : d <= 3 ? GOLD : '#666';
+              const dateLabel = d => d === null ? '' : d < 0 ? ` (${Math.abs(d)}d overdue)` : d === 0 ? ' (today!)' : d <= 3 ? ` (${d}d)` : '';
+
               return (
                 <div key={item.id} className="card" style={{
                   padding: '13px 15px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12,
@@ -1322,8 +1364,8 @@ function PipelineTab() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 14, fontWeight: 500, color: '#ddd' }}>{item.title}</span>
-                      {isOverdue  && <span className="tag" style={{ background: '#ff6b6b18', color: '#ff6b6b', fontSize: 10, fontWeight: 700 }}>⚠ OVERDUE</span>}
-                      {isDueSoon  && !isOverdue && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD, fontSize: 10, fontWeight: 700 }}>⏰ {daysUntil === 0 ? 'DUE TODAY' : `${daysUntil}d left`}</span>}
+                      {isOverdue && notPublished  && <span className="tag" style={{ background: '#ff6b6b18', color: '#ff6b6b', fontSize: 10, fontWeight: 700 }}>⚠ OVERDUE</span>}
+                      {isDueSoon && !isOverdue && notPublished && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD, fontSize: 10, fontWeight: 700 }}>⏰ {nearest === 0 ? 'DUE TODAY' : `${nearest}d`}</span>}
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                       <span className="tag" style={{ background: '#1e1e1e', color: '#ccc' }}>{item.channel}</span>
@@ -1333,10 +1375,17 @@ function PipelineTab() {
                         : <span className="tag" style={{ background: '#1e1e1e', color: '#888' }}>1️⃣ One-time</span>}
                       {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>💼 {item.brandName || 'Brand Deal'}</span>}
                       {item.brandDeal && item.agreedRate && <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 600 }}>₹{item.agreedRate}</span>}
-                      {item.brandDeal && item.pocName && <span style={{ fontSize: 11, color: '#666' }}>POC: {item.pocName}{item.pocContact ? ` · ${item.pocContact}` : ''}</span>}
-                      {item.publishDate && <span style={{ fontSize: 11, color: isOverdue ? '#ff6b6b' : isDueSoon ? GOLD : '#666' }}>{item.recurring ? 'Next: ' : '📅 '}{fmtDate(item.publishDate)}</span>}
-                      {item.notes && <span style={{ fontSize: 12, color: '#888' }}>{item.notes}</span>}
                     </div>
+                    {/* Stage dates row */}
+                    {(item.recordDate || item.editDate || item.publishDate) && (
+                      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 7, fontSize: 11 }}>
+                        {item.recordDate && <span style={{ color: dateCol(rd) }}>🎙️ {fmtDate(item.recordDate)}<span style={{ color: dateCol(rd), fontWeight: rd !== null && rd <= 3 ? 700 : 400 }}>{dateLabel(rd)}</span></span>}
+                        {item.editDate   && <span style={{ color: dateCol(ed) }}>✂️ {fmtDate(item.editDate)}<span style={{ color: dateCol(ed), fontWeight: ed !== null && ed <= 3 ? 700 : 400 }}>{dateLabel(ed)}</span></span>}
+                        {item.publishDate && <span style={{ color: dateCol(pd) }}>📅 {item.recurring ? 'Next: ' : ''}{fmtDate(item.publishDate)}<span style={{ fontWeight: pd !== null && pd <= 3 ? 700 : 400 }}>{dateLabel(pd)}</span></span>}
+                      </div>
+                    )}
+                    {item.brandDeal && item.pocName && <div style={{ fontSize: 11, color: '#666', marginTop: 5 }}>POC: {item.pocName}{item.pocContact ? ` · ${item.pocContact}` : ''}</div>}
+                    {item.notes && <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{item.notes}</div>}
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                     <select className="select" value={item.stage} onChange={e => updateStage(item.id, e.target.value)} style={{ fontSize: 12, padding: '4px 8px' }}>
