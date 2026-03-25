@@ -259,7 +259,7 @@ function Dashboard({ user, profile }) {
       {/* ── Content Canvas ── */}
       <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
         <div className="fade" key={tab} style={{ maxWidth: 920, margin: '0 auto' }}>
-          {tab === 'overview'  && <OverviewTab />}
+          {tab === 'overview'  && <OverviewTab onNavigate={setTab} />}
           {tab === 'today'     && <TodayTab />}
           {tab === 'weekly'    && <WeeklyTab />}
           {tab === 'pipeline'  && <PipelineTab />}
@@ -274,17 +274,23 @@ function Dashboard({ user, profile }) {
 }
 
 // --- OVERVIEW -------------------------------------------------
-function StatCard({ label, value, sub, color }) {
+function StatCard({ label, value, sub, color, onClick }) {
   return (
-    <div className="card" style={{ padding: '18px 20px' }}>
+    <div className="card" onClick={onClick} style={{
+      padding: '18px 20px', cursor: onClick ? 'pointer' : 'default', transition: 'border-color 0.15s',
+    }}
+      onMouseEnter={e => { if (onClick) e.currentTarget.style.borderColor = '#383838'; }}
+      onMouseLeave={e => { if (onClick) e.currentTarget.style.borderColor = ''; }}
+    >
       <div style={{ fontSize: 11, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</div>
       <div style={{ fontSize: 30, fontWeight: 800, color, letterSpacing: '-1px', lineHeight: 1 }}>{value}</div>
       <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>{sub}</div>
+      {onClick && <div style={{ fontSize: 10, color: '#444', marginTop: 8, letterSpacing: 0.5 }}>VIEW →</div>}
     </div>
   );
 }
 
-function OverviewTab() {
+function OverviewTab({ onNavigate }) {
   const [data, setData] = useState({ tasks: [], pipeline: [], deals: [] });
   const [loading, setLoading] = useState(true);
 
@@ -325,24 +331,26 @@ function OverviewTab() {
 
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-        <StatCard label="Today's Tasks" value={`${doneTasks.length}/${todayTasks.length}`} sub="completed" color={doneTasks.length === todayTasks.length && todayTasks.length > 0 ? '#4ade80' : GOLD} />
-        <StatCard label="Active Pipeline" value={activePipeline.length} sub={`of ${data.pipeline.length} total`} color="#38bdf8" />
-        <StatCard label="Active Deals" value={activeDeals.length} sub={totalDealValue ? `₹${totalDealValue.toLocaleString('en-IN')} pipeline` : 'deals'} color={GOLD} />
-        <StatCard label="Overdue" value={totalOverdue} sub={totalOverdue === 0 ? 'all clear ✓' : 'need attention'} color={totalOverdue > 0 ? '#ff6b6b' : '#4ade80'} />
+        <StatCard label="Today's Tasks" value={`${doneTasks.length}/${todayTasks.length}`} sub="completed" color={doneTasks.length === todayTasks.length && todayTasks.length > 0 ? '#4ade80' : GOLD} onClick={() => onNavigate('today')} />
+        <StatCard label="Active Pipeline" value={activePipeline.length} sub={`of ${data.pipeline.length} total`} color="#38bdf8" onClick={() => onNavigate('pipeline')} />
+        <StatCard label="Active Deals" value={activeDeals.length} sub={totalDealValue ? `₹${totalDealValue.toLocaleString('en-IN')} pipeline` : 'deals'} color={GOLD} onClick={() => onNavigate('deals')} />
+        <StatCard label="Overdue" value={totalOverdue} sub={totalOverdue === 0 ? 'all clear ✓' : 'need attention'} color={totalOverdue > 0 ? '#ff6b6b' : '#4ade80'} onClick={totalOverdue > 0 ? () => onNavigate('today') : undefined} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         {/* Pipeline breakdown */}
-        <div className="card" style={{ padding: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>🎬 Pipeline by Stage</div>
+        <div className="card" onClick={() => onNavigate('pipeline')} style={{ padding: 18, cursor: 'pointer' }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>🎬 Pipeline by Stage <span style={{ fontSize: 10, color: '#444', marginLeft: 4 }}>VIEW →</span></div>
           {P_STAGES.map(s => {
             const cnt = data.pipeline.filter(p => p.stage === s).length;
             const pct = data.pipeline.length ? (cnt / data.pipeline.length) * 100 : 0;
             return (
               <div key={s} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                  <span style={{ color: '#666' }}>{s}</span>
-                  <span style={{ color: cnt > 0 ? '#ddd' : '#333', fontWeight: 600 }}>{cnt}</span>
+                  <span style={{ color: '#888' }}>{s}</span>
+                  <span style={{ color: cnt > 0 ? '#ddd' : '#444', fontWeight: 600 }}>{cnt}</span>
                 </div>
                 <div style={{ height: 4, background: '#1e1e1e', borderRadius: 4 }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: s === 'Published' ? '#4ade80' : GOLD, borderRadius: 4, transition: 'width 0.5s ease' }} />
@@ -353,8 +361,10 @@ function OverviewTab() {
         </div>
 
         {/* Deals breakdown */}
-        <div className="card" style={{ padding: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>💼 Deals by Stage</div>
+        <div className="card" onClick={() => onNavigate('deals')} style={{ padding: 18, cursor: 'pointer' }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = ''}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 16 }}>💼 Deals by Stage <span style={{ fontSize: 10, color: '#444', marginLeft: 4 }}>VIEW →</span></div>
           {activeDeals.length === 0 && <div style={{ color: '#666', fontSize: 12 }}>No active deals</div>}
           {D_STAGES.map(s => {
             const grp = data.deals.filter(d => d.stage === s);
@@ -364,7 +374,7 @@ function OverviewTab() {
             return (
               <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #1a1a1a', fontSize: 12, gap: 8 }}>
                 <span className="tag" style={{ background: `${sc}18`, color: sc, flexShrink: 0 }}>{s}</span>
-                <span style={{ color: '#777', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{grp.map(d => d.brand).join(', ')}</span>
+                <span style={{ color: '#888', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{grp.map(d => d.brand).join(', ')}</span>
                 {val > 0 && <span style={{ color: '#4ade80', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>₹{val.toLocaleString('en-IN')}</span>}
               </div>
             );
@@ -377,18 +387,24 @@ function OverviewTab() {
         <div className="card" style={{ padding: 18, borderColor: '#ff6b6b33' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#ff6b6b', marginBottom: 12 }}>⚠️ Needs Attention ({totalOverdue})</div>
           {overdueTasks.slice(0, 3).map(t => (
-            <div key={t.id} style={{ fontSize: 12, color: '#888', padding: '5px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
-              <span>⬜</span><span style={{ color: '#ccc', flex: 1 }}>{t.title}</span><span style={{ color: '#888' }}>{fmtDate(t.date)}</span>
+            <div key={t.id} onClick={() => onNavigate('today')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}>
+              <span>⬜</span><span style={{ color: '#ccc', flex: 1 }}>{t.title}</span><span style={{ color: '#666' }}>{fmtDate(t.date)}</span>
             </div>
           ))}
           {overduePipeline.slice(0, 2).map(p => (
-            <div key={p.id} style={{ fontSize: 12, color: '#888', padding: '5px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
-              <span>🎬</span><span style={{ color: '#ccc', flex: 1 }}>{p.title}</span><span style={{ color: '#888' }}>due {fmtDate(p.publishDate)}</span>
+            <div key={p.id} onClick={() => onNavigate('pipeline')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}>
+              <span>🎬</span><span style={{ color: '#ccc', flex: 1 }}>{p.title}</span><span style={{ color: '#666' }}>due {fmtDate(p.publishDate)}</span>
             </div>
           ))}
           {overdueDeals.slice(0, 2).map(d => (
-            <div key={d.id} style={{ fontSize: 12, color: '#888', padding: '5px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8 }}>
-              <span>💼</span><span style={{ color: '#ccc', flex: 1 }}>{d.brand}</span><span style={{ color: '#888' }}>deadline {fmtDate(d.deadline)}</span>
+            <div key={d.id} onClick={() => onNavigate('deals')} style={{ fontSize: 12, color: '#888', padding: '7px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', gap: 8, cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}>
+              <span>💼</span><span style={{ color: '#ccc', flex: 1 }}>{d.brand}</span><span style={{ color: '#666' }}>deadline {fmtDate(d.deadline)}</span>
             </div>
           ))}
         </div>
@@ -405,6 +421,7 @@ function WeeklyTab() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [tasks, setTasks] = useState([]);
   const [pipeline, setPipeline] = useState([]);
+  const [trainings, setTrainings] = useState([]);
   const [addingDay, setAddingDay] = useState(null);
   const [newTask, setNewTask] = useState({ title: '', pillar: 'Content', priority: 'P2' });
   const [saving, setSaving] = useState(false);
@@ -435,8 +452,35 @@ function WeeklyTab() {
       .where('publishDate', '<=', endDate)
       .get()
       .then(snap => setPipeline(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    db.collection('trainings')
+      .where('date', '>=', startDate)
+      .where('date', '<=', endDate)
+      .get()
+      .then(snap => setTrainings(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     return unsub;
   }, [startDate, endDate]);
+
+  // Spawn recurring tasks for all 7 days in this week
+  useEffect(() => {
+    db.collection('taskTemplates').where('active', '==', true).get().then(async snap => {
+      const tmpls = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      for (const day of weekDays) {
+        for (const tmpl of tmpls) {
+          if (!appliesToday(tmpl, day)) continue;
+          const existing = await db.collection('tasks')
+            .where('templateId', '==', tmpl.id).where('date', '==', day).get();
+          if (existing.empty) {
+            await db.collection('tasks').add({
+              title: tmpl.title, pillar: tmpl.pillar, priority: tmpl.priority,
+              notes: tmpl.notes || '', date: day, done: false,
+              templateId: tmpl.id, recurring: true, frequency: tmpl.frequency,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    });
+  }, [startDate]);
 
   const addTask = async (day) => {
     if (!newTask.title.trim()) return;
@@ -475,9 +519,10 @@ function WeeklyTab() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
         {weekDays.map((day, idx) => {
-          const dayTasks = tasks.filter(t => t.date === day);
-          const dayPipe  = pipeline.filter(p => p.publishDate === day);
-          const isToday  = day === today;
+          const dayTasks     = tasks.filter(t => t.date === day);
+          const dayPipe      = pipeline.filter(p => p.publishDate === day);
+          const dayTrainings = trainings.filter(tr => tr.date === day);
+          const isToday      = day === today;
           const done     = dayTasks.filter(t => t.done).length;
           return (
             <div key={day} className="card" style={{
@@ -505,6 +550,17 @@ function WeeklyTab() {
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }} title={p.title}>
                   🎬 {p.title}
+                </div>
+              ))}
+
+              {/* Training sessions for this day */}
+              {dayTrainings.map(tr => (
+                <div key={tr.id} style={{
+                  fontSize: 11, color: '#a78bfa', background: '#a78bfa12',
+                  borderRadius: 4, padding: '3px 7px', marginBottom: 4,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }} title={`${tr.title}${tr.time ? ' · ' + tr.time : ''}`}>
+                  📚 {tr.title}{tr.time ? <span style={{ opacity: 0.6 }}> · {tr.time}</span> : ''}
                 </div>
               ))}
 
