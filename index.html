@@ -2498,23 +2498,27 @@ function InvoicesTab() {
     return (b.invoiceDate || b.createdAt || '').localeCompare(a.invoiceDate || a.createdAt || '');
   });
 
-  // ── Analytics — respect active date filter ──
-  const allForYear = hasDateRange
-    ? collabs.filter(c => {
-        if (dateFrom && (!c.invoiceDate || c.invoiceDate < dateFrom)) return false;
-        if (dateTo   && (!c.invoiceDate || c.invoiceDate > dateTo))   return false;
-        return true;
-      })
-    : filterYear === 'All' ? collabs : collabs.filter(c => c.invoiceDate?.slice(0, 4) === filterYear);
-  const totalInvoiced = allForYear.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-  const totalPaid     = allForYear.filter(c => c.status === 'Paid').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-  const totalPending  = allForYear.filter(c => c.status !== 'Paid').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-  const thisMonth     = (() => {
-    const ym = new Date().toISOString().slice(0, 7);
-    return collabs.filter(c => c.invoiceDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-  })();
+  // ── Analytics base: year/date + brand filters applied (not status) ──
+  const statsBase = collabs.filter(c => {
+    if (hasDateRange) {
+      if (dateFrom && (!c.invoiceDate || c.invoiceDate < dateFrom)) return false;
+      if (dateTo   && (!c.invoiceDate || c.invoiceDate > dateTo))   return false;
+    } else {
+      if (filterYear !== 'All' && c.invoiceDate?.slice(0, 4) !== filterYear) return false;
+    }
+    if (filterBrand !== 'All' && c.brand !== filterBrand) return false;
+    return true;
+  });
+  const totalInvoiced = statsBase.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const totalPaid     = statsBase.filter(c => c.status === 'Paid').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const totalPending  = statsBase.filter(c => c.status === 'Pending').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const totalOverdue  = statsBase.filter(c => c.status === 'Overdue').reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+  const cntPaid    = statsBase.filter(c => c.status === 'Paid').length;
+  const cntPending = statsBase.filter(c => c.status === 'Pending').length;
+  const cntOverdue = statsBase.filter(c => c.status === 'Overdue').length;
 
-  // Monthly bar chart — last 12 months
+  // Monthly bar chart — last 12 months, brand-filtered
+  const barBase = filterBrand !== 'All' ? collabs.filter(c => c.brand === filterBrand) : collabs;
   const monthlyData = (() => {
     const months = [];
     const now = new Date();
@@ -2522,18 +2526,18 @@ function InvoicesTab() {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const ym = d.toISOString().slice(0, 7);
       const label = d.toLocaleString('default', { month: 'short' });
-      const invoiced = collabs.filter(c => c.invoiceDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-      const received = collabs.filter(c => c.paidDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+      const invoiced = barBase.filter(c => c.invoiceDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+      const received = barBase.filter(c => c.paidDate?.startsWith(ym)).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
       months.push({ ym, label, invoiced, received });
     }
     return months;
   })();
   const maxBar = Math.max(...monthlyData.map(m => Math.max(m.invoiced, m.received)), 1);
 
-  // Brand breakdown
+  // Brand breakdown — uses statsBase
   const brandTotals = (() => {
     const map = {};
-    allForYear.forEach(c => {
+    statsBase.forEach(c => {
       if (!c.brand) return;
       map[c.brand] = (map[c.brand] || 0) + (parseFloat(c.amount) || 0);
     });
@@ -2777,14 +2781,15 @@ td:last-child{text-align:right;font-weight:600}
       {/* ── Stat strip ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 24 }}>
         {[
-          { label: 'Total Invoiced', value: fmt(totalInvoiced), color: GOLD },
-          { label: 'Received', value: fmt(totalPaid), color: '#4ade80' },
-          { label: 'Pending / Overdue', value: fmt(totalPending), color: '#f97316' },
-          { label: 'This Month', value: fmt(thisMonth), color: '#38bdf8' },
+          { label: 'Total Billed',  value: fmt(totalInvoiced), sub: `${statsBase.length} invoice${statsBase.length !== 1 ? 's' : ''}`, color: GOLD },
+          { label: 'Collected',     value: fmt(totalPaid),     sub: `${cntPaid} paid`,                                                  color: '#4ade80' },
+          { label: 'Pending',       value: fmt(totalPending),  sub: `${cntPending} unpaid`,                                             color: '#f97316' },
+          { label: 'Overdue',       value: fmt(totalOverdue),  sub: `${cntOverdue} overdue`,                                            color: '#ff6b6b' },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '14px 16px' }}>
             <div style={{ fontSize: 10, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>{s.label}</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: 'var(--t-muted)', marginTop: 4 }}>{s.sub}</div>
           </div>
         ))}
       </div>
@@ -2793,29 +2798,37 @@ td:last-child{text-align:right;font-weight:600}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 24 }}>
 
         {/* Monthly bar chart */}
-        <div className="card" style={{ padding: 18 }}>
-          <div style={{ fontSize: 11, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 }}>Monthly Revenue (last 12 months)</div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 100, paddingBottom: 20, position: 'relative' }}>
-            {monthlyData.map((m, i) => {
-              const invH = m.invoiced ? Math.max(4, (m.invoiced / maxBar) * 92) : 0;
-              const recH = m.received ? Math.max(4, (m.received / maxBar) * 92) : 0;
+        <div className="card" style={{ padding: 18, minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ fontSize: 11, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Monthly Revenue (last 12 months)</div>
+          {/* Bar area */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 88 }}>
+            {monthlyData.map(m => {
+              const invH = m.invoiced ? Math.max(3, Math.round((m.invoiced / maxBar) * 84)) : 0;
+              const recH = m.received ? Math.max(3, Math.round((m.received / maxBar) * 84)) : 0;
               return (
-                <div key={m.ym} style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 1, position: 'relative' }}
+                <div key={m.ym} style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end', gap: 1 }}
                   title={`${m.label}: Invoiced ₹${m.invoiced.toLocaleString('en-IN')} / Received ₹${m.received.toLocaleString('en-IN')}`}>
-                  {invH > 0 && <div style={{ flex: 1, height: invH, background: 'var(--a80)', borderRadius: '2px 2px 0 0' }} />}
-                  {recH > 0 && <div style={{ flex: 1, height: recH, background: '#4ade8099', borderRadius: '2px 2px 0 0' }} />}
-                  {invH === 0 && recH === 0 && <div style={{ flex: 1, height: 2, background: '#222', borderRadius: 1 }} />}
-                  <div style={{ position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)', fontSize: 8, color: '#444', whiteSpace: 'nowrap' }}>{m.label}</div>
+                  {invH > 0
+                    ? <div style={{ flex: 1, height: invH, background: '#F5C518cc', borderRadius: '2px 2px 0 0' }} />
+                    : <div style={{ flex: 1, height: 2, background: '#2a2a2a', borderRadius: 1 }} />}
+                  {recH > 0 && <div style={{ flex: 1, height: recH, background: '#4ade80aa', borderRadius: '2px 2px 0 0' }} />}
                 </div>
               );
             })}
           </div>
-          <div style={{ display: 'flex', gap: 14, marginTop: 4 }}>
+          {/* Month labels row */}
+          <div style={{ display: 'flex', gap: 2, marginTop: 5 }}>
+            {monthlyData.map(m => (
+              <div key={m.ym} style={{ flex: 1, textAlign: 'center', fontSize: 8, color: '#555', overflow: 'hidden', whiteSpace: 'nowrap' }}>{m.label}</div>
+            ))}
+          </div>
+          {/* Legend */}
+          <div style={{ display: 'flex', gap: 14, marginTop: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--t-soft)' }}>
-              <div style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--a80)' }} />Invoiced
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#F5C518cc' }} />Invoiced
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--t-soft)' }}>
-              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#4ade8099' }} />Received
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#4ade80aa' }} />Received
             </div>
           </div>
         </div>
