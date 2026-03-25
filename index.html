@@ -1182,6 +1182,23 @@ function PipelineTab() {
   const [items, setItems] = useState([]);
   const [channels, setChannels] = useState([]);
   const [vendors, setVendors] = useState([]);
+// ── CSV export utility (shared across tabs) ──
+const exportTabCSV = (rows, cols, filename) => {
+  const esc = v => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s; };
+  const header = cols.map(([h]) => h).join(',');
+  const body   = rows.map(r => cols.map(([,fn]) => esc(fn(r))).join(',')).join('\n');
+  const blob   = new Blob([header + '\n' + body], { type: 'text/csv;charset=utf-8;' });
+  const a      = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+};
+const csvBtn = (onClick, count) => (
+  <button onClick={onClick} title={`Export ${count} records to CSV`}
+    style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, border: '1px solid #334155',
+      background: '#0f172a', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+    ⬇ Export CSV <span style={{ color: 'var(--t-faint)', fontSize: 10 }}>({count})</span>
+  </button>
+);
+
   const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', recurring: false, frequency: 'Weekly', brandDeal: false, brandId: '', brandName: '', pocName: '', pocContact: '', agreedRate: '', deliverableType: 'Integration', recordDate: '', editDate: '', publishDate: '', notes: '' };
   const [form, setForm] = useState(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
@@ -1196,6 +1213,45 @@ function PipelineTab() {
   useEffect(() => {
     return db.collection('pipeline').orderBy('createdAt', 'desc').onSnapshot(snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, []);
+
+  const exportCSV = () => {
+    const rows = filtered.length > 0 ? filtered : collabs;
+    const cols = [
+      ['Invoice No',   r => r.invoiceNo],
+      ['Brand',        r => r.brand],
+      ['Description',  r => r.description],
+      ['Channel',      r => r.channel],
+      ['Deliverable',  r => r.deliverable],
+      ['Amount',       r => r.amount],
+      ['GST Rate',     r => r.gstRate],
+      ['GST Type',     r => r.gstType],
+      ['Status',       r => r.status],
+      ['Invoice Date', r => r.invoiceDate],
+      ['Due Date',     r => r.dueDate],
+      ['Paid Date',    r => r.paidDate],
+      ['POC',          r => r.poc],
+      ['Billing Entity', r => r.billingEntity],
+      ['Notes',        r => r.notes],
+    ];
+    const esc = v => {
+      const s = String(v ?? '');
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const header = cols.map(([h]) => h).join(',');
+    const body   = rows.map(r => cols.map(([, fn]) => esc(fn(r))).join(',')).join('\n');
+    const csv    = header + '\n' + body;
+    const blob   = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url    = URL.createObjectURL(blob);
+    const a      = document.createElement('a');
+    const fyLabel = `FY${String(chartFY).slice(-2)}-${String(chartFY+1).slice(-2)}`;
+    const today  = new Date().toISOString().slice(0,10);
+    const brandPart = filterBrand !== 'All' ? `_${filterBrand.replace(/\s+/g,'-')}` : '';
+    a.href = url;
+    a.download = `GrowGuru_Invoices_${fyLabel}${brandPart}_${today}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
 
   useEffect(() => {
     db.collection('vendors').orderBy('name').get().then(snap => setVendors(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -1326,7 +1382,25 @@ function PipelineTab() {
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Content Pipeline</h1>
           <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{visibleItems.length} of {items.length} items</div>
         </div>
-        <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditItem(null); }} style={{ fontSize: 13 }}>+ Add Content</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {csvBtn(() => exportTabCSV(visibleItems, [
+            ['Title',         r => r.title],
+            ['Stage',         r => r.stage],
+            ['Channel',       r => r.channel],
+            ['Platform',      r => r.platform],
+            ['Brand Deal',    r => r.brandDeal ? 'Yes' : 'No'],
+            ['Brand',         r => r.brandName],
+            ['POC',           r => r.pocName],
+            ['Agreed Rate',   r => r.agreedRate],
+            ['Deliverable',   r => r.deliverableType],
+            ['Record Date',   r => r.recordDate],
+            ['Edit Date',     r => r.editDate],
+            ['Publish Date',  r => r.publishDate],
+            ['Recurring',     r => r.recurring ? r.frequency : 'No'],
+            ['Notes',         r => r.notes],
+          ], `GrowGuru_Pipeline_${new Date().toISOString().slice(0,10)}.csv`), visibleItems.length)}
+          <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditItem(null); }} style={{ fontSize: 13 }}>+ Add Content</button>
+        </div>
       </div>
 
       {/* Channel filter */}
@@ -1952,7 +2026,23 @@ function DealsTab() {
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Brand Deals</h1>
           <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{deals.length} deals tracked</div>
         </div>
-        <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Add Deal</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {csvBtn(() => exportTabCSV(deals, [
+            ['Brand',          r => r.brand],
+            ['Stage',          r => r.stage],
+            ['Contact',        r => r.contact],
+            ['Contacted Via',  r => r.contactedVia],
+            ['Platform',       r => r.platform],
+            ['Agreed Rate',    r => r.agreedRate],
+            ['Commission',     r => r.commission],
+            ['Deliverables',   r => r.deliverables],
+            ['Payment Status', r => r.paymentStatus],
+            ['Deadline',       r => r.deadline],
+            ['Payment Due',    r => r.paymentDue],
+            ['Notes',          r => r.notes],
+          ], `GrowGuru_Deals_${new Date().toISOString().slice(0,10)}.csv`), deals.length)}
+          <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Add Deal</button>
+        </div>
       </div>
 
       {adding && <DealForm f={form} onChange={setForm} onSave={add} onCancel={() => setAdding(false)} btnLabel="Add Deal" loading={saving} accentColor={GOLD} vendors={vendors} />}
@@ -2147,6 +2237,13 @@ function IdeasTab() {
             {active.length} active · {active.filter(i => i.status === 'Shortlisted').length} shortlisted · {active.filter(i => i.status === 'In Pipeline').length} in pipeline · {active.filter(i => i.status === 'In Trainings').length} in trainings
           </div>
         </div>
+        {csvBtn(() => exportTabCSV(ideas, [
+          ['Idea',      r => r.text],
+          ['Category',  r => r.category],
+          ['Status',    r => r.status],
+          ['Starred',   r => r.starred ? 'Yes' : 'No'],
+          ['Created',   r => r.createdAt?.slice(0,10)],
+        ], `GrowGuru_Ideas_${new Date().toISOString().slice(0,10)}.csv`), ideas.length)}
       </div>
 
       {/* Quick capture */}
@@ -2896,8 +2993,13 @@ td:last-child{text-align:right;font-weight:600}
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>🧾 Invoices & Collabs</h1>
           <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{collabs.length} total records · ₹{totalPaid.toLocaleString('en-IN')} received</div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ New Invoice</button>
+          <button onClick={exportCSV} title={`Export ${filtered.length || collabs.length} records to CSV`}
+            style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, border: '1px solid #334155',
+              background: '#0f172a', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            ⬇ Export CSV <span style={{ color: 'var(--t-faint)', fontSize: 10 }}>({filtered.length || collabs.length})</span>
+          </button>
           <label style={{ fontSize: 12, padding: '7px 14px', borderRadius: 8, border: '1px solid #334155',
             background: '#0f172a', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
             title="Import records from a CSV file">
@@ -3542,7 +3644,23 @@ function TrainingsTab() {
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Trainings</h1>
           <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{upcoming.length} upcoming · {completed.filter(i => i.status === 'Completed').length} completed{totalRev > 0 ? ` · ₹${totalRev.toLocaleString('en-IN')} revenue` : ''}</div>
         </div>
-        <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Plan Training</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {csvBtn(() => exportTabCSV(items, [
+            ['Title',     r => r.title],
+            ['Category',  r => r.category],
+            ['Type',      r => r.type],
+            ['Date',      r => r.date],
+            ['Time',      r => r.time],
+            ['Batch',     r => r.batch],
+            ['Duration',  r => r.duration],
+            ['Capacity',  r => r.capacity],
+            ['Enrolled',  r => r.enrolled],
+            ['Revenue',   r => r.revenue],
+            ['Status',    r => r.status],
+            ['Notes',     r => r.notes],
+          ], `GrowGuru_Trainings_${new Date().toISOString().slice(0,10)}.csv`), items.length)}
+          <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Plan Training</button>
+        </div>
       </div>
 
       {/* Stat strip — status */}
