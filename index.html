@@ -50,6 +50,8 @@
     input::placeholder { color: var(--ph); }
     select option { background: var(--sel-opt); }
     .fade { animation: fadeIn 0.2s ease; }
+    /* Privacy mode — blur all .pv spans */
+    .privacy-on .pv { filter: blur(7px) !important; user-select: none; pointer-events: none; transition: filter 0.2s; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
     .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; }
     .card:hover { border-color: var(--border-hover); }
@@ -113,6 +115,7 @@
 </script>
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef } = React;
+const PrivacyContext = React.createContext(false);
 
 // --- FIREBASE INIT --------------------------------------------
 const firebaseConfig = {
@@ -283,6 +286,7 @@ function Dashboard({ user, profile }) {
   }, [theme]);
 
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+  const [privacy, setPrivacy] = useState(false);
   const tabs = [
     { id: 'overview',   label: '📊', full: 'Overview' },
     { id: 'today',      label: '✅', full: 'Today' },
@@ -298,7 +302,8 @@ function Dashboard({ user, profile }) {
   ];
 
   return (
-    <div className="app-shell">
+    <PrivacyContext.Provider value={privacy}>
+    <div className={`app-shell${privacy ? ' privacy-on' : ''}`}>
 
       {/* ── Sidebar (desktop only) ── */}
       <aside className="app-sidebar">
@@ -344,6 +349,20 @@ function Dashboard({ user, profile }) {
           </button>
         </div>
 
+        {/* Privacy toggle */}
+        <div style={{ padding: '6px 14px' }}>
+          <button onClick={() => setPrivacy(p => !p)} style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            padding: '7px 10px', background: privacy ? 'var(--a12)' : 'var(--bg-sub)',
+            border: privacy ? '1px solid var(--a44)' : '1px solid var(--border)',
+            borderRadius: 8, cursor: 'pointer',
+            color: privacy ? GOLD : 'var(--t-muted)', fontSize: 12, transition: 'all 0.2s',
+          }}>
+            <span style={{ fontSize: 15 }}>{privacy ? '🔒' : '👁️'}</span>
+            <span>{privacy ? 'Privacy On' : 'Privacy Mode'}</span>
+          </button>
+        </div>
+
         {/* User info + sign out */}
         <div style={{ padding: '14px 14px', borderTop: '1px solid var(--border-soft)' }}>
           <div style={{ fontSize: 12, color: 'var(--t-soft)', marginBottom: 6, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -384,6 +403,7 @@ function Dashboard({ user, profile }) {
         ))}
       </nav>
     </div>
+    </PrivacyContext.Provider>
   );
 }
 
@@ -501,7 +521,7 @@ function OverviewTab({ onNavigate }) {
               <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border-soft)', fontSize: 12, gap: 8 }}>
                 <span className="tag" style={{ background: `${sc}18`, color: sc, flexShrink: 0 }}>{s}</span>
                 <span style={{ color: 'var(--t-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{grp.map(d => d.brand).join(', ')}</span>
-                {val > 0 && <span style={{ color: '#4ade80', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>₹{val.toLocaleString('en-IN')}</span>}
+                {val > 0 && <span className="pv" style={{ color: '#4ade80', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>₹{val.toLocaleString('en-IN')}</span>}
               </div>
             );
           })}
@@ -522,7 +542,7 @@ function OverviewTab({ onNavigate }) {
               <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border-soft)', fontSize: 12, gap: 8 }}>
                 <span className="tag" style={{ background: `${catCol}18`, color: catCol, flexShrink: 0, fontSize: 11 }}>{cat}</span>
                 <span style={{ color: 'var(--t-muted)', flex: 1 }}>{upcoming} upcoming · {grp.length} total</span>
-                {rev > 0 && <span style={{ color: '#4ade80', fontWeight: 600, fontSize: 11 }}>₹{rev.toLocaleString('en-IN')}</span>}
+                {rev > 0 && <span className="pv" style={{ color: '#4ade80', fontWeight: 600, fontSize: 11 }}>₹{rev.toLocaleString('en-IN')}</span>}
               </div>
             );
           })}
@@ -586,7 +606,7 @@ function OverviewTab({ onNavigate }) {
                     <span style={{ color: 'var(--t-bright)', fontWeight: 600, flex: 1 }}>{d.brand}</span>
                     {d.invoiceNo && <span style={{ color: 'var(--t-muted)', fontSize: 11 }}>{d.invoiceNo}</span>}
                     {d.paymentDue && <span style={{ color: d.paymentDue < today ? '#ff6b6b' : '#f97316', fontSize: 11 }}>due {fmtDate(d.paymentDue)}</span>}
-                    {comm ? <span style={{ color: '#4ade80', fontWeight: 600 }}>Net ₹{comm.toLocaleString('en-IN')}</span> : amt ? <span style={{ color: '#4ade80', fontWeight: 600 }}>{amt}</span> : null}
+                    {comm ? <span className="pv" style={{ color: '#4ade80', fontWeight: 600 }}>Net ₹{comm.toLocaleString('en-IN')}</span> : amt ? <span className="pv" style={{ color: '#4ade80', fontWeight: 600 }}>{amt}</span> : null}
                   </div>
                 );
               })}
@@ -2064,7 +2084,7 @@ function DealsTab() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--t-heading)' }}>{deal.brand}</span>
                     <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 11, fontWeight: 600 }}>{deal.stage}</span>
-                    {deal.agreedRate && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 600 }}>₹{deal.agreedRate}</span>}
+                    {deal.agreedRate && <span className="pv" style={{ fontSize: 13, color: '#4ade80', fontWeight: 600 }}>₹{deal.agreedRate}</span>}
                     {deal.paymentStatus === 'Paid'    && <span className="tag" style={{ background: '#4ade8018', color: '#4ade80', fontSize: 10, fontWeight: 700 }}>✓ PAID</span>}
                     {deal.paymentStatus === 'Partial' && <span className="tag" style={{ background: 'var(--a18)', color: GOLD, fontSize: 10 }}>PARTIAL</span>}
                     {deal.invoiceNo && <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8', fontSize: 10 }}>🧾 {deal.invoiceNo}</span>}
@@ -2074,7 +2094,7 @@ function DealsTab() {
                     {deal.contactedVia === 'Agency' && deal.platform && <span>🏢 via {deal.platform}{deal.commission ? ` (${deal.commission}% cut)` : ''}</span>}
                     {deal.contactedVia !== 'Agency' && deal.platform && <span>🏢 {deal.platform}</span>}
                     {deal.agreedRate && deal.commission && deal.contactedVia === 'Agency' && (
-                      <span style={{ color: '#4ade80', fontWeight: 600 }}>Net ₹{Math.round(parseFloat(deal.agreedRate) * (1 - parseFloat(deal.commission) / 100)).toLocaleString('en-IN')}</span>
+                      <span className="pv" style={{ color: '#4ade80', fontWeight: 600 }}>Net ₹{Math.round(parseFloat(deal.agreedRate) * (1 - parseFloat(deal.commission) / 100)).toLocaleString('en-IN')}</span>
                     )}
                     {deal.deliverables && <span>📋 {deal.deliverables}</span>}
                     {deal.deadline    && <span style={{ color: deadlineCol, fontWeight: daysLeft !== null && daysLeft <= 3 ? 700 : 400 }}>📅 {fmtDate(deal.deadline)}{daysLeft !== null && daysLeft <= 3 && deal.stage !== 'Paid' ? ` (${daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'today!' : `${daysLeft}d`})` : ''}</span>}
@@ -2996,7 +3016,7 @@ td:last-child{text-align:right;font-weight:600}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>🧾 Invoices & Collabs</h1>
-          <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{collabs.length} total records · ₹{totalPaid.toLocaleString('en-IN')} received</div>
+          <div style={{ color: 'var(--t-muted)', fontSize: 13 }}>{collabs.length} total records · <span className="pv">₹{totalPaid.toLocaleString('en-IN')}</span> received</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button className="btn-gold" onClick={() => { setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ New Invoice</button>
@@ -3073,7 +3093,7 @@ td:last-child{text-align:right;font-weight:600}
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '14px 16px' }}>
             <div style={{ fontSize: 10, color: 'var(--t-soft)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>{s.label}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}><span className="pv">{s.value}</span></div>
             <div style={{ fontSize: 11, color: 'var(--t-muted)', marginTop: 4 }}>{s.sub}</div>
           </div>
         ))}
@@ -3258,7 +3278,7 @@ td:last-child{text-align:right;font-weight:600}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--t-heading)' }}>{c.brand}</span>
                     <span style={{ fontSize: 11, color: 'var(--t-faint)', fontFamily: 'monospace' }}>{c.invoiceNo}</span>
-                    {c.amount && <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 700 }}>₹{parseFloat(c.amount).toLocaleString('en-IN')}</span>}
+                    {c.amount && <span className="pv" style={{ fontSize: 13, color: '#4ade80', fontWeight: 700 }}>₹{parseFloat(c.amount).toLocaleString('en-IN')}</span>}
                     <span className="tag" style={{ background: `${sc}18`, color: sc, fontSize: 10, fontWeight: 700 }}>{c.status}</span>
                     {c.linkedDealId && <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8', fontSize: 10 }}>🔗 Deal</span>}
                   </div>
@@ -3404,9 +3424,9 @@ function VendorsTab() {
             {s.count > 0 && (
               <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
                 <span style={{ color: 'var(--t-faint)' }}>{s.count} deal{s.count > 1 ? 's' : ''} total</span>
-                <span style={{ color: '#4ade80', fontWeight: 600 }}>₹{s.total.toLocaleString('en-IN')} invoiced</span>
-                {s.paid > 0 && <span style={{ color: 'var(--t-muted)' }}>₹{s.paid.toLocaleString('en-IN')} paid</span>}
-                {s.total - s.paid > 0 && <span style={{ color: '#f97316' }}>₹{(s.total - s.paid).toLocaleString('en-IN')} pending</span>}
+                <span className="pv" style={{ color: '#4ade80', fontWeight: 600 }}>₹{s.total.toLocaleString('en-IN')} invoiced</span>
+                {s.paid > 0 && <span className="pv" style={{ color: 'var(--t-muted)' }}>₹{s.paid.toLocaleString('en-IN')} paid</span>}
+                {s.total - s.paid > 0 && <span className="pv" style={{ color: '#f97316' }}>₹{(s.total - s.paid).toLocaleString('en-IN')} pending</span>}
               </div>
             )}
             {v.notes && <div style={{ fontSize: 12, color: 'var(--t-faint)', marginTop: 5 }}>{v.notes}</div>}
@@ -3695,7 +3715,7 @@ function TrainingsTab() {
             <div key={cat} className="card" style={{ flex: 1, padding: '12px 14px', borderLeft: `3px solid ${col}50` }}>
               <div style={{ fontSize: 10, color: 'var(--t-muted)', letterSpacing: 0.8, marginBottom: 4 }}>{T_CAT_ICONS[cat]} {cat}</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: col }}>{cnt}</div>
-              {rev > 0 && <div style={{ fontSize: 11, color: '#4ade80', marginTop: 2 }}>₹{rev.toLocaleString('en-IN')}</div>}
+              {rev > 0 && <div className="pv" style={{ fontSize: 11, color: '#4ade80', marginTop: 2 }}>₹{rev.toLocaleString('en-IN')}</div>}
             </div>
           );
         })}
