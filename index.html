@@ -35,6 +35,37 @@
     .btn-ghost:hover { border-color: #444; color: #ccc; }
     .tag { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
     .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+
+    /* ── Mobile layout ── */
+    .app-shell   { display: flex; height: 100vh; overflow: hidden; background: #0d0d0d; }
+    .app-sidebar { width: 220px; background: #0a0a0a; border-right: 1px solid #1a1a1a; display: flex; flex-direction: column; flex-shrink: 0; }
+    .app-main    { flex: 1; overflow-y: auto; padding: 28px 32px; -webkit-overflow-scrolling: touch; }
+    .mobile-nav  { display: none; }
+
+    @media (max-width: 767px) {
+      .app-sidebar { display: none; }
+      .app-main    { padding: 18px 14px 72px; }
+      .mobile-nav  {
+        display: flex;
+        position: fixed; bottom: 0; left: 0; right: 0;
+        height: 56px;
+        background: #0a0a0a;
+        border-top: 1px solid #1e1e1e;
+        z-index: 200;
+        align-items: stretch;
+      }
+      .mob-btn {
+        flex: 1; background: none; border: none; cursor: pointer;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 2px; color: #444; font-size: 9px; letter-spacing: 0.2px;
+        transition: color 0.15s; padding: 4px 2px;
+      }
+      .mob-btn.mob-active { color: #F5C518; }
+      .mob-btn .mob-icon  { font-size: 18px; line-height: 1; }
+      /* Tighten up form rows on mobile */
+      .mob-stack { flex-direction: column !important; }
+      .mob-full  { width: 100% !important; }
+    }
   </style>
 </head>
 <body>
@@ -214,10 +245,10 @@ function Dashboard({ user, profile }) {
   ];
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0d0d0d' }}>
+    <div className="app-shell">
 
-      {/* ── Sidebar ── */}
-      <aside style={{ width: 220, background: '#0a0a0a', borderRight: '1px solid #1a1a1a', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      {/* ── Sidebar (desktop only) ── */}
+      <aside className="app-sidebar">
         {/* Brand */}
         <div style={{ padding: '22px 18px 18px', borderBottom: '1px solid #161616' }}>
           <div style={{ fontWeight: 800, fontSize: 16, color: GOLD, letterSpacing: '-0.3px', lineHeight: 1.2 }}>GrowGuru</div>
@@ -257,7 +288,7 @@ function Dashboard({ user, profile }) {
       </aside>
 
       {/* ── Content Canvas ── */}
-      <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+      <main className="app-main">
         <div className="fade" key={tab} style={{ maxWidth: 920, margin: '0 auto' }}>
           {tab === 'overview'  && <OverviewTab onNavigate={setTab} />}
           {tab === 'today'     && <TodayTab />}
@@ -269,6 +300,16 @@ function Dashboard({ user, profile }) {
           {tab === 'settings'  && canSeeSettings && <SettingsTab isAdmin={isAdmin} currentUid={user.uid} />}
         </div>
       </main>
+
+      {/* ── Bottom nav (mobile only) ── */}
+      <nav className="mobile-nav">
+        {tabs.map(t => (
+          <button key={t.id} className={`mob-btn${tab === t.id ? ' mob-active' : ''}`} onClick={() => setTab(t.id)}>
+            <span className="mob-icon">{t.label}</span>
+            <span>{t.full}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
@@ -335,18 +376,18 @@ function OverviewTab({ onNavigate }) {
       </div>
 
       {/* Stat cards — row 1 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 12 }}>
         <StatCard label="Today's Tasks" value={`${doneTasks.length}/${todayTasks.length}`} sub="completed today" color={doneTasks.length === todayTasks.length && todayTasks.length > 0 ? '#4ade80' : GOLD} onClick={() => onNavigate('today')} />
         <StatCard label="Active Pipeline" value={activePipeline.length} sub={`of ${data.pipeline.length} total items`} color="#38bdf8" onClick={() => onNavigate('pipeline')} />
         <StatCard label="Overdue" value={totalOverdue} sub={totalOverdue === 0 ? 'all clear ✓' : 'need attention'} color={totalOverdue > 0 ? '#ff6b6b' : '#4ade80'} onClick={totalOverdue > 0 ? () => onNavigate('today') : undefined} />
       </div>
       {/* Stat cards — row 2 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 24 }}>
         <StatCard label="Active Deals" value={activeDeals.length} sub={totalDealValue ? `₹${totalDealValue.toLocaleString('en-IN')} in pipeline` : 'no active deals'} color={GOLD} onClick={() => onNavigate('deals')} />
         <StatCard label="Upcoming Trainings" value={upcomingTrainings.length} sub={trainingRevenue ? `₹${trainingRevenue.toLocaleString('en-IN')} earned` : 'sessions planned'} color="#a78bfa" onClick={() => onNavigate('trainings')} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 16 }}>
         {/* Pipeline breakdown */}
         <div className="card" onClick={() => onNavigate('pipeline')} style={{ padding: 18, cursor: 'pointer' }}
           onMouseEnter={e => e.currentTarget.style.borderColor = '#383838'}
