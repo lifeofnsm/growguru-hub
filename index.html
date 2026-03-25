@@ -239,6 +239,7 @@ function Dashboard({ user, profile }) {
     { id: 'weekly',     label: '📅', full: 'Weekly Planner' },
     { id: 'pipeline',   label: '🎬', full: 'Content Pipeline' },
     { id: 'deals',      label: '💼', full: 'Deals' },
+    { id: 'vendors',    label: '🏢', full: 'Vendors' },
     { id: 'trainings',  label: '📚', full: 'Trainings' },
     { id: 'ideas',      label: '💡', full: 'Ideas' },
     { id: 'invoices',   label: '🧾', full: 'Invoices' },
@@ -297,6 +298,7 @@ function Dashboard({ user, profile }) {
           {tab === 'weekly'    && <WeeklyTab />}
           {tab === 'pipeline'  && <PipelineTab />}
           {tab === 'deals'     && <DealsTab />}
+          {tab === 'vendors'   && <VendorsTab />}
           {tab === 'trainings' && <TrainingsTab />}
           {tab === 'ideas'     && <IdeasTab />}
           {tab === 'invoices'  && <InvoicesTab />}
@@ -365,6 +367,8 @@ function OverviewTab({ onNavigate }) {
   const activeDeals       = data.deals.filter(d => !['Paid'].includes(d.stage));
   const overdueDeals      = data.deals.filter(d => d.deadline && d.deadline < today && !['Paid'].includes(d.stage));
   const paymentDueDeals   = data.deals.filter(d => d.paymentDue && d.paymentDue <= today && d.paymentStatus !== 'Paid');
+  const invoicedPending   = data.deals.filter(d => d.stage === 'Invoiced');
+  const liveNeedInvoice   = data.deals.filter(d => d.stage === 'Live' && !d.invoiceNo);
   const totalDealValue    = activeDeals.reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
   const paidDealsValue    = data.deals.filter(d => d.stage === 'Paid').reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
   const upcomingTrainings = data.trainings.filter(t => t.status === 'Upcoming' || t.status === 'Live');
@@ -495,6 +499,54 @@ function OverviewTab({ onNavigate }) {
       {totalOverdue === 0 && (
         <div style={{ textAlign: 'center', padding: '28px 0', color: '#4ade80', fontSize: 13 }}>✨ No overdue items — you're on track.</div>
       )}
+
+      {/* Payment Followup card */}
+      {(invoicedPending.length > 0 || liveNeedInvoice.length > 0) && (
+        <div className="card" style={{ padding: 18, marginTop: 16, borderColor: '#F5C51833' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#F5C518', marginBottom: 12 }}>🧾 Payment Followup ({invoicedPending.length + liveNeedInvoice.length})</div>
+
+          {invoicedPending.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Invoice Raised — Awaiting Payment</div>
+              {invoicedPending.map(d => {
+                const amt = d.agreedRate ? `₹${parseFloat(d.agreedRate).toLocaleString('en-IN')}` : null;
+                const comm = d.commission && d.contactedVia === 'Agency' ? Math.round(parseFloat(d.agreedRate || 0) * (1 - parseFloat(d.commission) / 100)) : null;
+                return (
+                  <div key={d.id} onClick={() => onNavigate('invoices')} style={{ fontSize: 12, padding: '8px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
+                    onMouseLeave={e => e.currentTarget.style.background = ''}>
+                    <span>🧾</span>
+                    <span style={{ color: '#ddd', fontWeight: 600, flex: 1 }}>{d.brand}</span>
+                    {d.invoiceNo && <span style={{ color: '#888', fontSize: 11 }}>{d.invoiceNo}</span>}
+                    {d.paymentDue && <span style={{ color: d.paymentDue < today ? '#ff6b6b' : '#f97316', fontSize: 11 }}>due {fmtDate(d.paymentDue)}</span>}
+                    {comm ? <span style={{ color: '#4ade80', fontWeight: 600 }}>Net ₹{comm.toLocaleString('en-IN')}</span> : amt ? <span style={{ color: '#4ade80', fontWeight: 600 }}>{amt}</span> : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {liveNeedInvoice.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Live — Raise Invoice</div>
+              {liveNeedInvoice.map(d => {
+                const amt = d.agreedRate ? `₹${parseFloat(d.agreedRate).toLocaleString('en-IN')}` : null;
+                return (
+                  <div key={d.id} onClick={() => onNavigate('deals')} style={{ fontSize: 12, padding: '8px 0', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#ffffff08'}
+                    onMouseLeave={e => e.currentTarget.style.background = ''}>
+                    <span>📤</span>
+                    <span style={{ color: '#ddd', fontWeight: 600, flex: 1 }}>{d.brand}</span>
+                    <span style={{ color: '#4ade80', fontSize: 11, fontWeight: 600 }}>LIVE</span>
+                    {amt && <span style={{ color: '#F5C518', fontWeight: 600 }}>{amt}</span>}
+                    <span style={{ color: '#888', fontSize: 11 }}>→ generate invoice</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -602,103 +654,162 @@ function WeeklyTab() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {weekDays.map((day, idx) => {
           const dayTasks     = tasks.filter(t => t.date === day);
           const dayPipe      = pipeline.filter(p => p.publishDate === day);
           const dayTrainings = trainings.filter(tr => tr.date === day);
           const isToday      = day === today;
-          const done     = dayTasks.filter(t => t.done).length;
+          const isPast       = day < today;
+          const done         = dayTasks.filter(t => t.done).length;
+          const hasContent   = dayTasks.length > 0 || dayPipe.length > 0 || dayTrainings.length > 0;
+          const dateObj      = new Date(day + 'T00:00:00');
+          const dateLabel    = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
           return (
             <div key={day} className="card" style={{
-              padding: '12px 10px',
-              borderColor: isToday ? GOLD + '88' : '#252525',
-              minHeight: 160,
-              background: isToday ? '#1a1800' : '#161616',
+              padding: 0,
+              borderColor: isToday ? GOLD + '99' : isPast && !hasContent ? '#1c1c1c' : '#252525',
+              background: isToday ? '#1a1800' : isPast ? '#141414' : '#161616',
+              overflow: 'hidden',
             }}>
-              {/* Day header */}
-              <div style={{ marginBottom: 10, paddingBottom: 8, borderBottom: `1px solid ${isToday ? GOLD + '33' : '#1e1e1e'}` }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? GOLD : '#999', textTransform: 'uppercase', letterSpacing: 1 }}>{DAY_NAMES[idx]}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: isToday ? GOLD : '#ccc', lineHeight: 1.15 }}>{new Date(day + 'T00:00:00').getDate()}</div>
-                {dayTasks.length > 0 && (
-                  <div style={{ fontSize: 10, color: done === dayTasks.length ? '#4ade80' : '#888', marginTop: 2 }}>
-                    {done}/{dayTasks.length} done
-                  </div>
+              {/* ── Day header row ── */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '10px 16px',
+                borderBottom: hasContent || addingDay === day ? `1px solid ${isToday ? GOLD + '33' : '#1e1e1e'}` : 'none',
+                background: isToday ? '#1f1c00' : 'transparent',
+              }}>
+                {/* Day name + date */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 110 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: isToday ? GOLD : isPast ? '#555' : '#bbb', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {DAY_NAMES[idx]}
+                  </span>
+                  <span style={{ fontSize: 12, color: isToday ? GOLD + 'cc' : '#555' }}>{dateLabel}</span>
+                  {isToday && <span style={{ fontSize: 10, background: GOLD, color: '#000', fontWeight: 700, borderRadius: 4, padding: '1px 6px', letterSpacing: 0.5 }}>TODAY</span>}
+                </div>
+
+                {/* Summary badges */}
+                <div style={{ display: 'flex', gap: 6, flex: 1, flexWrap: 'wrap' }}>
+                  {dayTasks.length > 0 && (
+                    <span style={{
+                      fontSize: 11, borderRadius: 4, padding: '2px 8px', fontWeight: 600,
+                      background: done === dayTasks.length ? '#4ade8022' : '#ffffff0a',
+                      color: done === dayTasks.length ? '#4ade80' : '#888',
+                    }}>
+                      {done === dayTasks.length ? '✓' : `${done}/`}{done !== dayTasks.length ? `${dayTasks.length}` : ''} tasks{done === dayTasks.length ? ' done' : ''}
+                    </span>
+                  )}
+                  {dayPipe.length > 0 && (
+                    <span style={{ fontSize: 11, borderRadius: 4, padding: '2px 8px', background: '#38bdf812', color: '#38bdf8', fontWeight: 600 }}>
+                      🎬 {dayPipe.length} video{dayPipe.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {dayTrainings.length > 0 && (
+                    <span style={{ fontSize: 11, borderRadius: 4, padding: '2px 8px', background: '#a78bfa12', color: '#a78bfa', fontWeight: 600 }}>
+                      📚 {dayTrainings.length} session{dayTrainings.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
+                {/* Add task button (top-right) */}
+                {addingDay !== day && (
+                  <button onClick={() => setAddingDay(day)} style={{
+                    background: 'none', border: `1px dashed ${isToday ? GOLD + '66' : '#333'}`,
+                    borderRadius: 5, color: isToday ? GOLD + 'aa' : '#666',
+                    cursor: 'pointer', fontSize: 12, padding: '3px 12px', flexShrink: 0,
+                    transition: 'all 0.15s',
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD + '99'; e.currentTarget.style.color = GOLD; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = isToday ? GOLD + '66' : '#333'; e.currentTarget.style.color = isToday ? GOLD + 'aa' : '#666'; }}
+                  >+ Task</button>
                 )}
               </div>
 
-              {/* Pipeline items for this day */}
-              {dayPipe.map(p => (
-                <div key={p.id} style={{
-                  fontSize: 11, color: '#38bdf8', background: '#38bdf810',
-                  borderRadius: 4, padding: '3px 7px', marginBottom: 4,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }} title={p.title}>
-                  🎬 {p.title}
-                </div>
-              ))}
+              {/* ── Content area ── */}
+              {(hasContent || addingDay === day) && (
+                <div style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
 
-              {/* Training sessions for this day */}
-              {dayTrainings.map(tr => (
-                <div key={tr.id} style={{
-                  fontSize: 11, color: '#a78bfa', background: '#a78bfa12',
-                  borderRadius: 4, padding: '3px 7px', marginBottom: 4,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }} title={`${tr.title}${tr.time ? ' · ' + tr.time : ''}`}>
-                  📚 {tr.title}{tr.time ? <span style={{ opacity: 0.6 }}> · {tr.time}</span> : ''}
-                </div>
-              ))}
+                  {/* Pipeline items */}
+                  {dayPipe.map(p => (
+                    <div key={p.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      fontSize: 12, color: '#38bdf8', background: '#38bdf80d',
+                      borderRadius: 6, padding: '6px 12px',
+                      borderLeft: '3px solid #38bdf844',
+                    }}>
+                      <span>🎬</span>
+                      <span style={{ flex: 1 }}>{p.title}</span>
+                      {p.stage && <span style={{ fontSize: 10, color: '#38bdf888', background: '#38bdf810', borderRadius: 3, padding: '1px 6px' }}>{p.stage}</span>}
+                    </div>
+                  ))}
 
-              {/* Tasks */}
-              {dayTasks.map(t => (
-                <div key={t.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 3,
-                  fontSize: 11, padding: '3px 5px', marginBottom: 3, borderRadius: 4,
-                  background: t.done ? '#4ade8010' : `${P_COLORS[t.priority]}10`,
-                }}>
-                  <span onClick={() => toggle(t.id, t.done)} style={{
-                    flex: 1, cursor: 'pointer', minWidth: 0,
-                    color: t.done ? '#4ade80' : P_COLORS[t.priority],
-                    textDecoration: t.done ? 'line-through' : 'none',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    opacity: t.done ? 0.6 : 1, lineHeight: 1.4,
-                  }} title={t.title}>
-                    {t.done ? '✓' : '·'} {t.title}
-                  </span>
-                  <button onClick={() => delTask(t.id)} title="Remove" style={{
-                    background: 'none', border: 'none', color: '#555', cursor: 'pointer',
-                    fontSize: 13, lineHeight: 1, padding: '0 1px', flexShrink: 0,
-                  }}
-                    onMouseEnter={e => e.target.style.color = '#ff6b6b'}
-                    onMouseLeave={e => e.target.style.color = '#555'}
-                  >×</button>
-                </div>
-              ))}
+                  {/* Training sessions */}
+                  {dayTrainings.map(tr => (
+                    <div key={tr.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      fontSize: 12, color: '#a78bfa', background: '#a78bfa0d',
+                      borderRadius: 6, padding: '6px 12px',
+                      borderLeft: '3px solid #a78bfa44',
+                    }}>
+                      <span>📚</span>
+                      <span style={{ flex: 1 }}>{tr.title}</span>
+                      {tr.time && <span style={{ fontSize: 11, color: '#a78bfa88' }}>{tr.time}</span>}
+                    </div>
+                  ))}
 
-              {/* Add task inline form */}
-              {addingDay === day ? (
-                <div style={{ marginTop: 6 }}>
-                  <input className="input" placeholder="Task name..." autoFocus value={newTask.title}
-                    onChange={e => setNewTask(v => ({ ...v, title: e.target.value }))}
-                    onKeyDown={e => { if (e.key === 'Enter') addTask(day); if (e.key === 'Escape') setAddingDay(null); }}
-                    style={{ fontSize: 11, padding: '5px 8px', marginBottom: 5 }} />
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <select className="select" value={newTask.priority} onChange={e => setNewTask(v => ({ ...v, priority: e.target.value }))} style={{ fontSize: 11, padding: '4px 6px', flex: 1 }}>
-                      <option>P1</option><option>P2</option><option>P3</option>
-                    </select>
-                    <button onClick={() => addTask(day)} disabled={saving} style={{ background: GOLD, border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: '#000' }}>Add</button>
-                    <button onClick={() => setAddingDay(null)} style={{ background: 'transparent', border: '1px solid #333', borderRadius: 6, padding: '4px 8px', fontSize: 11, color: '#888', cursor: 'pointer' }}>✕</button>
-                  </div>
+                  {/* Tasks */}
+                  {dayTasks.map(t => (
+                    <div key={t.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      fontSize: 12, padding: '6px 10px', borderRadius: 6,
+                      background: t.done ? '#4ade8008' : `${P_COLORS[t.priority]}0d`,
+                      borderLeft: `3px solid ${t.done ? '#4ade8033' : P_COLORS[t.priority] + '55'}`,
+                    }}>
+                      <span onClick={() => toggle(t.id, t.done)} style={{ cursor: 'pointer', fontSize: 14, lineHeight: 1, color: t.done ? '#4ade80' : P_COLORS[t.priority], flexShrink: 0 }}>
+                        {t.done ? '✓' : '○'}
+                      </span>
+                      <span onClick={() => toggle(t.id, t.done)} style={{
+                        flex: 1, cursor: 'pointer',
+                        color: t.done ? '#555' : '#ccc',
+                        textDecoration: t.done ? 'line-through' : 'none',
+                        lineHeight: 1.4,
+                      }}>
+                        {t.title}
+                      </span>
+                      {t.priority && !t.done && (
+                        <span style={{ fontSize: 10, color: P_COLORS[t.priority], background: P_COLORS[t.priority] + '18', borderRadius: 3, padding: '1px 5px', flexShrink: 0 }}>{t.priority}</span>
+                      )}
+                      <button onClick={() => delTask(t.id)} style={{
+                        background: 'none', border: 'none', color: '#444', cursor: 'pointer',
+                        fontSize: 15, lineHeight: 1, padding: '0 2px', flexShrink: 0,
+                      }}
+                        onMouseEnter={e => e.target.style.color = '#ff6b6b'}
+                        onMouseLeave={e => e.target.style.color = '#444'}
+                      >×</button>
+                    </div>
+                  ))}
+
+                  {/* Add task inline form */}
+                  {addingDay === day && (
+                    <div style={{ marginTop: 4, background: '#1e1e1e', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <input className="input" placeholder="Task name..." autoFocus value={newTask.title}
+                        onChange={e => setNewTask(v => ({ ...v, title: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') addTask(day); if (e.key === 'Escape') setAddingDay(null); }}
+                        style={{ fontSize: 13, padding: '7px 10px' }} />
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <select className="select" value={newTask.priority} onChange={e => setNewTask(v => ({ ...v, priority: e.target.value }))} style={{ fontSize: 12, padding: '5px 8px' }}>
+                          <option>P1</option><option>P2</option><option>P3</option>
+                        </select>
+                        <select className="select" value={newTask.pillar} onChange={e => setNewTask(v => ({ ...v, pillar: e.target.value }))} style={{ fontSize: 12, padding: '5px 8px', flex: 1 }}>
+                          {['Content', 'Brand', 'Learning', 'Admin', 'Personal'].map(p => <option key={p}>{p}</option>)}
+                        </select>
+                        <button onClick={() => addTask(day)} disabled={saving} style={{ background: GOLD, border: 'none', borderRadius: 6, padding: '6px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#000', flexShrink: 0 }}>Add</button>
+                        <button onClick={() => setAddingDay(null)} style={{ background: 'transparent', border: '1px solid #333', borderRadius: 6, padding: '6px 10px', fontSize: 12, color: '#888', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <button onClick={() => setAddingDay(day)} title="Add task" style={{
-                  marginTop: 6, background: 'none', border: '1px dashed #333',
-                  borderRadius: 5, color: '#777', cursor: 'pointer',
-                  fontSize: 14, width: '100%', padding: '3px 0', transition: 'all 0.15s',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD + '66'; e.currentTarget.style.color = GOLD; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#777'; }}
-                >+</button>
               )}
             </div>
           );
@@ -1425,10 +1536,11 @@ function PipelineTab() {
 }
 
 // --- DEALS ----------------------------------------------------
-const D_EMPTY = { brand: '', stage: 'Lead', contact: '', platform: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', paymentDue: '', notes: '' };
+const D_EMPTY = { brand: '', brandId: '', stage: 'Lead', contact: '', contactedVia: 'Direct', platform: '', agencyId: '', commission: '', agreedRate: '', deliverables: '', paymentStatus: 'Pending', deadline: '', paymentDue: '', notes: '' };
 
 function DealsTab() {
   const [deals, setDeals]       = useState([]);
+  const [vendors, setVendors]   = useState([]);
   const [form, setForm]         = useState({ ...D_EMPTY });
   const [adding, setAdding]     = useState(false);
   const [saving, setSaving]     = useState(false);
@@ -1437,7 +1549,9 @@ function DealsTab() {
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    return db.collection('deals').orderBy('createdAt', 'desc').onSnapshot(snap => setDeals(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const u1 = db.collection('deals').orderBy('createdAt', 'desc').onSnapshot(snap => setDeals(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const u2 = db.collection('vendors').onSnapshot(snap => setVendors(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return () => { u1(); u2(); };
   }, []);
 
   const add = async () => {
@@ -1452,7 +1566,7 @@ function DealsTab() {
 
   const startEdit = (deal) => {
     setEditId(deal.id);
-    setEditForm({ brand: deal.brand || '', stage: deal.stage || 'Lead', contact: deal.contact || '', platform: deal.platform || '', agreedRate: deal.agreedRate || '', deliverables: deal.deliverables || '', paymentStatus: deal.paymentStatus || 'Pending', deadline: deal.deadline || '', paymentDue: deal.paymentDue || '', notes: deal.notes || '' });
+    setEditForm({ brand: deal.brand || '', brandId: deal.brandId || '', stage: deal.stage || 'Lead', contact: deal.contact || '', contactedVia: deal.contactedVia || 'Direct', platform: deal.platform || '', agencyId: deal.agencyId || '', commission: deal.commission || '', agreedRate: deal.agreedRate || '', deliverables: deal.deliverables || '', paymentStatus: deal.paymentStatus || 'Pending', deadline: deal.deadline || '', paymentDue: deal.paymentDue || '', notes: deal.notes || '' });
     setAdding(false);
   };
 
@@ -1521,41 +1635,119 @@ function DealsTab() {
     notify('brand', `🧾  **Invoice Generated**\n> **${deal.brand}**  ·  ${invNo}\n> ₹${deal.agreedRate || '—'}  ·  Deal → Invoiced`);
   };
 
-  // Shared form fields — used by both add and edit
-  const DealForm = ({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor }) => (
-    <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${accentColor}44` }}>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-        <input className="input" placeholder="Brand name *" value={f.brand} onChange={e => onChange({ ...f, brand: e.target.value })} style={{ flex: 2, minWidth: 140 }} autoFocus />
-        <input className="input" placeholder="POC / Contact" value={f.contact} onChange={e => onChange({ ...f, contact: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
-      </div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-        <select className="select" value={f.stage} onChange={e => onChange({ ...f, stage: e.target.value })} style={{ flex: 1, minWidth: 120 }}>
-          {D_STAGES.map(s => <option key={s}>{s}</option>)}
-        </select>
-        <select className="select" value={f.paymentStatus} onChange={e => onChange({ ...f, paymentStatus: e.target.value })} style={{ flex: 1, minWidth: 100 }}>
-          {['Pending', 'Partial', 'Paid'].map(s => <option key={s}>{s}</option>)}
-        </select>
-        <input className="input" placeholder="Rate (₹)" value={f.agreedRate} onChange={e => onChange({ ...f, agreedRate: e.target.value })} style={{ flex: 1, minWidth: 100 }} />
-      </div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-        <input className="input" placeholder="Agency / Platform" value={f.platform} onChange={e => onChange({ ...f, platform: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
-        <div style={{ flex: 1, minWidth: 130 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>📅 Deadline</div>
-          <input className="input" type="date" value={f.deadline} onChange={e => onChange({ ...f, deadline: e.target.value })} />
+  // Shared form — vendor-aware (brand selector + contacted via + agency selector)
+  const DealForm = ({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor }) => {
+    const brandVendors  = vendors.filter(v => v.type === 'Brand');
+    const agencyVendors = vendors.filter(v => v.type === 'Agency');
+    const gross = parseFloat(f.agreedRate) || 0;
+    const comm  = parseFloat(f.commission) || 0;
+    const net   = gross && f.contactedVia === 'Agency' && comm ? Math.round(gross * (1 - comm / 100)) : null;
+
+    const pickBrand  = id => { const v = vendors.find(x => x.id === id); if (v) onChange({ ...f, brandId: v.id, brand: v.name, contact: v.contactPerson || f.contact }); };
+    const pickAgency = id => { const v = vendors.find(x => x.id === id); if (v) onChange({ ...f, agencyId: v.id, platform: v.name, commission: v.commission || '' }); };
+
+    return (
+      <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${accentColor}44` }}>
+
+        {/* Brand row */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 5 }}>🏷️ Brand</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {brandVendors.length > 0 && (
+              <select className="select" value={f.brandId || ''} onChange={e => pickBrand(e.target.value)} style={{ minWidth: 150 }}>
+                <option value="">↓ Saved brands</option>
+                {brandVendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+            )}
+            <input className="input" placeholder="Brand name *" value={f.brand} onChange={e => onChange({ ...f, brand: e.target.value, brandId: '' })} style={{ flex: 1, minWidth: 140 }} autoFocus />
+          </div>
         </div>
-        <div style={{ flex: 1, minWidth: 130 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>💳 Payment Due</div>
-          <input className="input" type="date" value={f.paymentDue} onChange={e => onChange({ ...f, paymentDue: e.target.value })} />
+
+        {/* Contacted via */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>📞 Contacted via</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['Direct', 'Agency'].map(opt => (
+              <button key={opt} type="button"
+                onClick={() => onChange({ ...f, contactedVia: opt, ...(opt === 'Direct' ? { agencyId: '', platform: '', commission: '' } : {}) })}
+                style={{ padding: '6px 16px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: f.contactedVia === opt ? 700 : 400,
+                  background: f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf820' : `${GOLD}20`) : 'transparent',
+                  color: f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf8' : GOLD) : '#555',
+                  border: `1px solid ${f.contactedVia === opt ? (opt === 'Direct' ? '#38bdf8' : GOLD) : '#222'}`, transition: 'all 0.15s' }}>
+                {opt === 'Direct' ? '🤝 Direct' : '🏢 Via Agency'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Agency box */}
+        {f.contactedVia === 'Agency' && (
+          <div style={{ marginBottom: 10, padding: '12px 14px', background: `${GOLD}08`, border: `1px solid ${GOLD}22`, borderRadius: 8 }}>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>🏢 Agency</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+              {agencyVendors.length > 0 && (
+                <select className="select" value={f.agencyId || ''} onChange={e => pickAgency(e.target.value)} style={{ minWidth: 150 }}>
+                  <option value="">↓ Saved agencies</option>
+                  {agencyVendors.map(v => <option key={v.id} value={v.id}>{v.name}{v.commission ? ` (${v.commission}%)` : ''}</option>)}
+                </select>
+              )}
+              <input className="input" placeholder="Agency name" value={f.platform} onChange={e => onChange({ ...f, platform: e.target.value, agencyId: '' })} style={{ flex: 1, minWidth: 120 }} />
+              <input className="input" placeholder="Commission %" type="number" value={f.commission} onChange={e => onChange({ ...f, commission: e.target.value })} style={{ width: 100 }} />
+            </div>
+            {net !== null && (
+              <div style={{ fontSize: 12, color: '#888' }}>
+                Gross <span style={{ color: '#ccc' }}>₹{gross.toLocaleString('en-IN')}</span>
+                <span style={{ color: '#555' }}> − agency cut </span>
+                <span style={{ color: '#f97316' }}>₹{Math.round(gross * comm / 100).toLocaleString('en-IN')}</span>
+                <span style={{ color: '#555' }}> = </span>
+                <span style={{ color: '#4ade80', fontWeight: 700 }}>Net ₹{net.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* POC + Stage + Payment */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+          <input className="input" placeholder="POC / Contact" value={f.contact} onChange={e => onChange({ ...f, contact: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
+          <select className="select" value={f.stage} onChange={e => onChange({ ...f, stage: e.target.value })} style={{ flex: 1, minWidth: 120 }}>
+            {D_STAGES.map(s => <option key={s}>{s}</option>)}
+          </select>
+          <select className="select" value={f.paymentStatus} onChange={e => onChange({ ...f, paymentStatus: e.target.value })} style={{ flex: 1, minWidth: 100 }}>
+            {['Pending', 'Partial', 'Paid'].map(s => <option key={s}>{s}</option>)}
+          </select>
+        </div>
+
+        {/* Rate row */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <input className="input" placeholder="Agreed Rate ₹ (Gross)" value={f.agreedRate} onChange={e => onChange({ ...f, agreedRate: e.target.value })} style={{ flex: 1, minWidth: 130 }} />
+          {net !== null && (
+            <div style={{ flex: 1, minWidth: 130, padding: '9px 13px', background: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: 8, fontSize: 12, color: '#888' }}>
+              Net to you: <strong style={{ color: '#4ade80' }}>₹{net.toLocaleString('en-IN')}</strong>
+            </div>
+          )}
+        </div>
+
+        {/* Dates */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 130 }}>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>📅 Deadline</div>
+            <input className="input" type="date" value={f.deadline} onChange={e => onChange({ ...f, deadline: e.target.value })} />
+          </div>
+          <div style={{ flex: 1, minWidth: 130 }}>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>💳 Payment Due</div>
+            <input className="input" type="date" value={f.paymentDue} onChange={e => onChange({ ...f, paymentDue: e.target.value })} />
+          </div>
+        </div>
+
+        <input className="input" placeholder="Deliverables" value={f.deliverables} onChange={e => onChange({ ...f, deliverables: e.target.value })} style={{ marginBottom: 10 }} />
+        <input className="input" placeholder="Notes" value={f.notes} onChange={e => onChange({ ...f, notes: e.target.value })} style={{ marginBottom: 12 }} />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-gold" onClick={onSave} disabled={loading} style={{ fontSize: 13 }}>{loading ? 'Saving...' : btnLabel}</button>
+          <button className="btn-ghost" onClick={onCancel} style={{ fontSize: 13 }}>Cancel</button>
         </div>
       </div>
-      <input className="input" placeholder="Deliverables" value={f.deliverables} onChange={e => onChange({ ...f, deliverables: e.target.value })} style={{ marginBottom: 10 }} />
-      <input className="input" placeholder="Notes" value={f.notes} onChange={e => onChange({ ...f, notes: e.target.value })} style={{ marginBottom: 12 }} />
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn-gold" onClick={onSave} disabled={loading} style={{ fontSize: 13 }}>{loading ? 'Saving...' : btnLabel}</button>
-        <button className="btn-ghost" onClick={onCancel} style={{ fontSize: 13 }}>Cancel</button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div>
@@ -1598,7 +1790,11 @@ function DealsTab() {
                   </div>
                   <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#888' }}>
                     {deal.contact     && <span>👤 {deal.contact}</span>}
-                    {deal.platform    && <span>🏢 {deal.platform}</span>}
+                    {deal.contactedVia === 'Agency' && deal.platform && <span>🏢 via {deal.platform}{deal.commission ? ` (${deal.commission}% cut)` : ''}</span>}
+                    {deal.contactedVia !== 'Agency' && deal.platform && <span>🏢 {deal.platform}</span>}
+                    {deal.agreedRate && deal.commission && deal.contactedVia === 'Agency' && (
+                      <span style={{ color: '#4ade80', fontWeight: 600 }}>Net ₹{Math.round(parseFloat(deal.agreedRate) * (1 - parseFloat(deal.commission) / 100)).toLocaleString('en-IN')}</span>
+                    )}
                     {deal.deliverables && <span>📋 {deal.deliverables}</span>}
                     {deal.deadline    && <span style={{ color: deadlineCol, fontWeight: daysLeft !== null && daysLeft <= 3 ? 700 : 400 }}>📅 {fmtDate(deal.deadline)}{daysLeft !== null && daysLeft <= 3 && deal.stage !== 'Paid' ? ` (${daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'today!' : `${daysLeft}d`})` : ''}</span>}
                     {deal.paymentDue && deal.paymentStatus !== 'Paid' && <span style={{ color: payDueCol, fontWeight: payDaysLeft !== null && payDaysLeft <= 7 ? 700 : 400 }}>💳 due {fmtDate(deal.paymentDue)}{payDaysLeft !== null && payDaysLeft <= 7 ? ` (${payDaysLeft < 0 ? `${Math.abs(payDaysLeft)}d overdue` : payDaysLeft === 0 ? 'today!' : `${payDaysLeft}d`})` : ''}</span>}
@@ -1980,7 +2176,7 @@ function InvoicesTab() {
   const [filterStatus, setFilterStatus] = useState('All');
 
   useEffect(() => {
-    return db.collection('collabs').orderBy('invoiceDate', 'desc').onSnapshot(snap =>
+    return db.collection('collabs').orderBy('createdAt', 'desc').onSnapshot(snap =>
       setCollabs(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     );
   }, []);
@@ -1993,7 +2189,7 @@ function InvoicesTab() {
     if (filterBrand  !== 'All' && c.brand !== filterBrand)                        return false;
     if (filterStatus !== 'All' && c.status !== filterStatus)                      return false;
     return true;
-  });
+  }).sort((a, b) => (b.invoiceDate || b.createdAt || '').localeCompare(a.invoiceDate || a.createdAt || ''));
 
   // ── Analytics computed values ──
   const allForYear = filterYear === 'All' ? collabs : collabs.filter(c => c.invoiceDate?.slice(0, 4) === filterYear);
@@ -2297,6 +2493,174 @@ function InvoicesTab() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// --- VENDORS --------------------------------------------------
+const V_EMPTY = { name: '', type: 'Agency', contactPerson: '', email: '', phone: '', commission: '', gstin: '', paymentTerms: '', notes: '' };
+
+function VendorsTab() {
+  const [vendors, setVendors]   = useState([]);
+  const [allDeals, setAllDeals] = useState([]);
+  const [form, setForm]         = useState({ ...V_EMPTY });
+  const [addType, setAddType]   = useState('Agency');
+  const [adding, setAdding]     = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [editId, setEditId]     = useState(null);
+  const [editForm, setEditForm] = useState({ ...V_EMPTY });
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    const u1 = db.collection('vendors').orderBy('name').onSnapshot(snap => setVendors(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const u2 = db.collection('deals').onSnapshot(snap => setAllDeals(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return () => { u1(); u2(); };
+  }, []);
+
+  const stats = v => {
+    const matched = allDeals.filter(d =>
+      d.brandId === v.id || d.agencyId === v.id ||
+      (v.type === 'Brand' ? d.brand === v.name : d.platform === v.name)
+    );
+    const total  = matched.reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
+    const paid   = matched.filter(d => d.stage === 'Paid').reduce((s, d) => s + (parseFloat(d.agreedRate) || 0), 0);
+    const active = matched.filter(d => d.stage !== 'Paid').length;
+    return { count: matched.length, total, paid, active };
+  };
+
+  const add = async () => {
+    if (!form.name.trim()) return;
+    setSaving(true);
+    await db.collection('vendors').add({ ...form, type: addType, createdAt: new Date().toISOString() });
+    setForm({ ...V_EMPTY });
+    setAdding(false);
+    setSaving(false);
+  };
+
+  const startEdit = v => {
+    setEditId(v.id);
+    setEditForm({ name: v.name || '', type: v.type || 'Agency', contactPerson: v.contactPerson || '', email: v.email || '', phone: v.phone || '', commission: v.commission || '', gstin: v.gstin || '', paymentTerms: v.paymentTerms || '', notes: v.notes || '' });
+    setAdding(false);
+  };
+
+  const saveEdit = async () => {
+    setUpdating(true);
+    await db.collection('vendors').doc(editId).update({ ...editForm });
+    setEditId(null);
+    setUpdating(false);
+  };
+
+  const del = id => db.collection('vendors').doc(id).delete();
+
+  const VendorForm = ({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor }) => (
+    <div className="card fade" style={{ padding: 18, marginBottom: 16, borderColor: `${accentColor}44` }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+        <input className="input" placeholder="Name *" value={f.name} onChange={e => onChange({ ...f, name: e.target.value })} style={{ flex: 2, minWidth: 140 }} autoFocus />
+        <input className="input" placeholder="Contact person" value={f.contactPerson} onChange={e => onChange({ ...f, contactPerson: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+        <input className="input" placeholder="Email" value={f.email} onChange={e => onChange({ ...f, email: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
+        <input className="input" placeholder="Phone" value={f.phone} onChange={e => onChange({ ...f, phone: e.target.value })} style={{ flex: 1, minWidth: 110 }} />
+        {f.type === 'Agency' && <input className="input" placeholder="Commission %" type="number" value={f.commission} onChange={e => onChange({ ...f, commission: e.target.value })} style={{ width: 110 }} />}
+      </div>
+      {f.type === 'Agency' && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+          <input className="input" placeholder="GSTIN" value={f.gstin} onChange={e => onChange({ ...f, gstin: e.target.value })} style={{ flex: 1, minWidth: 140 }} />
+          <input className="input" placeholder="Payment terms (e.g. 30 days from invoice)" value={f.paymentTerms} onChange={e => onChange({ ...f, paymentTerms: e.target.value })} style={{ flex: 1, minWidth: 160 }} />
+        </div>
+      )}
+      <input className="input" placeholder="Notes" value={f.notes} onChange={e => onChange({ ...f, notes: e.target.value })} style={{ marginBottom: 12 }} />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn-gold" onClick={onSave} disabled={loading} style={{ fontSize: 13 }}>{loading ? 'Saving...' : btnLabel}</button>
+        <button className="btn-ghost" onClick={onCancel} style={{ fontSize: 13 }}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  const VendorCard = ({ v }) => {
+    const s   = stats(v);
+    const col = v.type === 'Agency' ? GOLD : '#38bdf8';
+    if (editId === v.id) return (
+      <VendorForm key={v.id} f={editForm} onChange={setEditForm} onSave={saveEdit} onCancel={() => setEditId(null)} btnLabel="Save" loading={updating} accentColor={col} />
+    );
+    return (
+      <div className="card" style={{ padding: '14px 16px', borderLeft: `3px solid ${col}40` }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#eee' }}>{v.name}</span>
+              <span className="tag" style={{ background: `${col}18`, color: col, fontSize: 10, fontWeight: 700 }}>{v.type}</span>
+              {v.type === 'Agency' && v.commission && <span style={{ fontSize: 11, color: '#f97316', fontWeight: 600 }}>{v.commission}% commission</span>}
+              {s.active > 0 && <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8', fontSize: 10 }}>{s.active} active deal{s.active > 1 ? 's' : ''}</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: '#888', marginBottom: s.count > 0 ? 8 : 0 }}>
+              {v.contactPerson && <span>👤 {v.contactPerson}</span>}
+              {v.email         && <span>✉️ {v.email}</span>}
+              {v.phone         && <span>📱 {v.phone}</span>}
+              {v.gstin         && <span>🏛️ {v.gstin}</span>}
+              {v.paymentTerms  && <span>📋 {v.paymentTerms}</span>}
+            </div>
+            {s.count > 0 && (
+              <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
+                <span style={{ color: '#555' }}>{s.count} deal{s.count > 1 ? 's' : ''} total</span>
+                <span style={{ color: '#4ade80', fontWeight: 600 }}>₹{s.total.toLocaleString('en-IN')} invoiced</span>
+                {s.paid > 0 && <span style={{ color: '#888' }}>₹{s.paid.toLocaleString('en-IN')} paid</span>}
+                {s.total - s.paid > 0 && <span style={{ color: '#f97316' }}>₹{(s.total - s.paid).toLocaleString('en-IN')} pending</span>}
+              </div>
+            )}
+            {v.notes && <div style={{ fontSize: 12, color: '#555', marginTop: 5 }}>{v.notes}</div>}
+          </div>
+          <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+            <button onClick={() => startEdit(v)} style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#888', cursor: 'pointer', fontSize: 13, padding: '3px 8px' }}>✎</button>
+            <button onClick={() => del(v.id)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const agencies = vendors.filter(v => v.type === 'Agency');
+  const brands   = vendors.filter(v => v.type === 'Brand');
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>🏢 Vendors</h1>
+          <div style={{ color: '#888', fontSize: 13 }}>{agencies.length} agencies · {brands.length} direct brands</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-ghost" onClick={() => { setAddType('Brand'); setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Brand</button>
+          <button className="btn-gold"  onClick={() => { setAddType('Agency'); setAdding(v => !v); setEditId(null); }} style={{ fontSize: 13 }}>+ Agency</button>
+        </div>
+      </div>
+
+      {adding && (
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ fontSize: 12, color: addType === 'Agency' ? GOLD : '#38bdf8', fontWeight: 600, marginBottom: 8 }}>
+            {addType === 'Agency' ? '🏢 New Agency' : '🏷️ New Direct Brand'}
+          </div>
+          <VendorForm f={{ ...form, type: addType }} onChange={f => setForm({ ...f, type: addType })} onSave={add} onCancel={() => setAdding(false)} btnLabel={`Add ${addType}`} loading={saving} accentColor={addType === 'Agency' ? GOLD : '#38bdf8'} />
+        </div>
+      )}
+
+      {agencies.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 11, color: GOLD, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>🏢 Agencies ({agencies.length})</div>
+          <div style={{ display: 'grid', gap: 10 }}>{agencies.map(v => <VendorCard key={v.id} v={v} />)}</div>
+        </div>
+      )}
+
+      {brands.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>🏷️ Direct Brands ({brands.length})</div>
+          <div style={{ display: 'grid', gap: 10 }}>{brands.map(v => <VendorCard key={v.id} v={v} />)}</div>
+        </div>
+      )}
+
+      {vendors.length === 0 && !adding && (
+        <Empty icon="🏢" text="No vendors yet. Add agencies who broker deals or direct brands you work with." />
+      )}
     </div>
   );
 }
