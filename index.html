@@ -1817,12 +1817,24 @@ function DealsTab() {
 
   const generateInvoice = async (deal) => {
     try {
+      // Pull vendor details (brand preferred, else agency) for billing info
+      const vendorId = deal.brandId || deal.agencyId;
+      let vd = {};
+      if (vendorId) {
+        const vDoc = await db.collection('vendors').doc(vendorId).get();
+        if (vDoc.exists) vd = vDoc.data();
+      }
       const invNo = await autoInvoiceNo();
       await db.collection('collabs').add({
         brand: deal.brand || '',
+        billingEntity: vd.legalName || deal.brand || '',
+        vendorGstin: vd.gstin || '',
+        vendorAddress: vd.address || '',
         invoiceNo: invNo,
         description: deal.deliverables || '',
         amount: deal.agreedRate || '',
+        gstRate: '',
+        gstType: 'CGST+SGST',
         channel: deal.platform || '',
         poc: deal.contact || '',
         deliverable: 'Integration',
@@ -2248,30 +2260,60 @@ const INV_STATUSES   = ['Pending', 'Paid', 'Overdue'];
 
 const INV_ST_COLORS  = { Pending: '#f97316', Paid: '#4ade80', Overdue: '#ff6b6b' };
 const INV_DELIVERABLES = ['Integration', 'Dedicated Video', 'Live', 'Short', 'Reel', 'Webinar', 'Sponsorship', 'Other'];
-const INV_EMPTY      = { brand: '', invoiceNo: '', description: '', amount: '', channel: '', poc: '', deliverable: 'Integration', invoiceDate: '', dueDate: '', status: 'Pending', paidDate: '', notes: '', linkedDealId: '' };
+const INV_EMPTY      = { brand: '', billingEntity: '', vendorGstin: '', vendorAddress: '', invoiceNo: '', description: '', amount: '', gstRate: '', gstType: 'CGST+SGST', channel: '', poc: '', deliverable: 'Integration', invoiceDate: '', dueDate: '', status: 'Pending', paidDate: '', notes: '', linkedDealId: '' };
+const GST_RATES      = ['', '0', '5', '12', '18', '28'];
 const BRAND_PALETTE  = ['#38bdf8','#a78bfa','#f97316','#4ade80','#f43f5e','#F5C518','#06b6d4','#84cc16','#e879f9','#fb923c'];
 
 function CollabForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor }) {
+  const gstAmt = f.gstRate && f.amount ? Math.round(parseFloat(f.amount) * parseFloat(f.gstRate) / 100) : 0;
+  const total  = (parseFloat(f.amount) || 0) + gstAmt;
   return (
     <div className="card fade" style={{ padding: 18, marginBottom: 20, borderColor: `${accentColor}44` }}>
+      {/* Brand + Legal name */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
         <input className="input" placeholder="Brand name *" value={f.brand} onChange={e => onChange({ ...f, brand: e.target.value })} style={{ flex: 2, minWidth: 140 }} autoFocus />
-        <input className="input" placeholder="POC / Contact" value={f.poc} onChange={e => onChange({ ...f, poc: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
+        <input className="input" placeholder="Legal / Invoiceable Company Name" value={f.billingEntity} onChange={e => onChange({ ...f, billingEntity: e.target.value })} style={{ flex: 2, minWidth: 160 }} />
       </div>
+      {/* Invoice no + Amount + GST + Status */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-        <input className="input" placeholder="Invoice No (auto if blank)" value={f.invoiceNo} onChange={e => onChange({ ...f, invoiceNo: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
-        <input className="input" placeholder="Amount (₹) *" type="number" value={f.amount} onChange={e => onChange({ ...f, amount: e.target.value })} style={{ flex: 1, minWidth: 100 }} />
-        <select className="select" value={f.status} onChange={e => onChange({ ...f, status: e.target.value })} style={{ flex: 1, minWidth: 100 }}>
+        <input className="input" placeholder="Invoice No (auto if blank)" value={f.invoiceNo} onChange={e => onChange({ ...f, invoiceNo: e.target.value })} style={{ flex: 2, minWidth: 130 }} />
+        <input className="input" placeholder="Amount (₹) *" type="number" value={f.amount} onChange={e => onChange({ ...f, amount: e.target.value })} style={{ flex: 1, minWidth: 90 }} />
+        <select className="select" title="GST Rate (optional)" value={f.gstRate} onChange={e => onChange({ ...f, gstRate: e.target.value })} style={{ minWidth: 90 }}>
+          <option value="">No GST</option>
+          {['0','5','12','18','28'].map(r => <option key={r} value={r}>GST {r}%</option>)}
+        </select>
+        <select className="select" value={f.status} onChange={e => onChange({ ...f, status: e.target.value })} style={{ minWidth: 100 }}>
           {INV_STATUSES.map(s => <option key={s}>{s}</option>)}
         </select>
       </div>
+      {/* GST type + total preview */}
+      {f.gstRate && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
+          <select className="select" value={f.gstType} onChange={e => onChange({ ...f, gstType: e.target.value })} style={{ minWidth: 140 }}>
+            <option value="CGST+SGST">CGST + SGST (Intra-state)</option>
+            <option value="IGST">IGST (Inter-state)</option>
+          </select>
+          <span style={{ fontSize: 12, color: 'var(--t-muted)' }}>
+            GST: <strong style={{ color: GOLD }}>₹{gstAmt.toLocaleString('en-IN')}</strong>
+            &nbsp;→ Total: <strong style={{ color: '#4ade80' }}>₹{total.toLocaleString('en-IN')}</strong>
+          </span>
+        </div>
+      )}
+      {/* Channel + Deliverable + POC */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
         <input className="input" placeholder="Channel (e.g. YouTube Kannada)" value={f.channel} onChange={e => onChange({ ...f, channel: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
         <select className="select" value={f.deliverable} onChange={e => onChange({ ...f, deliverable: e.target.value })} style={{ flex: 1, minWidth: 120 }}>
           {INV_DELIVERABLES.map(d => <option key={d}>{d}</option>)}
         </select>
+        <input className="input" placeholder="POC / Contact" value={f.poc} onChange={e => onChange({ ...f, poc: e.target.value })} style={{ flex: 1, minWidth: 120 }} />
       </div>
       <input className="input" placeholder="Description / deliverable details" value={f.description} onChange={e => onChange({ ...f, description: e.target.value })} style={{ marginBottom: 10 }} />
+      {/* Client GSTIN + Address (for invoice print) */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+        <input className="input" placeholder="Client GSTIN (optional)" value={f.vendorGstin} onChange={e => onChange({ ...f, vendorGstin: e.target.value })} style={{ flex: 1, minWidth: 140 }} />
+        <textarea className="input" placeholder="Client billing address (optional)" value={f.vendorAddress} onChange={e => onChange({ ...f, vendorAddress: e.target.value })} rows={1} style={{ flex: 2, minWidth: 180, resize: 'none', fontFamily: 'inherit', paddingTop: 8 }} />
+      </div>
+      {/* Dates */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 130 }}>
           <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 4 }}>📄 Invoice Date</div>
@@ -2310,11 +2352,20 @@ function InvoicesTab() {
   const [filterStatus, setFilterStatus] = useState('All');
 
   useEffect(() => {
+    // Auto-mark overdue: any Pending invoice past its due date
+    const today = todayStr();
+    db.collection('collabs').where('status', '==', 'Pending').get().then(snap => {
+      const overdueOnes = snap.docs.filter(d => { const dd = d.data(); return dd.dueDate && dd.dueDate < today; });
+      if (overdueOnes.length) {
+        const batch = db.batch();
+        overdueOnes.forEach(d => batch.update(d.ref, { status: 'Overdue' }));
+        batch.commit();
+      }
+    });
     return db.collection('collabs').orderBy('createdAt', 'desc').onSnapshot(
       snap => setCollabs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       err => {
         console.error('InvoicesTab collabs listener error:', err);
-        // Fallback: load without ordering if index issue
         db.collection('collabs').get().then(snap =>
           setCollabs(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) =>
             (b.createdAt || '').localeCompare(a.createdAt || '')
@@ -2387,7 +2438,7 @@ function InvoicesTab() {
 
   const startEdit = (c) => {
     setEditId(c.id);
-    setEditForm({ brand: c.brand || '', invoiceNo: c.invoiceNo || '', description: c.description || '', amount: c.amount || '', channel: c.channel || '', poc: c.poc || '', deliverable: c.deliverable || 'Integration', invoiceDate: c.invoiceDate || '', dueDate: c.dueDate || '', status: c.status || 'Pending', paidDate: c.paidDate || '', notes: c.notes || '', linkedDealId: c.linkedDealId || '' });
+    setEditForm({ brand: c.brand || '', billingEntity: c.billingEntity || '', vendorGstin: c.vendorGstin || '', vendorAddress: c.vendorAddress || '', invoiceNo: c.invoiceNo || '', description: c.description || '', amount: c.amount || '', gstRate: c.gstRate || '', gstType: c.gstType || 'CGST+SGST', channel: c.channel || '', poc: c.poc || '', deliverable: c.deliverable || 'Integration', invoiceDate: c.invoiceDate || '', dueDate: c.dueDate || '', status: c.status || 'Pending', paidDate: c.paidDate || '', notes: c.notes || '', linkedDealId: c.linkedDealId || '' });
     setAdding(false);
   };
 
@@ -2435,6 +2486,127 @@ function InvoicesTab() {
   };
 
   const del = id => db.collection('collabs').doc(id).delete();
+
+  const printInvoice = async (collab) => {
+    const billingDoc = await db.collection('settings').doc('billing').get();
+    const b = billingDoc.exists ? billingDoc.data() : {};
+    const gstRate   = parseFloat(collab.gstRate) || 0;
+    const baseAmt   = parseFloat(collab.amount) || 0;
+    const gstAmt    = gstRate > 0 ? Math.round(baseAmt * gstRate / 100) : 0;
+    const halfGst   = Math.round(gstAmt / 2);
+    const totalAmt  = baseAmt + gstAmt;
+    const isIGST    = collab.gstType === 'IGST';
+    const stColor   = { Paid: '#166534', Pending: '#854d0e', Overdue: '#991b1b' }[collab.status] || '#666';
+    const stBg      = { Paid: '#dcfce7', Pending: '#fef9c3', Overdue: '#fee2e2' }[collab.status] || '#eee';
+    const w = window.open('', '_blank');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Invoice ${collab.invoiceNo || ''}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;background:#fff;font-size:14px}
+.page{max-width:820px;margin:0 auto;padding:52px}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:24px;border-bottom:2.5px solid #1a1a1a;margin-bottom:36px}
+.co-name{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+.co-sub{font-size:11px;color:#666;margin-top:3px;line-height:1.6}
+.inv-title{text-align:right}
+.inv-word{font-size:30px;font-weight:200;color:#ccc;letter-spacing:6px;text-transform:uppercase}
+.inv-no{font-size:16px;font-weight:700;font-family:monospace;margin-top:4px}
+.inv-meta{font-size:11px;color:#888;margin-top:4px;line-height:1.7}
+.badge{display:inline-block;padding:2px 9px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:${stBg};color:${stColor}}
+.billing{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-bottom:36px}
+.bl-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin-bottom:6px}
+.bl-val{font-size:14px;font-weight:700}
+.bl-sub{font-size:11px;color:#666;line-height:1.6;margin-top:2px}
+table{width:100%;border-collapse:collapse;margin-bottom:24px}
+thead tr{background:#1a1a1a;color:#fff}
+th{padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.5px}
+th:last-child{text-align:right}
+tbody tr{border-bottom:1px solid #f0f0f0}
+td{padding:13px 14px;vertical-align:top;font-size:13px}
+td:last-child{text-align:right;font-weight:600}
+.totals{width:280px;margin-left:auto;margin-bottom:36px}
+.tr{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:#555}
+.tr.grand{border-top:2px solid #1a1a1a;margin-top:6px;padding-top:10px;font-size:16px;font-weight:800;color:#1a1a1a}
+.ftr{display:grid;grid-template-columns:1fr 1fr;gap:36px;padding-top:24px;border-top:1px solid #eee}
+.ftr-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin-bottom:8px}
+.ftr-row{font-size:12px;color:#444;margin-bottom:3px}
+.ftr-row strong{color:#1a1a1a}
+.noprint{position:fixed;bottom:24px;right:24px;display:flex;gap:8px}
+@media print{.noprint{display:none}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.page{padding:24px}}
+</style></head><body>
+<div class="page">
+<div class="hdr">
+  <div>
+    <div class="co-name">${b.companyName || 'GrowGuru Media'}</div>
+    ${b.gstin ? `<div class="co-sub">GSTIN: ${b.gstin}</div>` : ''}
+    ${b.address ? `<div class="co-sub">${b.address.replace(/\n/g, '<br>')}</div>` : ''}
+  </div>
+  <div class="inv-title">
+    <div class="inv-word">Invoice</div>
+    <div class="inv-no">${collab.invoiceNo || 'DRAFT'}</div>
+    <div class="inv-meta">
+      Date: <strong>${collab.invoiceDate ? collab.invoiceDate.split('-').reverse().join('/') : '—'}</strong><br>
+      ${collab.dueDate ? `Due: <strong>${collab.dueDate.split('-').reverse().join('/')}</strong><br>` : ''}
+    </div>
+    <span class="badge">${collab.status || 'Pending'}</span>
+  </div>
+</div>
+<div class="billing">
+  <div>
+    <div class="bl-label">Bill To</div>
+    <div class="bl-val">${collab.billingEntity || collab.brand || '—'}</div>
+    ${collab.billingEntity && collab.brand && collab.billingEntity !== collab.brand ? `<div class="bl-sub">(${collab.brand})</div>` : ''}
+    ${collab.vendorGstin ? `<div class="bl-sub">GSTIN: ${collab.vendorGstin}</div>` : ''}
+    ${collab.vendorAddress ? `<div class="bl-sub">${collab.vendorAddress.replace(/\n/g, '<br>')}</div>` : ''}
+  </div>
+  <div>
+    ${collab.poc ? `<div class="bl-label">Contact</div><div class="bl-val" style="font-size:13px">${collab.poc}</div>` : ''}
+    ${collab.channel ? `<div class="bl-label" style="margin-top:${collab.poc ? '14px' : '0'}">Channel</div><div class="bl-val" style="font-size:13px">${collab.channel}</div>` : ''}
+  </div>
+</div>
+<table>
+  <thead><tr>
+    <th style="width:44%">Description</th>
+    <th>Type</th>
+    ${gstRate > 0 ? `<th>Base Amt</th>${isIGST ? `<th>IGST ${gstRate}%</th>` : `<th>CGST ${gstRate / 2}%</th><th>SGST ${gstRate / 2}%</th>`}` : ''}
+    <th>${gstRate > 0 ? 'Total' : 'Amount'}</th>
+  </tr></thead>
+  <tbody><tr>
+    <td><strong>${collab.description || collab.deliverable || 'Content Collaboration'}</strong></td>
+    <td>${collab.deliverable || '—'}</td>
+    ${gstRate > 0 ? `<td>₹${baseAmt.toLocaleString('en-IN')}</td>${isIGST ? `<td>₹${gstAmt.toLocaleString('en-IN')}</td>` : `<td>₹${halfGst.toLocaleString('en-IN')}</td><td>₹${halfGst.toLocaleString('en-IN')}</td>`}` : ''}
+    <td>₹${baseAmt.toLocaleString('en-IN')}</td>
+  </tr></tbody>
+</table>
+<div class="totals">
+  <div class="tr"><span>Sub-total</span><span>₹${baseAmt.toLocaleString('en-IN')}</span></div>
+  ${gstRate > 0 && !isIGST ? `<div class="tr"><span>CGST @ ${gstRate / 2}%</span><span>₹${halfGst.toLocaleString('en-IN')}</span></div><div class="tr"><span>SGST @ ${gstRate / 2}%</span><span>₹${halfGst.toLocaleString('en-IN')}</span></div>` : ''}
+  ${gstRate > 0 && isIGST ? `<div class="tr"><span>IGST @ ${gstRate}%</span><span>₹${gstAmt.toLocaleString('en-IN')}</span></div>` : ''}
+  <div class="tr grand"><span>TOTAL</span><span>₹${totalAmt.toLocaleString('en-IN')}</span></div>
+  ${collab.paidDate ? `<div class="tr" style="color:#16a34a;font-size:11px"><span>✓ Paid on ${collab.paidDate.split('-').reverse().join('/')}</span></div>` : ''}
+</div>
+<div class="ftr">
+  <div>
+    <div class="ftr-label">Payment Details</div>
+    ${b.bankName ? `<div class="ftr-row"><strong>Bank:</strong> ${b.bankName}</div>` : ''}
+    ${b.accountNo ? `<div class="ftr-row"><strong>A/C:</strong> ${b.accountNo}</div>` : ''}
+    ${b.ifsc ? `<div class="ftr-row"><strong>IFSC:</strong> ${b.ifsc}</div>` : ''}
+    ${b.upi ? `<div class="ftr-row"><strong>UPI:</strong> ${b.upi}</div>` : ''}
+    ${!b.bankName && !b.upi ? '<div class="ftr-row" style="color:#ccc">Add bank details in Settings</div>' : ''}
+  </div>
+  <div>
+    <div class="ftr-label">Notes</div>
+    <div style="font-size:12px;color:#666;line-height:1.6">Thank you for the collaboration.<br>Please process payment by the due date.</div>
+  </div>
+</div>
+</div>
+<div class="noprint">
+  <button onclick="window.print()" style="padding:10px 22px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">🖨️ Print / Save PDF</button>
+  <button onclick="window.close()" style="padding:10px 18px;background:#f0f0f0;color:#333;border:none;border-radius:6px;cursor:pointer;font-size:13px">Close</button>
+</div>
+</body></html>`);
+    w.document.close();
+  };
 
   return (
     <div>
@@ -2583,6 +2755,7 @@ function InvoicesTab() {
                   {c.status === 'Pending' && c.dueDate && c.dueDate < today && (
                     <button onClick={() => markOverdue(c)} style={{ background: '#ff6b6b12', border: '1px solid #ff6b6b44', borderRadius: 6, color: '#ff6b6b', cursor: 'pointer', fontSize: 11, padding: '4px 10px' }}>! Overdue</button>
                   )}
+                  <button onClick={() => printInvoice(c)} title="Print Invoice" style={{ background: 'var(--a12)', border: '1px solid var(--a28)', borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 8px', fontWeight: 600 }}>🖨️</button>
                   <button onClick={() => startEdit(c)} title="Edit" style={{ background: 'none', border: '1px solid var(--border-input)', borderRadius: 6, color: 'var(--t-muted)', cursor: 'pointer', fontSize: 13, padding: '3px 8px' }}>✎</button>
                   <button onClick={() => del(c.id)} style={{ background: 'none', border: 'none', color: 'var(--t-faint)', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
                 </div>
@@ -2596,13 +2769,16 @@ function InvoicesTab() {
 }
 
 // --- VENDORS --------------------------------------------------
-const V_EMPTY = { name: '', type: 'Agency', contactPerson: '', email: '', phone: '', commission: '', gstin: '', paymentTerms: '', address: '', notes: '' };
+const V_EMPTY = { name: '', type: 'Agency', legalName: '', contactPerson: '', email: '', phone: '', commission: '', gstin: '', paymentTerms: '', address: '', notes: '' };
 
 function VendorForm({ f, onChange, onSave, onCancel, btnLabel, loading, accentColor }) {
   return (
     <div className="card fade" style={{ padding: 18, marginBottom: 16, borderColor: `${accentColor}44` }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-        <input className="input" placeholder="Name *" value={f.name} onChange={e => onChange({ ...f, name: e.target.value })} style={{ flex: 2, minWidth: 140 }} autoFocus />
+        <input className="input" placeholder="Brand / Agency Name *" value={f.name} onChange={e => onChange({ ...f, name: e.target.value })} style={{ flex: 2, minWidth: 140 }} autoFocus />
+        <input className="input" placeholder="Legal / Invoiceable Company Name" value={f.legalName} onChange={e => onChange({ ...f, legalName: e.target.value })} style={{ flex: 2, minWidth: 160 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
         <input className="input" placeholder="Contact person" value={f.contactPerson} onChange={e => onChange({ ...f, contactPerson: e.target.value })} style={{ flex: 2, minWidth: 140 }} />
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
@@ -2663,7 +2839,7 @@ function VendorsTab() {
 
   const startEdit = v => {
     setEditId(v.id);
-    setEditForm({ name: v.name || '', type: v.type || 'Agency', contactPerson: v.contactPerson || '', email: v.email || '', phone: v.phone || '', commission: v.commission || '', gstin: v.gstin || '', paymentTerms: v.paymentTerms || '', address: v.address || '', notes: v.notes || '' });
+    setEditForm({ name: v.name || '', type: v.type || 'Agency', legalName: v.legalName || '', contactPerson: v.contactPerson || '', email: v.email || '', phone: v.phone || '', commission: v.commission || '', gstin: v.gstin || '', paymentTerms: v.paymentTerms || '', address: v.address || '', notes: v.notes || '' });
     setAdding(false);
   };
 
@@ -3024,12 +3200,21 @@ function SettingsTab({ isAdmin, currentUid }) {
   const [chList, setChList] = useState([]);
   const [newCh, setNewCh] = useState({ name: '', platform: 'YouTube' });
   const [addingCh, setAddingCh] = useState(false);
+  const [billing, setBilling] = useState({ companyName: '', gstin: '', address: '', bankName: '', accountNo: '', ifsc: '', upi: '' });
+  const [billingSaved, setBillingSaved] = useState(false);
 
   useEffect(() => {
     db.collection('users').get().then(s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))));
     db.collection('settings').doc('webhooks').get().then(d => { if (d.exists) setWebhooks(d.data()); });
+    db.collection('settings').doc('billing').get().then(d => { if (d.exists) setBilling(prev => ({ ...prev, ...d.data() })); });
     db.collection('channels').orderBy('createdAt', 'asc').get().then(s => setChList(s.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, []);
+
+  const saveBilling = async () => {
+    await db.collection('settings').doc('billing').set(billing);
+    setBillingSaved(true);
+    setTimeout(() => setBillingSaved(false), 2500);
+  };
 
   const addChannel = async () => {
     if (!newCh.name.trim()) return;
@@ -3235,6 +3420,25 @@ function SettingsTab({ isAdmin, currentUid }) {
   return (
     <div style={{ display: 'grid', gap: 20 }}>
       <h1 style={{ fontSize: 20, fontWeight: 700 }}>Settings</h1>
+
+      {/* Billing Details */}
+      <div className="card" style={{ padding: 20 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: 'var(--t-bright)' }}>🧾 My Billing Details</h2>
+        <p style={{ fontSize: 12, color: 'var(--t-muted)', marginBottom: 16 }}>Appears on every invoice you print. GSTIN optional — add when registered.</p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+          <input className="input" placeholder="Company / Creator Name *" value={billing.companyName} onChange={e => setBilling({ ...billing, companyName: e.target.value })} style={{ flex: 2, minWidth: 160 }} />
+          <input className="input" placeholder="GSTIN (optional)" value={billing.gstin} onChange={e => setBilling({ ...billing, gstin: e.target.value })} style={{ flex: 1, minWidth: 140 }} />
+        </div>
+        <textarea className="input" placeholder="Your business address (appears on invoice)" value={billing.address} onChange={e => setBilling({ ...billing, address: e.target.value })} rows={2} style={{ marginBottom: 10, resize: 'vertical', fontFamily: 'inherit' }} />
+        <div style={{ fontSize: 11, color: 'var(--t-muted)', marginBottom: 8, fontWeight: 600 }}>Bank Details (for payment collection)</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+          <input className="input" placeholder="Bank Name" value={billing.bankName} onChange={e => setBilling({ ...billing, bankName: e.target.value })} style={{ flex: 1, minWidth: 130 }} />
+          <input className="input" placeholder="Account Number" value={billing.accountNo} onChange={e => setBilling({ ...billing, accountNo: e.target.value })} style={{ flex: 1, minWidth: 130 }} />
+          <input className="input" placeholder="IFSC Code" value={billing.ifsc} onChange={e => setBilling({ ...billing, ifsc: e.target.value })} style={{ flex: 1, minWidth: 100 }} />
+        </div>
+        <input className="input" placeholder="UPI ID (optional)" value={billing.upi} onChange={e => setBilling({ ...billing, upi: e.target.value })} style={{ marginBottom: 12 }} />
+        <button className="btn-gold" onClick={saveBilling} style={{ fontSize: 13 }}>{billingSaved ? '✓ Saved' : 'Save Billing Details'}</button>
+      </div>
 
       {/* Discord */}
       <div className="card" style={{ padding: 20 }}>
