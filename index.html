@@ -589,7 +589,7 @@ function TodayTab() {
 function PipelineTab() {
   const [items, setItems] = useState([]);
   const [channels, setChannels] = useState([]);
-  const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', brandDeal: false, brandName: '', pocName: '', pocContact: '', agreedRate: '', publishDate: '', notes: '' };
+  const EMPTY_FORM = { title: '', stage: 'Idea', channel: '', platform: '', recurring: false, frequency: 'Weekly', brandDeal: false, brandName: '', pocName: '', pocContact: '', agreedRate: '', publishDate: '', notes: '' };
   const [form, setForm] = useState(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -661,7 +661,7 @@ function PipelineTab() {
 
   const startEdit = (item) => {
     setEditItem(item.id);
-    setEditForm({ title: item.title || '', stage: item.stage || 'Idea', channel: item.channel || '', platform: item.platform || '', brandDeal: item.brandDeal || false, brandName: item.brandName || '', pocName: item.pocName || '', pocContact: item.pocContact || '', agreedRate: item.agreedRate || '', publishDate: item.publishDate || '', notes: item.notes || '' });
+    setEditForm({ title: item.title || '', stage: item.stage || 'Idea', channel: item.channel || '', platform: item.platform || '', recurring: item.recurring || false, frequency: item.frequency || 'Weekly', brandDeal: item.brandDeal || false, brandName: item.brandName || '', pocName: item.pocName || '', pocContact: item.pocContact || '', agreedRate: item.agreedRate || '', publishDate: item.publishDate || '', notes: item.notes || '' });
   };
 
   const saveEdit = async () => {
@@ -712,13 +712,33 @@ function PipelineTab() {
               })}
             </select>
           </div>
+          {/* Recurring toggle */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: '#666', marginRight: 4 }}>Type:</span>
+            {['One-time', 'Recurring'].map(opt => (
+              <button key={opt} type="button" onClick={() => setForm({ ...form, recurring: opt === 'Recurring' })}
+                style={{ padding: '5px 14px', borderRadius: 6, border: `1px solid ${form.recurring === (opt === 'Recurring') ? GOLD : '#2a2a2a'}`, background: form.recurring === (opt === 'Recurring') ? `${GOLD}18` : 'transparent', color: form.recurring === (opt === 'Recurring') ? GOLD : '#666', fontSize: 12, cursor: 'pointer', fontWeight: form.recurring === (opt === 'Recurring') ? 600 : 400 }}>
+                {opt === 'Recurring' ? '🔁 Recurring' : '1️⃣ One-time'}
+              </button>
+            ))}
+            {form.recurring && (
+              <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
+                {['Daily', 'Weekly', 'Monthly'].map(f => (
+                  <button key={f} type="button" onClick={() => setForm({ ...form, frequency: f })}
+                    style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${form.frequency === f ? '#38bdf8' : '#2a2a2a'}`, background: form.frequency === f ? '#38bdf818' : 'transparent', color: form.frequency === f ? '#38bdf8' : '#555', fontSize: 12, cursor: 'pointer', fontWeight: form.frequency === f ? 600 : 400 }}>
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#888', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={form.brandDeal} onChange={e => setForm({ ...form, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
               Brand Deal
             </label>
             {form.brandDeal && <input className="input" placeholder="Brand name *" value={form.brandName} onChange={e => setForm({ ...form, brandName: e.target.value })} style={{ flex: 1 }} />}
-            <input className="input" type="date" value={form.publishDate} onChange={e => setForm({ ...form, publishDate: e.target.value })} style={{ flex: 1 }} />
+            <input className="input" type="date" value={form.publishDate} onChange={e => setForm({ ...form, publishDate: e.target.value })} style={{ flex: 1 }} placeholder={form.recurring ? 'Next publish date' : 'Publish date'} />
           </div>
           {form.brandDeal && (
             <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: `${GOLD}08`, border: `1px solid ${GOLD}22`, borderRadius: 8 }}>
@@ -764,13 +784,33 @@ function PipelineTab() {
               })}
             </select>
           </div>
+          {/* Recurring toggle (edit) */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: '#666', marginRight: 4 }}>Type:</span>
+            {['One-time', 'Recurring'].map(opt => (
+              <button key={opt} type="button" onClick={() => setEditForm({ ...editForm, recurring: opt === 'Recurring' })}
+                style={{ padding: '5px 14px', borderRadius: 6, border: `1px solid ${editForm.recurring === (opt === 'Recurring') ? GOLD : '#2a2a2a'}`, background: editForm.recurring === (opt === 'Recurring') ? `${GOLD}18` : 'transparent', color: editForm.recurring === (opt === 'Recurring') ? GOLD : '#666', fontSize: 12, cursor: 'pointer', fontWeight: editForm.recurring === (opt === 'Recurring') ? 600 : 400 }}>
+                {opt === 'Recurring' ? '🔁 Recurring' : '1️⃣ One-time'}
+              </button>
+            ))}
+            {editForm.recurring && (
+              <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
+                {['Daily', 'Weekly', 'Monthly'].map(f => (
+                  <button key={f} type="button" onClick={() => setEditForm({ ...editForm, frequency: f })}
+                    style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${editForm.frequency === f ? '#38bdf8' : '#2a2a2a'}`, background: editForm.frequency === f ? '#38bdf818' : 'transparent', color: editForm.frequency === f ? '#38bdf8' : '#555', fontSize: 12, cursor: 'pointer', fontWeight: editForm.frequency === f ? 600 : 400 }}>
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div style={{ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'center' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#888', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={editForm.brandDeal} onChange={e => setEditForm({ ...editForm, brandDeal: e.target.checked })} style={{ accentColor: GOLD }} />
               Brand Deal
             </label>
             {editForm.brandDeal && <input className="input" placeholder="Brand name" value={editForm.brandName} onChange={e => setEditForm({ ...editForm, brandName: e.target.value })} style={{ flex: 1 }} />}
-            <input className="input" type="date" value={editForm.publishDate} onChange={e => setEditForm({ ...editForm, publishDate: e.target.value })} style={{ flex: 1 }} />
+            <input className="input" type="date" value={editForm.publishDate} onChange={e => setEditForm({ ...editForm, publishDate: e.target.value })} style={{ flex: 1 }} placeholder={editForm.recurring ? 'Next publish date' : 'Publish date'} />
           </div>
           {editForm.brandDeal && (
             <div style={{ display: 'flex', gap: 10, marginBottom: 10, padding: '12px 14px', background: `${GOLD}08`, border: `1px solid ${GOLD}22`, borderRadius: 8 }}>
@@ -811,10 +851,13 @@ function PipelineTab() {
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span className="tag" style={{ background: '#1e1e1e', color: '#ccc' }}>{item.channel}</span>
                     {item.platform && <span className="tag" style={{ background: `${PLATFORM_COLORS[item.platform] || '#888'}18`, color: PLATFORM_COLORS[item.platform] || '#888', fontSize: 10 }}>{item.platform}</span>}
+                    {item.recurring
+                      ? <span className="tag" style={{ background: '#38bdf818', color: '#38bdf8' }}>🔁 {item.frequency || 'Recurring'}</span>
+                      : <span className="tag" style={{ background: '#1e1e1e', color: '#555' }}>1️⃣ One-time</span>}
                     {item.brandDeal && <span className="tag" style={{ background: `${GOLD}18`, color: GOLD }}>💼 {item.brandName || 'Brand Deal'}</span>}
                     {item.brandDeal && item.agreedRate && <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 600 }}>₹{item.agreedRate}</span>}
                     {item.brandDeal && item.pocName && <span style={{ fontSize: 11, color: '#666' }}>POC: {item.pocName}{item.pocContact ? ` · ${item.pocContact}` : ''}</span>}
-                    {item.publishDate && <span style={{ fontSize: 11, color: '#666' }}>{fmtDate(item.publishDate)}</span>}
+                    {item.publishDate && <span style={{ fontSize: 11, color: '#666' }}>{item.recurring ? 'Next: ' : ''}{fmtDate(item.publishDate)}</span>}
                     {item.notes && <span style={{ fontSize: 12, color: '#555' }}>{item.notes}</span>}
                   </div>
                 </div>
