@@ -334,7 +334,28 @@ function PipelineTab() {
     if (!form.title.trim()) return;
     setSaving(true);
     await db.collection('pipeline').add({ ...form, createdAt: new Date().toISOString() });
-    notify('content', `Pipeline: **${form.title}** added - Stage: ${form.stage}`);
+    notify('content', `🎬 Pipeline: **${form.title}** added — Stage: ${form.stage}${form.brandDeal ? ` | 💼 Brand: ${form.brandName}` : ''}`);
+
+    // Auto-create deal entry if marked as brand collaboration
+    if (form.brandDeal && form.brandName.trim()) {
+      const existingDeals = await db.collection('deals').where('brand', '==', form.brandName.trim()).get();
+      if (existingDeals.empty) {
+        await db.collection('deals').add({
+          brand: form.brandName.trim(),
+          stage: 'Confirmed',
+          contact: '',
+          platform: '',
+          agreedRate: '',
+          deliverables: form.title,
+          paymentStatus: 'Pending',
+          deadline: form.publishDate || '',
+          notes: `Auto-created from pipeline: ${form.title}`,
+          createdAt: new Date().toISOString(),
+        });
+        notify('brand', `💼 Deal auto-created: **${form.brandName}** — from pipeline video "${form.title}"`);
+      }
+    }
+
     setForm({ title: '', stage: 'Idea', channel: CHANNELS[0], brandDeal: false, brandName: '', publishDate: '', notes: '' });
     setAdding(false);
     setSaving(false);
@@ -542,6 +563,7 @@ function IdeasTab() {
     if (!text.trim()) return;
     setSaving(true);
     await db.collection('ideas').add({ text, category: cat, createdAt: new Date().toISOString() });
+    notify('content', `💡 New idea captured: **${text}** [${cat}]`);
     setText('');
     setSaving(false);
   };
@@ -587,13 +609,15 @@ function IdeasTab() {
 // --- SETTINGS -------------------------------------------------
 function SettingsTab({ isAdmin }) {
   const [users, setUsers] = useState([]);
-  const [webhooks, setWebhooks] = useState({ content: '', brand: '', training: '' });
+  const [webhooks, setWebhooks] = useState({ content: '', brand: '', training: '', alerts: '' });
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'member' });
   const [creating, setCreating] = useState(false);
   const [userErr, setUserErr] = useState('');
   const [whSaved, setWhSaved] = useState(false);
   const [testMsg, setTestMsg] = useState('');
   const [changingRole, setChangingRole] = useState({});
+  const [summarySending, setSummarySending] = useState(false);
+  const [summaryMsg, setSummaryMsg] = useState('');
 
   useEffect(() => {
     db.collection('users').get().then(s => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -608,9 +632,127 @@ function SettingsTab({ isAdmin }) {
 
   const testWebhook = async (channel) => {
     setTestMsg('Sending...');
-    await notify(channel, `Test from GrowGuru Hub - ${channel} channel webhook is working!`);
-    setTestMsg('Sent');
+    await notify(channel, `✅ Test from GrowGuru Hub — ${channel} webhook is working!`);
+    setTestMsg('Sent ✓');
     setTimeout(() => setTestMsg(''), 3000);
+  };
+
+  const sendDailySummary = async () => {
+    setSummarySending(true);
+    setSummaryMsg('');
+    try {
+      const today = todayStr();
+
+      // Fetch all collections in parallel
+      const [tasksSnap, pipeSnap, dealsSnap, ideasSnap] = await Promise.all([
+        db.collection('tasks').get(),
+        db.collection('pipeline').get(),
+        db.collection('deals').get(),
+        db.collection('ideas').get(),
+      ]);
+
+      const allTasks   = tasksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const todayTasks = allTasks.filter(t => t.date === today);
+      const overdueTasks = allTasks.filter(t => t.date < today && !t.done);
+
+      const pipeline      = pipeSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const overduePipe   = pipeline.filter(p => p.publishDate && p.publishDate < today && p.stage !== 'Published');
+
+      const deals         = dealsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const activeDeals   = deals.filter(d => !['Paid'].includes(d.stage));
+      const overdueDeals  = deals.filter(d => d.deadline && d.deadline < today && !['Paid'].includes(d.stage));
+
+      const todayIdeas    = ideasSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .filter(i => i.createdAt && i.createdAt.startsWith(today));
+
+      const doneTasks    = todayTasks.filter(t => t.done);
+      const pendingTasks = todayTasks.filter(t => !t.done);
+
+      const lines = [];
+      lines.push(`📊 **GrowGuru Hub — Daily Summary**`);
+      lines.push(`📅 ${fmtDateFull()}`);
+      lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      lines.push('');
+
+      // --- Tasks ---
+      lines.push(`**✅ TODAY'S TASKS** — ${doneTasks.length}/${todayTasks.length} done`);
+      if (todayTasks.length === 0) {
+        lines.push('No tasks logged today.');
+      } else {
+        doneTasks.slice(0, 4).forEach(t => lines.push(`  ✅ [${t.priority}] ${t.title}`));
+        pendingTasks.slice(0, 4).forEach(t => lines.push(`  ⬜ [${t.priority}] ${t.title}`));
+        if (todayTasks.length > 8) lines.push(`  ...and ${todayTasks.length - 8} more`);
+      }
+      lines.push('');
+
+      // --- Pipeline ---
+      const activeVids = pipeline.filter(p => p.stage !== 'Published');
+      lines.push(`**🎬 CONTENT PIPELINE** — ${activeVids.length} active`);
+      ['Idea','Script','Record','Edit','Review'].forEach(s => {
+        const grp = pipeline.filter(p => p.stage === s);
+        if (grp.length) lines.push(`  • ${s}: ${grp.length} video${grp.length > 1 ? 's' : ''}`);
+      });
+      const pubToday = pipeline.filter(p => p.publishDate === today);
+      if (pubToday.length) lines.push(`  🚀 Due today: ${pubToday.map(p => p.title).join(', ')}`);
+      lines.push('');
+
+      // --- Deals ---
+      lines.push(`**💼 BRAND DEALS** — ${activeDeals.length} active`);
+      if (activeDeals.length === 0) {
+        lines.push('  No active deals.');
+      } else {
+        ['Lead','Negotiation','Confirmed','Script Approval','Live','Invoiced'].forEach(s => {
+          const grp = deals.filter(d => d.stage === s);
+          if (grp.length) lines.push(`  • ${s}: ${grp.map(d => `${d.brand}${d.agreedRate ? ` ₹${d.agreedRate}` : ''}`).join(', ')}`);
+        });
+      }
+      lines.push('');
+
+      // --- Overdue / Follow-up ---
+      const hasOverdue = overdueTasks.length || overduePipe.length || overdueDeals.length;
+      if (hasOverdue) {
+        lines.push(`**⚠️ OVERDUE / NEEDS FOLLOW-UP**`);
+        if (overdueTasks.length) lines.push(`  🔴 ${overdueTasks.length} task${overdueTasks.length > 1 ? 's' : ''} incomplete from past days`);
+        if (overduePipe.length) lines.push(`  🎬 ${overduePipe.length} video${overduePipe.length > 1 ? 's' : ''} past publish date: ${overduePipe.map(p => p.title).slice(0, 3).join(', ')}`);
+        if (overdueDeals.length) lines.push(`  💼 ${overdueDeals.length} deal${overdueDeals.length > 1 ? 's' : ''} past deadline: ${overdueDeals.map(d => `${d.brand} (${fmtDate(d.deadline)})`).join(', ')}`);
+        lines.push('');
+      } else {
+        lines.push(`**✨ NO OVERDUE ITEMS** — All clear!`);
+        lines.push('');
+      }
+
+      // --- Ideas ---
+      if (todayIdeas.length) {
+        lines.push(`**💡 IDEAS CAPTURED TODAY** (${todayIdeas.length})`);
+        todayIdeas.slice(0, 5).forEach(i => lines.push(`  • ${i.text}`));
+        lines.push('');
+      }
+
+      lines.push(`_GrowGuru Hub CMS — ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}_`);
+
+      // Get alerts webhook URL
+      const wDoc = await db.collection('settings').doc('webhooks').get();
+      if (!wDoc.exists || !wDoc.data().alerts) {
+        setSummaryMsg('⚠️ No Alerts webhook saved. Paste one above and hit Save Webhooks first.');
+        setSummarySending(false);
+        return;
+      }
+      const url = wDoc.data().alerts;
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: lines.join('\n') })
+      });
+      if (resp.ok || resp.status === 204) {
+        setSummaryMsg('✅ Summary posted to Discord!');
+      } else {
+        setSummaryMsg(`❌ Discord returned ${resp.status}. Check webhook URL.`);
+      }
+    } catch (e) {
+      setSummaryMsg(`❌ Error: ${e.message}`);
+    }
+    setSummarySending(false);
+    setTimeout(() => setSummaryMsg(''), 7000);
   };
 
   const changeRole = async (uid, newRole) => {
@@ -630,6 +772,7 @@ function SettingsTab({ isAdmin }) {
       const sec = firebase.initializeApp(firebase.app().options, appName);
       const cred = await sec.auth().createUserWithEmailAndPassword(newUser.email, newUser.password);
       await db.collection('users').doc(cred.user.uid).set({ name: newUser.name, email: newUser.email, role: newUser.role, createdAt: todayStr() });
+      notify('alerts', `👤 New member added: **${newUser.name}** (${newUser.email}) — Role: ${newUser.role}`);
       await sec.auth().signOut();
       sec.delete();
       setUsers(prev => [...prev, { id: cred.user.uid, name: newUser.name, email: newUser.email, role: newUser.role }]);
@@ -648,9 +791,15 @@ function SettingsTab({ isAdmin }) {
       <div className="card" style={{ padding: 20 }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>Discord Webhooks</h2>
         <p style={{ fontSize: 12, color: '#555', marginBottom: 18 }}>Paste webhook URLs for each pillar channel. Notifications will route automatically.</p>
-        {[['content', 'Content Channel'], ['brand', 'Brand Channel'], ['training', 'Training Channel']].map(([key, label]) => (
+        {[
+          ['content', '🎬 Content Channel', 'Pipeline, tasks, ideas'],
+          ['brand',   '💼 Brand Channel',   'New deals, stage changes'],
+          ['training','📚 Training Channel', 'Training updates'],
+          ['alerts',  '⚙️ Alerts & Summary', 'New members, daily summary — use this for daily digest'],
+        ].map(([key, label, hint]) => (
           <div key={key} style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#888', marginBottom: 5 }}>{label}</label>
+            <label style={{ display: 'block', fontSize: 12, color: '#888', marginBottom: 3 }}>{label}</label>
+            <div style={{ fontSize: 11, color: '#444', marginBottom: 5 }}>{hint}</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input className="input" type="url" placeholder="https://discord.com/api/webhooks/..." value={webhooks[key] || ''}
                 onChange={e => setWebhooks({ ...webhooks, [key]: e.target.value })} style={{ flex: 1 }} />
@@ -659,7 +808,27 @@ function SettingsTab({ isAdmin }) {
           </div>
         ))}
         {testMsg && <div style={{ fontSize: 12, color: '#4ade80', marginBottom: 10 }}>{testMsg}</div>}
-        <button className="btn-gold" onClick={saveWebhooks} style={{ fontSize: 13 }}>{whSaved ? 'Saved' : 'Save Webhooks'}</button>
+        <button className="btn-gold" onClick={saveWebhooks} style={{ fontSize: 13 }}>{whSaved ? '✓ Saved' : 'Save Webhooks'}</button>
+      </div>
+
+      {/* Daily Summary */}
+      <div className="card" style={{ padding: 20, borderColor: '#F5C51830' }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: '#ddd' }}>📊 Daily Summary</h2>
+        <p style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>Posts a full digest to your Discord Alerts channel — tasks done/pending, pipeline status, active deals, overdue items, and ideas captured today.</p>
+        <div style={{ background: '#111', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 12, color: '#666', lineHeight: 1.8 }}>
+          <div>✅ Today's tasks — done vs pending, by priority</div>
+          <div>🎬 Pipeline — active videos per stage, what's due today</div>
+          <div>💼 Brand deals — active deals per stage with amounts</div>
+          <div>⚠️ Overdue — incomplete tasks, missed publish dates, past-deadline deals</div>
+          <div>💡 Ideas — everything captured today</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button className="btn-gold" onClick={sendDailySummary} disabled={summarySending} style={{ fontSize: 13 }}>
+            {summarySending ? 'Posting...' : '📨 Post Summary to Discord'}
+          </button>
+          {summaryMsg && <span style={{ fontSize: 12, color: summaryMsg.startsWith('✅') ? '#4ade80' : summaryMsg.startsWith('⚠️') ? GOLD : '#ff6b6b' }}>{summaryMsg}</span>}
+        </div>
+        <div style={{ fontSize: 11, color: '#444', marginTop: 10 }}>Requires Alerts webhook to be saved above. Click any time — morning check-in, end of day, whenever you need a snapshot.</div>
       </div>
 
       {/* Users */}
